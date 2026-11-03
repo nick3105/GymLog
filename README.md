@@ -1,3 +1,13 @@
+# GymLog
+
+**[Open GymLog in your browser](https://nick3105.github.io/GymLog/)** — no downloads or installation.
+
+The website works on phones and computers. Entries stay in the current page session and reset on refresh. For web source files and collaboration notes, see [WEB_README.md](WEB_README.md).
+
+The original Python desktop starter is also included below.
+
+---
+
 # GymLog — Python desktop starter
 
 A beginner-friendly CustomTkinter app for a four-student Introduction to Programming project. Dark charcoal panels, lime accents, a scrollable dashboard and a small workout form. No accounts, server or database.
