@@ -1,0 +1,272 @@
+import { localDate, bestEstimate, lastPerformance, validateSets } from './training-model.mjs';
+
+const $ = selector => document.querySelector(selector);
+let csrf = '';
+let data = { exercises: [], templates: [], sessions: [] };
+let builder = { name: '', exercises: [] };
+let active = null;
+let saving = false;
+let signedIn = false;
+const view = $('#view');
+const format = value => Number(value).toLocaleString('en-GB', { maximumFractionDigits: 1 });
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const icon = name => `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+const dateLabel = day => new Date(`${day}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+async function api(path, body) {
+  const options = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, cache: 'no-store' };
+  if (body !== undefined) {
+    options.method = 'POST';
+    options.headers['X-CSRF-Token'] = csrf;
+    options.body = JSON.stringify(body);
+  }
+  let response;
+  try { response = await fetch(`/api/${path}`, options); }
+  catch { throw new Error('Cannot reach your journal. Check your connection. Your form has not been cleared.'); }
+  let result;
+  try { result = await response.json(); }
+  catch { throw new Error('The journal server did not respond correctly. Please try again.'); }
+  if (!response.ok) {
+    const error = new Error(result.error || 'The request could not be saved.');
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
+function error(message = '') {
+  $('#global-error').textContent = message;
+  $('#global-error').hidden = !message;
+}
+function toast(message) {
+  $('#toast').textContent = message;
+  $('#toast').hidden = !message;
+}
+function status(text) {
+  $('#save-status').replaceChildren();
+  const dot = document.createElement('span'); dot.className = 'status-dot';
+  $('#save-status').append(dot, document.createTextNode(text));
+}
+function showLogin(message = '') {
+  signedIn = false;
+  $('#app-screen').hidden = true;
+  $('#login-screen').hidden = false;
+  $('#login-error').textContent = message;
+}
+function showApp() {
+  signedIn = true;
+  $('#login-screen').hidden = true;
+  $('#app-screen').hidden = false;
+  render();
+}
+function handleError(problem) {
+  if (problem.status === 401) showLogin('Please sign in again. Your unfinished form is still here.');
+  else { error(problem.message); status('Not saved · please retry'); }
+}
+
+$('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = $('#login-submit'); button.disabled = true;
+  $('#login-error').textContent = '';
+  try {
+    const session = await api('session'); csrf = session.csrf;
+    const result = await api('login', { password: $('#password').value }); csrf = result.csrf;
+    data = await api('state'); $('#password').value = ''; showApp();
+  } catch (problem) { $('#login-error').textContent = problem.message; }
+  finally { button.disabled = false; }
+});
+
+async function signOut() {
+  if (saving) return;
+  if ((active || builder.name || builder.exercises.length) && !confirm('Sign out and discard your unfinished form? Saved workouts will stay in your journal.')) return;
+  try {
+    await api('logout', {});
+    active = null; builder = { name: '', exercises: [] };
+    data = { exercises: [], templates: [], sessions: [] };
+    csrf = ''; showLogin();
+    history.replaceState(null, '', '#home');
+  } catch (problem) { handleError(problem); }
+}
+$('#sign-out').addEventListener('click', signOut);
+$('#mobile-sign-out').addEventListener('click', signOut);
+$('#refresh-data').addEventListener('click', async () => {
+  if (saving || active) { toast('Finish or discard your active session before refreshing.'); return; }
+  const button = $('#refresh-data'); button.disabled = true;
+  try { data = await api('state'); render(); status('Journal is up to date'); toast('Loaded your latest saved workouts.'); }
+  catch (problem) { handleError(problem); }
+  finally { button.disabled = false; }
+});
+
+function route() { return location.hash.slice(1) || 'home'; }
+function navigate(next) {
+  if (saving) return;
+  if (active && next !== 'session') {
+    if (!confirm('Discard this unfinished session? Saved sessions will not be changed.')) return;
+    active = null;
+  }
+  if (route() === 'create' && next !== 'create' && (builder.name || builder.exercises.length)) {
+    if (!confirm('Discard this unsaved workout template?')) return;
+    builder = { name: '', exercises: [] };
+  }
+  if (location.hash === '#' + next) render();
+  else location.hash = next;
+}
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  if (link.classList.contains('skip')) return;
+  link.addEventListener('click', event => { event.preventDefault(); navigate(link.hash.slice(1)); });
+});
+window.addEventListener('hashchange', () => {
+  // Browser Back must not silently discard a draft. Keep the session reachable.
+  if (signedIn) { render(); window.scrollTo({ top: 0 }); }
+});
+window.addEventListener('beforeunload', event => {
+  if (active || builder.name || builder.exercises.length) { event.preventDefault(); event.returnValue = ''; }
+});
+
+function render() {
+  if (!signedIn) return;
+  error(); toast('');
+  let page = route();
+  if (page === 'session' && !active) { page = 'start'; history.replaceState(null, '', '#start'); }
+  const section = page.startsWith('review/') ? 'review' : page;
+  const names = { home: 'Home', start: 'Start workout', create: 'Create workout', session: 'Active session', review: 'Review workouts' };
+  $('#breadcrumb').textContent = names[section] || 'Home';
+  document.querySelectorAll('[data-nav]').forEach(link => {
+    const current = link.dataset.nav === section || (section === 'session' && link.dataset.nav === 'start');
+    link.classList.toggle('active', current);
+    if (current) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+  });
+  const titles = { home: ['Make your next session count.', 'Your workouts and progress, together in one place.'], start: ['Pick your workout.', 'Choose a saved template and make it your own today.'], create: ['Build your next workout.', 'Choose your exercises. Set your targets. Repeat whenever you like.'], session: [active?.name || 'Your session', 'Enter your actual results. RPE is optional. All weights are in kilograms.'], review: ['Look back. Move forward.', 'Your completed sessions, saved in your journal.'] };
+  const title = titles[section] || titles.home;
+  $('#page-title').textContent = title[0]; $('#page-subtitle').textContent = title[1];
+  $('#refresh-data').disabled = Boolean(active);
+  if (page.startsWith('review/')) renderReviewDetail(page.slice(7));
+  else if (page === 'create') renderBuilder();
+  else if (page === 'start') renderTemplates();
+  else if (page === 'session') renderSession();
+  else if (page === 'review') renderReviews();
+  else renderHome();
+}
+
+function renderHome() {
+  view.innerHTML = `<p class="home-intro">A good training plan is one you come back to. Create your routine, log every set, and use your last session to guide your next one.</p>
+  <div class="choice-grid">${[
+    ['01', 'dumbbell', 'Start workout', 'Choose a saved session and log your sets.', 'start'],
+    ['02', 'plus', 'Create workout', 'Build a repeatable workout with your own targets.', 'create'],
+    ['03', 'list', 'Review workouts', 'Revisit the weights, reps and effort you recorded.', 'review']
+  ].map(([number, glyph, title, text, destination], index) => `<button class="choice ${index === 0 ? 'highlight' : ''}" data-go="${destination}"><span class="choice-number">${number} / YOUR TRAINING</span>${icon(glyph)}<h2>${title}</h2><p>${text}</p><span class="choice-arrow" aria-hidden="true">↗</span></button>`).join('')}</div>
+  <div class="summary-strip"><div><strong>${data.templates.length}</strong><span>Saved workouts</span></div><div><strong>${data.sessions.length}</strong><span>Completed sessions</span></div><div><strong>${data.sessions.length ? esc(dateLabel(data.sessions[0].day)) : '—'}</strong><span>Last session</span></div></div>
+  ${active ? '<p class="session-note">You have an unfinished session. <button class="text-button" data-go="session">Return to active session →</button></p>' : ''}`;
+}
+function empty(title, text, destination, label) {
+  return `<div class="empty-state">${icon('dumbbell')}<h2>${title}</h2><p>${text}</p><button class="button primary" data-go="${destination}">${label} →</button></div>`;
+}
+function renderTemplates() {
+  if (!data.templates.length) { view.innerHTML = empty('Your routine starts here.', 'Create your first workout template, then return here to start a session.', 'create', 'Create workout'); return; }
+  view.innerHTML = `<div class="view-header"><div><h2>Your saved workouts</h2><p>${data.templates.length} repeatable ${data.templates.length === 1 ? 'workout' : 'workouts'}</p></div><button class="text-button" data-go="create">+ Create workout</button></div><div class="template-grid">${data.templates.map(template => `<article class="template-card"><span class="eyebrow">YOUR ROUTINE</span><h2>${esc(template.name)}</h2><p class="card-meta">${template.exercises.length} exercises · ${template.exercises.reduce((sum, e) => sum + e.sets, 0)} sets</p><ul>${template.exercises.map(e => `<li><span>${esc(e.name)}</span><small>${e.sets} × ${e.targetReps}${e.targetWeight !== null ? ' · ' + format(e.targetWeight) + ' kg' : ''}</small></li>`).join('')}</ul><button class="button primary" data-start="${template.id}">Start session <span>→</span></button></article>`).join('')}</div>`;
+}
+function renderBuilder() {
+  const used = new Set(builder.exercises.map(e => e.id));
+  view.innerHTML = `<form id="builder-form" novalidate><div class="form-panel"><label for="template-name">Workout name</label><input class="workout-name-input" id="template-name" maxlength="60" placeholder="e.g. Upper body A" value="${esc(builder.name)}" required><div class="exercise-picker"><div><label for="exercise-choice">Add an exercise</label><select id="exercise-choice"><option value="">Choose from your exercise catalogue</option>${data.exercises.filter(e => !used.has(e.id)).map(e => `<option value="${esc(e.id)}">${esc(e.name)} · ${esc(e.group)}</option>`).join('')}</select></div><button type="button" class="button secondary" data-action="add-exercise">+ Add</button></div><p class="saving-note">Set targets now; record your actual results during the session.</p></div>
+  <div class="builder-list">${builder.exercises.map((e, i) => `<section class="builder-card"><div class="exercise-title"><div><h2>${i+1}. ${esc(e.name)}</h2><p>${esc(e.group)}</p></div><button type="button" class="remove-exercise" data-remove="${i}" aria-label="Remove ${esc(e.name)}">Remove</button></div><div class="builder-fields"><div><label for="sets-${i}">Sets</label><input id="sets-${i}" type="number" inputmode="numeric" min="1" max="20" step="1" required value="${esc(e.sets)}" data-builder="${i}:sets"></div><div><label for="reps-${i}">Target reps</label><input id="reps-${i}" type="number" inputmode="numeric" min="1" max="100" step="1" required value="${esc(e.targetReps)}" data-builder="${i}:targetReps"></div><div><label for="target-${i}">Target kg <span>(optional)</span></label><input id="target-${i}" type="number" inputmode="decimal" min="0" max="1000" step="any" placeholder="Optional" value="${esc(e.targetWeight)}" data-builder="${i}:targetWeight"></div></div></section>`).join('')}</div>
+  ${builder.exercises.length ? '' : '<p class="builder-empty">Add at least one exercise to build your workout.</p>'}<p class="error" id="builder-error" role="alert"></p><div class="sticky-actions"><p>Saved templates can be used again on any device.</p><div><button type="button" class="button secondary" data-go="home">Cancel</button><button type="submit" class="button primary" ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : 'Save workout'} ${icon('check')}</button></div></div></form>`;
+}
+
+function previousText(exerciseId) {
+  const previous = lastPerformance(data.sessions, exerciseId);
+  if (!previous) return '<strong>Last session:</strong> No previous results for this exercise yet.';
+  return `<strong>Last session · ${dateLabel(previous.day)}:</strong> ${previous.sets.map(s => `${format(s.weight)} kg × ${s.reps}${s.rpe !== null ? ' @ RPE ' + format(s.rpe) : ''}`).join(' · ')}`;
+}
+function estimateMarkup(value) {
+  return value === null ? '—<span>kg</span>' : `${format(value)}<span>kg</span>`;
+}
+function renderSession() {
+  view.innerHTML = `<div class="session-header"><div><h2>${active.exercises.length} exercises · ${active.exercises.reduce((sum, e) => sum + e.sets.length, 0)} sets</h2><p>${dateLabel(active.day)} · Unsaved until you finish</p></div><button class="danger-button" data-action="discard-session">Discard session</button></div><form id="session-form" novalidate>${active.exercises.map((exercise, i) => `<section class="exercise-section"><p class="previous-performance">${previousText(exercise.id)}</p><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${String(i+1).padStart(2,'0')}</span><div><h2>${esc(exercise.name)}</h2><p>ACTUAL RESULTS</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong id="estimate-${i}">${estimateMarkup(bestEstimate(exercise.sets))}</strong></div></div><div class="sets-head" aria-hidden="true"><span>SET</span><span>WEIGHT <small>KG</small></span><span>REPS</span><span>RPE <small>OPTIONAL</small></span></div>${exercise.sets.map((set, j) => `<div class="set-input-row"><span class="set-index">${j+1}</span><input aria-label="${esc(exercise.name)} set ${j+1} weight in kilograms" type="number" inputmode="decimal" min="0" max="1000" step="any" required placeholder="${exercise.targetWeight !== null ? exercise.targetWeight : 'kg'}" value="${esc(set.weight)}" data-set="${i}:${j}:weight"><input aria-label="${esc(exercise.name)} set ${j+1} reps" type="number" inputmode="numeric" min="1" max="100" step="1" required placeholder="${exercise.targetReps}" value="${esc(set.reps)}" data-set="${i}:${j}:reps"><input aria-label="${esc(exercise.name)} set ${j+1} RPE optional" type="number" inputmode="decimal" min="1" max="10" step="0.5" placeholder="—" value="${esc(set.rpe)}" data-set="${i}:${j}:rpe"></div>`).join('')}<p class="target-line">Target: ${exercise.sets.length} × ${exercise.targetReps} reps${exercise.targetWeight !== null ? ' at ' + format(exercise.targetWeight) + ' kg' : ''} · Enter 0 kg for bodyweight-only sets.</p></article></section>`).join('')}<p class="session-note">Estimated 1RM uses your best valid set: weight × (1 + reps ÷ 30), with a single rep reported as the lifted weight. Shown for 1–10 reps with positive external load. RPE does not change this estimate. It is an estimate, not a tested maximum.</p><p class="error" id="session-error" role="alert"></p><div class="sticky-actions"><p>Your template stays unchanged. Only this session's results are saved.</p><div><button type="submit" class="button primary" ${saving ? 'disabled' : ''}>${saving ? 'Saving session…' : 'Finish & save session'} ${icon('check')}</button></div></div></form>`;
+}
+function renderReviews() {
+  if (!data.sessions.length) { view.innerHTML = empty('Your first session is waiting.', 'Finish a workout and your actual sets, reps and effort will appear here.', 'start', 'Start workout'); return; }
+  view.innerHTML = `<div class="view-header"><h2>${data.sessions.length} completed ${data.sessions.length === 1 ? 'session' : 'sessions'}</h2></div><div class="review-list">${data.sessions.map(s => `<button class="review-card" data-go="review/${s.id}"><div><span class="date">${dateLabel(s.day)}</span><h2>${esc(s.name)}</h2><p>${s.exercises.length} exercises · ${s.exercises.reduce((sum, e) => sum + e.sets.length, 0)} completed sets</p></div><span aria-hidden="true">↗</span></button>`).join('')}</div>`;
+}
+function renderReviewDetail(id) {
+  const session = data.sessions.find(s => s.id === id);
+  if (!session) { view.innerHTML = empty('Session not found.', 'Refresh your journal to load the latest saved sessions.', 'review', 'Back to history'); return; }
+  $('#page-title').textContent = session.name;
+  $('#page-subtitle').textContent = `${dateLabel(session.day)} · Completed and saved`;
+  view.innerHTML = `<button class="back-button" data-go="review">← All sessions</button>${session.exercises.map((e, i) => `<section class="exercise-section"><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${i+1}</span><div><h2>${esc(e.name)}</h2><p>${e.sets.length} COMPLETED SETS</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong>${estimateMarkup(e.estimated1rm)}</strong></div></div><table class="review-set-table"><thead><tr><th>SET</th><th>WEIGHT</th><th>REPS</th><th>RPE</th></tr></thead><tbody>${e.sets.map((s, j) => `<tr><td>${j+1}</td><td>${format(s.weight)} kg</td><td>${s.reps}</td><td>${s.rpe === null ? '—' : format(s.rpe)}</td></tr>`).join('')}</tbody></table></article></section>`).join('')}<p class="session-note">These are the actual results saved for this session. Your repeatable workout template has not changed.</p>`;
+}
+
+view.addEventListener('input', event => {
+  const input = event.target;
+  if (input.id === 'template-name') builder.name = input.value;
+  if (input.dataset.builder) {
+    const [i, field] = input.dataset.builder.split(':'); builder.exercises[i][field] = input.value;
+  }
+  if (input.dataset.set && active) {
+    const [i, j, field] = input.dataset.set.split(':'); active.exercises[i].sets[j][field] = input.value;
+    $(`#estimate-${i}`).innerHTML = estimateMarkup(bestEstimate(active.exercises[i].sets));
+  }
+});
+view.addEventListener('click', async event => {
+  const button = event.target.closest('button'); if (!button || saving) return;
+  if (button.dataset.go) { event.preventDefault(); navigate(button.dataset.go); return; }
+  if (button.dataset.remove !== undefined) { builder.exercises.splice(Number(button.dataset.remove), 1); renderBuilder(); return; }
+  if (button.dataset.action === 'add-exercise') {
+    const exercise = data.exercises.find(e => e.id === $('#exercise-choice').value);
+    if (!exercise) { $('#builder-error').textContent = 'Choose an exercise before adding it.'; return; }
+    if (builder.exercises.length >= 20) { $('#builder-error').textContent = 'A workout can contain up to 20 exercises.'; return; }
+    builder.exercises.push({ ...exercise, sets: 3, targetReps: 8, targetWeight: '' }); renderBuilder(); return;
+  }
+  if (button.dataset.action === 'discard-session') { navigate('start'); return; }
+  if (button.dataset.start) {
+    if (active && !confirm('Discard your unfinished session and start a new one?')) return;
+    button.disabled = true;
+    try {
+      data = await api('state');
+      const template = data.templates.find(t => t.id === button.dataset.start);
+      if (!template) throw new Error('That template is no longer available. Refresh your workouts.');
+      active = { clientId: crypto.randomUUID(), templateId: template.id, name: template.name, day: localDate(), exercises: template.exercises.map(e => ({ ...e, sets: Array.from({ length: e.sets }, () => ({ weight: '', reps: '', rpe: '' })) })) };
+      history.pushState(null, '', '#session'); render();
+    } catch (problem) { handleError(problem); button.disabled = false; }
+  }
+});
+
+view.addEventListener('submit', async event => {
+  event.preventDefault(); if (saving) return;
+  const form = event.target;
+  if (form.id === 'builder-form') {
+    const feedback = $('#builder-error'); feedback.textContent = '';
+    if (!builder.name.trim()) { feedback.textContent = 'Give your workout a name.'; $('#template-name').focus(); return; }
+    if (!builder.exercises.length) { feedback.textContent = 'Add at least one exercise.'; return; }
+    if (!form.reportValidity()) return;
+    saving = true; form.querySelector('[type="submit"]').disabled = true; status('Saving workout…');
+    try {
+      const saved = await api('templates', builder);
+      data.templates.unshift(saved); builder = { name: '', exercises: [] };
+      saving = false; history.pushState(null, '', '#start'); render(); status('Saved to your journal'); toast('Workout saved. You can start it now, or return to it on another device.');
+    } catch (problem) { feedback.textContent = problem.message; handleError(problem); }
+    finally { saving = false; const current = $('#builder-form [type="submit"]'); if (current) current.disabled = false; }
+  }
+  if (form.id === 'session-form') {
+    const feedback = $('#session-error'); feedback.textContent = '';
+    try { validateSets(active.exercises); }
+    catch (problem) { feedback.textContent = problem.message; feedback.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    saving = true; form.querySelector('[type="submit"]').disabled = true; status('Saving session…');
+    try {
+      const saved = await api('sessions', active);
+      data.sessions = [saved, ...data.sessions.filter(s => s.id !== saved.id)];
+      active = null; saving = false; history.pushState(null, '', `#review/${saved.id}`); render(); status('Saved to your journal'); toast('Session saved. Your results are ready for your next workout.');
+    } catch (problem) { feedback.textContent = problem.message; handleError(problem); }
+    finally { saving = false; const current = $('#session-form [type="submit"]'); if (current) current.disabled = false; }
+  }
+});
+
+async function boot() {
+  $('#login-submit').disabled = true;
+  try {
+    const session = await api('session'); csrf = session.csrf;
+    if (session.authenticated) { data = await api('state'); showApp(); }
+    else showLogin();
+  } catch (problem) { showLogin(problem.message); }
+  finally { $('#login-submit').disabled = false; }
+}
+boot();

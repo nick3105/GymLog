@@ -1,0 +1,11 @@
+[
+  {"id":"bench-press","name":"Bench press","group":"Chest"},
+  {"id":"squat","name":"Squat","group":"Legs"},
+  {"id":"deadlift","name":"Deadlift","group":"Posterior chain"},
+  {"id":"overhead-press","name":"Overhead press","group":"Shoulders"},
+  {"id":"barbell-row","name":"Barbell row","group":"Back"},
+  {"id":"lat-pulldown","name":"Lat pulldown","group":"Back"},
+  {"id":"leg-press","name":"Leg press","group":"Legs"},
+  {"id":"dumbbell-curl","name":"Dumbbell curl","group":"Arms"},
+  {"id":"triceps-pushdown","name":"Triceps pushdown","group":"Arms"}
+]
