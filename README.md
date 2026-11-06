@@ -1,10 +1,16 @@
 # GymLog
 
-**[Open GymLog in your browser](https://nick3105.github.io/GymLog/)** — no downloads or installation.
+**[Open your GymLog training journal](https://nickkkk3105.pythonanywhere.com/)** — no downloads. Sign in with your GymLog password on any device.
 
-The website works on phones and computers. Entries stay in the current page session and reset on refresh. For web source files and collaboration notes, see [WEB_README.md](WEB_README.md).
+The app has one personal account, saved workout templates and a permanent session history. Create a workout, start it, record actual weight/reps and optional RPE for every set, then finish and save. Each exercise shows the last recorded session and a live Estimated 1RM.
 
-The original Python desktop starter is also included below.
+The new Python/Flask app is in **[cloud/](cloud/README.md)**. Its private SQLite database is on PythonAnywhere, not in this public repository. The old [GitHub Pages address](https://nick3105.github.io/GymLog/) redirects to the hosted journal.
+
+**Hosting:** the free PythonAnywhere web app currently needs renewal in the Web tab every month. The first expiry is 6 December 2026. See [deployment notes](cloud/README.md).
+
+**Developers:** exercise names live in [cloud/exercises.json](cloud/exercises.json). Keep exercise IDs stable. Read the cloud README for setup, tests, backup and the four-person collaboration split.
+
+The original desktop starter remains below; it runs separately and does not sync to the hosted journal.
 
 ---
 

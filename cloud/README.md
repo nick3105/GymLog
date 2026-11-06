@@ -1,6 +1,6 @@
 # GymLog — single-user training journal
 
-This is the new **server-backed version**. It has one owner, reusable workout templates and actual results saved in SQLite. Open the hosted URL and sign in with the same password on a computer or phone. The GitHub Pages demo at the repository root remains a separate, session-only demo until a Python host is configured.
+This is the new **server-backed version**. It has one owner, reusable workout templates and actual results saved in SQLite. Open the hosted URL and sign in with the same password on a computer or phone. The live journal is at https://nickkkk3105.pythonanywhere.com/. The old GitHub Pages address redirects there. The first free-host renewal is due by 6 December 2026.
 
 ## Included flows
 
@@ -94,7 +94,7 @@ from wsgi import application
 ```
 
 6. Leave static mappings empty initially; Flask serves `/assets/`. Never map the project folder or `instance/` as static content. Enable **Force HTTPS**, then **Reload**. Open `https://YOUR_USERNAME.pythonanywhere.com/` and sign in.
-7. Create a test template on one device, reload, then sign in on another device. Finish a session and verify that the other device can retrieve it using Refresh. Only after this check should the old GitHub Pages link redirect to the new hosted URL.
+7. Create a test template on one device, reload, then sign in on another device. Finish a session and verify that the other device can retrieve it using Refresh. The current GitHub Pages link already redirects to the hosted journal; update it if you move hosts.
 
 SQLite needs a persistent filesystem. Do not deploy this unchanged onto an ephemeral container disk. PythonAnywhere provides filesystem-backed SQLite; other platforms may require an explicitly persistent volume. Only one deployed app instance should use this database.
 
