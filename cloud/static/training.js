@@ -140,6 +140,7 @@ function render() {
   const title = titles[section] || titles.home;
   $('#page-title').textContent = title[0]; $('#page-subtitle').textContent = title[1];
   $('#refresh-data').disabled = Boolean(active);
+  if (page === 'session') status('Active session · not yet saved');
   if (page.startsWith('review/')) renderReviewDetail(page.slice(7));
   else if (page === 'create') renderBuilder();
   else if (page === 'start') renderTemplates();
@@ -192,7 +193,7 @@ function renderReviewDetail(id) {
   if (!session) { view.innerHTML = empty('Session not found.', 'Refresh your journal to load the latest saved sessions.', 'review', 'Back to history'); return; }
   $('#page-title').textContent = session.name;
   $('#page-subtitle').textContent = `${dateLabel(session.day)} · Completed and saved`;
-  view.innerHTML = `<button class="back-button" data-go="review">← All sessions</button>${session.exercises.map((e, i) => `<section class="exercise-section"><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${i+1}</span><div><h2>${esc(e.name)}</h2><p>${e.sets.length} COMPLETED SETS</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong>${estimateMarkup(e.estimated1rm)}</strong></div></div><table class="review-set-table"><thead><tr><th>SET</th><th>WEIGHT</th><th>REPS</th><th>RPE</th></tr></thead><tbody>${e.sets.map((s, j) => `<tr><td>${j+1}</td><td>${format(s.weight)} kg</td><td>${s.reps}</td><td>${s.rpe === null ? '—' : format(s.rpe)}</td></tr>`).join('')}</tbody></table></article></section>`).join('')}<p class="session-note">These are the actual results saved for this session. Your repeatable workout template has not changed.</p>`;
+  view.innerHTML = `<button class="back-button" data-go="review">← All sessions</button>${session.exercises.map((e, i) => `<section class="exercise-section"><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${i+1}</span><div><h2>${esc(e.name)}</h2><p>${e.sets.length} COMPLETED ${e.sets.length === 1 ? 'SET' : 'SETS'}</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong>${estimateMarkup(e.estimated1rm)}</strong></div></div><table class="review-set-table"><thead><tr><th>SET</th><th>WEIGHT</th><th>REPS</th><th>RPE</th></tr></thead><tbody>${e.sets.map((s, j) => `<tr><td>${j+1}</td><td>${format(s.weight)} kg</td><td>${s.reps}</td><td>${s.rpe === null ? '—' : format(s.rpe)}</td></tr>`).join('')}</tbody></table></article></section>`).join('')}<p class="session-note">These are the actual results saved for this session. Your repeatable workout template has not changed.</p>`;
 }
 
 view.addEventListener('input', event => {
