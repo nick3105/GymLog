@@ -20,19 +20,21 @@ def number(value, label, minimum, maximum, integer=False, optional=False):
     return int(result) if integer else result
 
 
-def estimated_1rm(weight, reps):
+def estimated_1rm(weight, reps, rpe=None):
     """Epley estimate; one completed rep is the actual lifted load.
 
     Display estimates only for 1–10 reps with positive external load.
-    RPE is recorded separately; no RPE adjustment is assumed.
+    Optional RPE adds estimated reps in reserve, capped at ten effective reps.
     """
     if not weight or not 1 <= reps <= 10:
         return None
-    return round(weight if reps == 1 else weight * (1 + reps / 30), 1)
+    effective = min(10, reps + (10 - rpe if rpe is not None else 0))
+    value = weight if effective == 1 else weight * (1 + effective / 30)
+    return math.floor(value * 10 + 0.5) / 10
 
 
 def best_1rm(sets):
-    estimates = [estimated_1rm(s["weight"], s["reps"]) for s in sets]
+    estimates = [estimated_1rm(s["weight"], s["reps"], s.get("rpe")) for s in sets]
     return max((value for value in estimates if value is not None), default=None)
 
 

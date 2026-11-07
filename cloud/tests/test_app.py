@@ -56,7 +56,7 @@ class JournalTests(unittest.TestCase):
         payload = self.session(template)
         saved = self.post("/api/sessions", payload)
         self.assertEqual(saved.status_code, 201, saved.json)
-        self.assertEqual(saved.json["exercises"][0]["estimated1rm"], 79.2)
+        self.assertEqual(saved.json["exercises"][0]["estimated1rm"], 82.3)
         self.assertIsNone(saved.json["exercises"][0]["sets"][0]["rpe"])
         self.assertIsNone(saved.json["exercises"][1]["sets"][0]["rpe"])
         phone = self.app.test_client()
@@ -116,7 +116,21 @@ class JournalTests(unittest.TestCase):
         token = restarted.get("/api/session").json["csrf"]
         self.assertEqual(restarted.post("/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}).status_code, 429)
 
+    def test_weight_upsert_and_access(self):
+        payload = {"day": "2026-11-06", "kg": 80.2}
+        self.assertEqual(self.post("/api/weights", payload).status_code, 200)
+        payload["kg"] = 80.5
+        self.assertEqual(self.post("/api/weights", payload).status_code, 200)
+        self.assertEqual(self.post("/api/weights", {"day": "invalid", "kg": 80}).status_code, 400)
+        phone = create_app(self.config).test_client()
+        self.assertEqual(phone.get("/api/state").status_code, 401)
+        self.login(phone)
+        self.assertEqual(phone.get("/api/state").json["weights"], [payload])
+
     def test_estimate_rules(self):
+        self.assertEqual(estimated_1rm(80, 5, 8), 98.7)
+        self.assertEqual(estimated_1rm(80, 5, 10), 93.3)
+        self.assertEqual(estimated_1rm(80, 9, 7), 106.7)
         self.assertEqual(estimated_1rm(80, 5), 93.3)
         self.assertEqual(estimated_1rm(100, 1), 100)
         self.assertIsNone(estimated_1rm(80, 11))

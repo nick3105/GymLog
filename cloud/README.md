@@ -2,6 +2,10 @@
 
 This is the new **server-backed version**. It has one owner, reusable workout templates and actual results saved in SQLite. Open the hosted URL and sign in with the same password on a computer or phone. The live journal is at https://nickkkk3105.pythonanywhere.com/. The old GitHub Pages address redirects there. The first free-host renewal is due by 6 December 2026.
 
+## Profile selection and progress
+
+The landing page lists Martin, Anna Lisa, Gaia and Nick. Nick is the only active profile for this release; the other profiles have no access to his journal. The Weight Tracker stores one measurement per date; saving an existing date replaces its weight. Select an exercise name in the builder, active session or review to see its best and latest estimated 1RM and history. Closing the dashboard restores the same screen and inputs.
+
 ## Included flows
 
 - **Home:** Start workout / Create workout / Review workouts.
@@ -25,7 +29,9 @@ Use unique, stable IDs and English names. Reload the host after editing. Saved t
 
 ## Estimated 1RM
 
-For sets of 2–10 reps with positive external load, the Epley estimate is **weight × (1 + reps / 30)**, rounded to 0.1 kg. A single rep is reported as its actual load. The highest valid set estimate appears at the upper right of the exercise block. Zero external load or more than 10 reps does not produce an estimate. RPE is saved independently and does not adjust the calculation. The 1–10 rep display cutoff is an app choice to avoid presenting long sets as precise estimates.
+For eligible sets of 1–10 actual reps and positive load, GymLog uses Epley: **weight × (1 + effective reps / 30)**. Without RPE, effective reps are the actual reps. With RPE, GymLog adds estimated reps in reserve (10 − RPE) and caps effective reps at 10. One effective rep is reported as the actual load. The chart and review recompute historical estimates from the saved sets using the same rule. This combination is an app estimate, not a validated maximum test.
+
+RPE scale reference: [Zourdos et al.](https://pubmed.ncbi.nlm.nih.gov/26049792/).
 
 Formula reference: [US Marine Corps, Introduction to Assessments](https://www.tbs.marines.mil/Portals/230/TBS%20Redesign/MAFCE/FFI/3.%20Instructional%20Material/CourseStudentOutlines/FFIC1030_Introduction%20to%20Assessments_Student%20Outline.pdf). This is an estimate from completed sets, not a tested maximum.
 

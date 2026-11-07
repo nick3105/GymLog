@@ -2,14 +2,17 @@
 export function localDate(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
-export function estimate(weight, reps) {
+export function estimate(weight, reps, rpe = null) {
   if (weight === '' || reps === '') return null;
   weight = Number(weight); reps = Number(reps);
   if (!Number.isFinite(weight) || weight <= 0 || weight > 1000 || !Number.isInteger(reps) || reps < 1 || reps > 10) return null;
-  return Math.round((reps === 1 ? weight : weight * (1 + reps/30)) * 10) / 10;
+  const effort = rpe === null || rpe === "" ? 10 : Number(rpe);
+  if (!Number.isFinite(effort) || effort < 1 || effort > 10 || effort * 2 % 1) return null;
+  const effective = Math.min(10, reps + 10 - effort);
+  return Math.round((effective === 1 ? weight : weight * (1 + effective/30)) * 10) / 10;
 }
 export function bestEstimate(sets) {
-  const values = sets.map(s => estimate(s.weight, s.reps)).filter(value => value !== null);
+  const values = sets.map(s => estimate(s.weight, s.reps, s.rpe)).filter(value => value !== null);
   return values.length ? Math.max(...values) : null;
 }
 export function lastPerformance(sessions, exerciseId) {

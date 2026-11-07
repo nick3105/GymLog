@@ -28,6 +28,7 @@ def initialize(path):
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY, client_id TEXT UNIQUE NOT NULL,
                 document TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS body_weights (day TEXT PRIMARY KEY, kg REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS login_attempts (
                 address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL);
         ''')
@@ -85,3 +86,14 @@ def record_login(path, address, success):
         else:
             db.execute('''INSERT INTO login_attempts VALUES (?, 1, ?)
                 ON CONFLICT(address) DO UPDATE SET count=count+1''', (address, time.time()))
+
+
+def weights(path):
+    with connect(path) as db:
+        return [dict(row) for row in db.execute("SELECT day, kg FROM body_weights ORDER BY day")]
+
+
+def save_weight(path, day, kg):
+    with connect(path) as db:
+        db.execute("INSERT INTO body_weights VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET kg=excluded.kg", (day, kg))
+    return {"day": day, "kg": kg}

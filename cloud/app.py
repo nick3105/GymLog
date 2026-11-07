@@ -1,5 +1,5 @@
 """Single-owner GymLog web app. Run via run.py or import with WSGI."""
-from datetime import timedelta
+from datetime import date, timedelta
 from functools import wraps
 import hashlib
 import hmac
@@ -13,7 +13,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash
 
 import storage
-from models import validate_session, validate_template
+from models import best_1rm, number, validate_session, validate_template
 
 ROOT = Path(__file__).resolve().parent
 
@@ -121,7 +121,7 @@ def create_app(config=None):
     @app.get("/api/state")
     @authenticated
     def state():
-        return jsonify(exercises=catalogue, templates=storage.documents(app.config["DATABASE"], "templates"), sessions=storage.documents(app.config["DATABASE"], "sessions"))
+        return jsonify(exercises=catalogue, templates=storage.documents(app.config["DATABASE"], "templates"), sessions=storage.documents(app.config["DATABASE"], "sessions"), weights=storage.weights(app.config["DATABASE"]))
 
     @app.post("/api/templates")
     @authenticated
@@ -145,9 +145,24 @@ def create_app(config=None):
         existing = storage.existing_session(app.config["DATABASE"], document["clientId"])
         if existing:
             comparable = {key: existing[key] for key in document}
+            for exercise in comparable["exercises"]:
+                exercise["estimated1rm"] = best_1rm(exercise["sets"])
             if comparable != document:
                 return jsonify(error="This session was already saved with different values. Reload your history."), 409
             return jsonify(existing)
         return jsonify(storage.add_session(app.config["DATABASE"], document)), 201
+
+    @app.post("/api/weights")
+    @authenticated
+    def record_weight():
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("A weight entry is required.")
+        try:
+            day = date.fromisoformat(body.get("day", "")).isoformat()
+        except (ValueError, TypeError):
+            raise ValueError("Choose a valid date.") from None
+        kg = number(body.get("kg"), "Body weight", 1, 700)
+        return jsonify(storage.save_weight(app.config["DATABASE"], day, kg))
 
     return app

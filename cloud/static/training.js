@@ -83,7 +83,7 @@ async function signOut() {
     await api('logout', {});
     active = null; builder = { name: '', exercises: [] };
     data = { exercises: [], templates: [], sessions: [] };
-    csrf = ''; showLogin();
+    csrf = ''; showProfiles();
     history.replaceState(null, '', '#home');
   } catch (problem) { handleError(problem); }
 }
@@ -129,14 +129,14 @@ function render() {
   let page = route();
   if (page === 'session' && !active) { page = 'start'; history.replaceState(null, '', '#start'); }
   const section = page.startsWith('review/') ? 'review' : page;
-  const names = { home: 'Home', start: 'Start workout', create: 'Create workout', session: 'Active session', review: 'Review workouts' };
+  const names = { home: 'Home', start: 'Start workout', create: 'Create workout', session: 'Active session', review: 'Review workouts', weight: 'Weight Tracker' };
   $('#breadcrumb').textContent = names[section] || 'Home';
   document.querySelectorAll('[data-nav]').forEach(link => {
     const current = link.dataset.nav === section || (section === 'session' && link.dataset.nav === 'start');
     link.classList.toggle('active', current);
     if (current) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
   });
-  const titles = { home: ['Make your next session count.', 'Your workouts and progress, together in one place.'], start: ['Pick your workout.', 'Choose a saved template and make it your own today.'], create: ['Build your next workout.', 'Choose your exercises. Set your targets. Repeat whenever you like.'], session: [active?.name || 'Your session', 'Enter your actual results. RPE is optional. All weights are in kilograms.'], review: ['Look back. Move forward.', 'Your completed sessions, saved in your journal.'] };
+  const titles = { weight: ['Weight Tracker', 'Record your body weight and see how it changes over time.'], home: ['Make your next session count.', 'Your workouts and progress, together in one place.'], start: ['Pick your workout.', 'Choose a saved template and make it your own today.'], create: ['Build your next workout.', 'Choose your exercises. Set your targets. Repeat whenever you like.'], session: [active?.name || 'Your session', 'Enter your actual results. RPE is optional. All weights are in kilograms.'], review: ['Look back. Move forward.', 'Your completed sessions, saved in your journal.'] };
   const title = titles[section] || titles.home;
   $('#page-title').textContent = title[0]; $('#page-subtitle').textContent = title[1];
   $('#refresh-data').disabled = Boolean(active);
@@ -146,6 +146,7 @@ function render() {
   else if (page === 'start') renderTemplates();
   else if (page === 'session') renderSession();
   else if (page === 'review') renderReviews();
+  else if (page === 'weight') renderWeights();
   else renderHome();
 }
 
@@ -154,7 +155,8 @@ function renderHome() {
   <div class="choice-grid">${[
     ['01', 'dumbbell', 'Start workout', 'Choose a saved session and log your sets.', 'start'],
     ['02', 'plus', 'Create workout', 'Build a repeatable workout with your own targets.', 'create'],
-    ['03', 'list', 'Review workouts', 'Revisit the weights, reps and effort you recorded.', 'review']
+    ['03', 'list', 'Review workouts', 'Revisit the weights, reps and effort you recorded.', 'review'],
+    ['04', 'target', 'Weight Tracker', 'Log your body weight and follow your trend.', 'weight']
   ].map(([number, glyph, title, text, destination], index) => `<button class="choice ${index === 0 ? 'highlight' : ''}" data-go="${destination}"><span class="choice-number">${number} / YOUR TRAINING</span>${icon(glyph)}<h2>${title}</h2><p>${text}</p><span class="choice-arrow" aria-hidden="true">↗</span></button>`).join('')}</div>
   <div class="summary-strip"><div><strong>${data.templates.length}</strong><span>Saved workouts</span></div><div><strong>${data.sessions.length}</strong><span>Completed sessions</span></div><div><strong>${data.sessions.length ? esc(dateLabel(data.sessions[0].day)) : '—'}</strong><span>Last session</span></div></div>
   ${active ? '<p class="session-note">You have an unfinished session. <button class="text-button" data-go="session">Return to active session →</button></p>' : ''}`;
@@ -169,7 +171,7 @@ function renderTemplates() {
 function renderBuilder() {
   const used = new Set(builder.exercises.map(e => e.id));
   view.innerHTML = `<form id="builder-form" novalidate><div class="form-panel"><label for="template-name">Workout name</label><input class="workout-name-input" id="template-name" maxlength="60" placeholder="e.g. Upper body A" value="${esc(builder.name)}" required><div class="exercise-picker"><div><label for="exercise-choice">Add an exercise</label><select id="exercise-choice"><option value="">Choose from your exercise catalogue</option>${data.exercises.filter(e => !used.has(e.id)).map(e => `<option value="${esc(e.id)}">${esc(e.name)} · ${esc(e.group)}</option>`).join('')}</select></div><button type="button" class="button secondary" data-action="add-exercise">+ Add</button></div><p class="saving-note">Set targets now; record your actual results during the session.</p></div>
-  <div class="builder-list">${builder.exercises.map((e, i) => `<section class="builder-card"><div class="exercise-title"><div><h2>${i+1}. ${esc(e.name)}</h2><p>${esc(e.group)}</p></div><button type="button" class="remove-exercise" data-remove="${i}" aria-label="Remove ${esc(e.name)}">Remove</button></div><div class="builder-fields"><div><label for="sets-${i}">Sets</label><input id="sets-${i}" type="number" inputmode="numeric" min="1" max="20" step="1" required value="${esc(e.sets)}" data-builder="${i}:sets"></div><div><label for="reps-${i}">Target reps</label><input id="reps-${i}" type="number" inputmode="numeric" min="1" max="100" step="1" required value="${esc(e.targetReps)}" data-builder="${i}:targetReps"></div><div><label for="target-${i}">Target kg <span>(optional)</span></label><input id="target-${i}" type="number" inputmode="decimal" min="0" max="1000" step="any" placeholder="Optional" value="${esc(e.targetWeight)}" data-builder="${i}:targetWeight"></div></div></section>`).join('')}</div>
+  <div class="builder-list">${builder.exercises.map((e, i) => `<section class="builder-card"><div class="exercise-title"><div><h2>${exerciseLink(e, i+1 + ". ")}</h2><p>${esc(e.group)}</p></div><button type="button" class="remove-exercise" data-remove="${i}" aria-label="Remove ${esc(e.name)}">Remove</button></div><div class="builder-fields"><div><label for="sets-${i}">Sets</label><input id="sets-${i}" type="number" inputmode="numeric" min="1" max="20" step="1" required value="${esc(e.sets)}" data-builder="${i}:sets"></div><div><label for="reps-${i}">Target reps</label><input id="reps-${i}" type="number" inputmode="numeric" min="1" max="100" step="1" required value="${esc(e.targetReps)}" data-builder="${i}:targetReps"></div><div><label for="target-${i}">Target kg <span>(optional)</span></label><input id="target-${i}" type="number" inputmode="decimal" min="0" max="1000" step="any" placeholder="Optional" value="${esc(e.targetWeight)}" data-builder="${i}:targetWeight"></div></div></section>`).join('')}</div>
   ${builder.exercises.length ? '' : '<p class="builder-empty">Add at least one exercise to build your workout.</p>'}<p class="error" id="builder-error" role="alert"></p><div class="sticky-actions"><p>Saved templates can be used again on any device.</p><div><button type="button" class="button secondary" data-go="home">Cancel</button><button type="submit" class="button primary" ${saving ? 'disabled' : ''}>${saving ? 'Saving…' : 'Save workout'} ${icon('check')}</button></div></div></form>`;
 }
 
@@ -182,7 +184,7 @@ function estimateMarkup(value) {
   return value === null ? '—<span>kg</span>' : `${format(value)}<span>kg</span>`;
 }
 function renderSession() {
-  view.innerHTML = `<div class="session-header"><div><h2>${active.exercises.length} exercises · ${active.exercises.reduce((sum, e) => sum + e.sets.length, 0)} sets</h2><p>${dateLabel(active.day)} · Unsaved until you finish</p></div><button class="danger-button" data-action="discard-session">Discard session</button></div><form id="session-form" novalidate>${active.exercises.map((exercise, i) => `<section class="exercise-section"><p class="previous-performance">${previousText(exercise.id)}</p><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${String(i+1).padStart(2,'0')}</span><div><h2>${esc(exercise.name)}</h2><p>ACTUAL RESULTS</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong id="estimate-${i}">${estimateMarkup(bestEstimate(exercise.sets))}</strong></div></div><div class="sets-head" aria-hidden="true"><span>SET</span><span>WEIGHT <small>KG</small></span><span>REPS</span><span>RPE <small>OPTIONAL</small></span></div>${exercise.sets.map((set, j) => `<div class="set-input-row"><span class="set-index">${j+1}</span><input aria-label="${esc(exercise.name)} set ${j+1} weight in kilograms" type="number" inputmode="decimal" min="0" max="1000" step="any" required placeholder="${exercise.targetWeight !== null ? exercise.targetWeight : 'kg'}" value="${esc(set.weight)}" data-set="${i}:${j}:weight"><input aria-label="${esc(exercise.name)} set ${j+1} reps" type="number" inputmode="numeric" min="1" max="100" step="1" required placeholder="${exercise.targetReps}" value="${esc(set.reps)}" data-set="${i}:${j}:reps"><input aria-label="${esc(exercise.name)} set ${j+1} RPE optional" type="number" inputmode="decimal" min="1" max="10" step="0.5" placeholder="—" value="${esc(set.rpe)}" data-set="${i}:${j}:rpe"></div>`).join('')}<p class="target-line">Target: ${exercise.sets.length} × ${exercise.targetReps} reps${exercise.targetWeight !== null ? ' at ' + format(exercise.targetWeight) + ' kg' : ''} · Enter 0 kg for bodyweight-only sets.</p></article></section>`).join('')}<p class="session-note">Estimated 1RM uses your best valid set: weight × (1 + reps ÷ 30), with a single rep reported as the lifted weight. Shown for 1–10 reps with positive external load. RPE does not change this estimate. It is an estimate, not a tested maximum.</p><p class="error" id="session-error" role="alert"></p><div class="sticky-actions"><p>Your template stays unchanged. Only this session's results are saved.</p><div><button type="submit" class="button primary" ${saving ? 'disabled' : ''}>${saving ? 'Saving session…' : 'Finish & save session'} ${icon('check')}</button></div></div></form>`;
+  view.innerHTML = `<div class="session-header"><div><h2>${active.exercises.length} exercises · ${active.exercises.reduce((sum, e) => sum + e.sets.length, 0)} sets</h2><p>${dateLabel(active.day)} · Unsaved until you finish</p></div><button class="danger-button" data-action="discard-session">Discard session</button></div><form id="session-form" novalidate>${active.exercises.map((exercise, i) => `<section class="exercise-section"><p class="previous-performance">${previousText(exercise.id)}</p><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${String(i+1).padStart(2,'0')}</span><div><h2>${exerciseLink(exercise)}</h2><p>ACTUAL RESULTS</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong id="estimate-${i}">${estimateMarkup(bestEstimate(exercise.sets))}</strong></div></div><div class="sets-head" aria-hidden="true"><span>SET</span><span>WEIGHT <small>KG</small></span><span>REPS</span><span>RPE <small>OPTIONAL</small></span></div>${exercise.sets.map((set, j) => `<div class="set-input-row"><span class="set-index">${j+1}</span><input aria-label="${esc(exercise.name)} set ${j+1} weight in kilograms" type="number" inputmode="decimal" min="0" max="1000" step="any" required placeholder="${exercise.targetWeight !== null ? exercise.targetWeight : 'kg'}" value="${esc(set.weight)}" data-set="${i}:${j}:weight"><input aria-label="${esc(exercise.name)} set ${j+1} reps" type="number" inputmode="numeric" min="1" max="100" step="1" required placeholder="${exercise.targetReps}" value="${esc(set.reps)}" data-set="${i}:${j}:reps"><input aria-label="${esc(exercise.name)} set ${j+1} RPE optional" type="number" inputmode="decimal" min="1" max="10" step="0.5" placeholder="—" value="${esc(set.rpe)}" data-set="${i}:${j}:rpe"></div>`).join('')}<p class="target-line">Target: ${exercise.sets.length} × ${exercise.targetReps} reps${exercise.targetWeight !== null ? ' at ' + format(exercise.targetWeight) + ' kg' : ''} · Enter 0 kg for bodyweight-only sets.</p></article></section>`).join('')}<p class="session-note">Estimated 1RM uses the best eligible set (1–10 reps, positive weight). With RPE, estimated reps in reserve (10 − RPE) are added, capped at 10 effective reps. Without RPE, only actual reps count. This is an estimate, not a tested maximum.</p><p class="error" id="session-error" role="alert"></p><div class="sticky-actions"><p>Your template stays unchanged. Only this session's results are saved.</p><div><button type="submit" class="button primary" ${saving ? 'disabled' : ''}>${saving ? 'Saving session…' : 'Finish & save session'} ${icon('check')}</button></div></div></form>`;
 }
 function renderReviews() {
   if (!data.sessions.length) { view.innerHTML = empty('Your first session is waiting.', 'Finish a workout and your actual sets, reps and effort will appear here.', 'start', 'Start workout'); return; }
@@ -193,7 +195,7 @@ function renderReviewDetail(id) {
   if (!session) { view.innerHTML = empty('Session not found.', 'Refresh your journal to load the latest saved sessions.', 'review', 'Back to history'); return; }
   $('#page-title').textContent = session.name;
   $('#page-subtitle').textContent = `${dateLabel(session.day)} · Completed and saved`;
-  view.innerHTML = `<button class="back-button" data-go="review">← All sessions</button>${session.exercises.map((e, i) => `<section class="exercise-section"><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${i+1}</span><div><h2>${esc(e.name)}</h2><p>${e.sets.length} COMPLETED ${e.sets.length === 1 ? 'SET' : 'SETS'}</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong>${estimateMarkup(e.estimated1rm)}</strong></div></div><table class="review-set-table"><thead><tr><th>SET</th><th>WEIGHT</th><th>REPS</th><th>RPE</th></tr></thead><tbody>${e.sets.map((s, j) => `<tr><td>${j+1}</td><td>${format(s.weight)} kg</td><td>${s.reps}</td><td>${s.rpe === null ? '—' : format(s.rpe)}</td></tr>`).join('')}</tbody></table></article></section>`).join('')}<p class="session-note">These are the actual results saved for this session. Your repeatable workout template has not changed.</p>`;
+  view.innerHTML = `<button class="back-button" data-go="review">← All sessions</button>${session.exercises.map((e, i) => `<section class="exercise-section"><article class="exercise-card"><div class="exercise-title"><div class="exercise-tag"><span class="exercise-order">${i+1}</span><div><h2>${exerciseLink(e)}</h2><p>${e.sets.length} COMPLETED ${e.sets.length === 1 ? 'SET' : 'SETS'}</p></div></div><div class="estimate"><small>ESTIMATED 1RM</small><strong>${estimateMarkup(bestEstimate(e.sets))}</strong></div></div><table class="review-set-table"><thead><tr><th>SET</th><th>WEIGHT</th><th>REPS</th><th>RPE</th></tr></thead><tbody>${e.sets.map((s, j) => `<tr><td>${j+1}</td><td>${format(s.weight)} kg</td><td>${s.reps}</td><td>${s.rpe === null ? '—' : format(s.rpe)}</td></tr>`).join('')}</tbody></table></article></section>`).join('')}<p class="session-note">These are the actual results saved for this session. Your repeatable workout template has not changed.</p>`;
 }
 
 view.addEventListener('input', event => {
@@ -209,6 +211,7 @@ view.addEventListener('input', event => {
 });
 view.addEventListener('click', async event => {
   const button = event.target.closest('button'); if (!button || saving) return;
+  if (button.dataset.exercise) { showExercise(button.dataset.exercise, button.dataset.label); return; }
   if (button.dataset.go) { event.preventDefault(); navigate(button.dataset.go); return; }
   if (button.dataset.remove !== undefined) { builder.exercises.splice(Number(button.dataset.remove), 1); renderBuilder(); return; }
   if (button.dataset.action === 'add-exercise') {
@@ -234,6 +237,19 @@ view.addEventListener('click', async event => {
 view.addEventListener('submit', async event => {
   event.preventDefault(); if (saving) return;
   const form = event.target;
+  if (form.id === 'weight-form') {
+    const feedback = $('#weight-error');
+    const button = form.querySelector('button');
+    if (!form.reportValidity()) return;
+    saving = true; button.disabled = true;
+    try {
+      const saved = await api('weights', {day: $('#weight-day').value, kg: $('#weight-kg').value});
+      data.weights = [...(data.weights || []).filter(entry => entry.day !== saved.day), saved].sort((a,b) => a.day.localeCompare(b.day));
+      renderWeights(); toast('Body weight saved.');
+    } catch (problem) { feedback.textContent = problem.message; }
+    finally { saving = false; button.disabled = false; }
+    return;
+  }
   if (form.id === 'builder-form') {
     const feedback = $('#builder-error'); feedback.textContent = '';
     if (!builder.name.trim()) { feedback.textContent = 'Give your workout a name.'; $('#template-name').focus(); return; }
@@ -270,4 +286,50 @@ async function boot() {
   } catch (problem) { showLogin(problem.message); }
   finally { $('#login-submit').disabled = false; }
 }
-boot();
+function showProfiles() {
+  $('#profiles').hidden = false;
+  $('#login-screen').hidden = true;
+  $('#app-screen').hidden = true;
+}
+$('#choose-nick').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  $('#profiles').hidden = true;
+  try { await boot(); } finally { button.disabled = false; }
+});
+$('#back-profiles').addEventListener('click', showProfiles);
+
+
+function exerciseLink(exercise, prefix = '') {
+  return `<button type="button" class="exercise-link" data-exercise="${esc(exercise.id)}" data-label="${esc(exercise.name)}">${esc(prefix + exercise.name)} <span aria-hidden="true">↗</span></button>`;
+}
+
+function lineChart(points, description) {
+  if (!points.length) return '<p class="chart-empty">No measurements yet.</p>';
+  const values = points.map(p => p.value);
+  const times = points.map(p => Date.parse(p.day));
+  const span = times.at(-1) - times[0];
+  const min = Math.min(...values), max = Math.max(...values);
+  const padding = Math.max((max - min) * .12, .5);
+  const y = value => 155 - (value - min + padding) / (max - min + padding * 2) * 125;
+  const coords = points.map((point, i) => [54 + (span ? (times[i] - times[0]) / span * 510 : 255), y(point.value)]);
+  return `<figure class="trend"><svg viewBox="0 0 600 190" role="img" aria-label="${esc(description)}">${[35,95,155].map(py => `<path d="M54 ${py}H565" class="gridline"/><text x="45" y="${py+4}" text-anchor="end">${format(min-padding+(155-py)/125*(max-min+padding*2))}</text>`).join('')}<polyline class="trend-line" points="${coords.map(c=>c.join(',')).join(' ')}"/>${coords.map(([x,py],i)=>`<circle cx="${x}" cy="${py}" r="4"><title>${esc(dateLabel(points[i].day))}: ${format(values[i])} kg</title></circle>`).join('')}<text x="54" y="179">${esc(dateLabel(points[0].day))}</text>${span ? `<text x="565" y="179" text-anchor="end">${esc(dateLabel(points.at(-1).day))}</text>` : ''}</svg><figcaption>${esc(description)} · kg</figcaption></figure>`;
+}
+
+function showExercise(id, name) {
+  const points = data.sessions.flatMap(session => {
+    const exercise = session.exercises.find(e => e.id === id);
+    const value = exercise ? bestEstimate(exercise.sets) : null;
+    return value === null ? [] : [{day:session.day,value,completedAt:session.completedAt}];
+  }).sort((a,b) => a.day.localeCompare(b.day) || a.completedAt.localeCompare(b.completedAt));
+  const best = points.length ? format(Math.max(...points.map(p=>p.value))) + ' kg' : '—';
+  const recent = points.length ? format(points.at(-1).value) + ' kg' : '—';
+  $('#exercise-dashboard-content').innerHTML = `<p class="eyebrow">EXERCISE PERFORMANCE</p><h2 id="exercise-dashboard-title">${esc(name)}</h2><div class="summary-strip"><div><strong>${best}</strong><span>Best estimated 1RM</span></div><div><strong>${recent}</strong><span>Latest estimated 1RM</span></div></div>${lineChart(points,'Estimated 1RM over time')}<p class="session-note">Based on completed sessions. Estimates use the same RPE rule throughout your history.</p>`;
+  $('#exercise-dashboard').showModal();
+}
+
+function renderWeights() {
+  const entries = data.weights || [];
+  const latest = entries.at(-1);
+  view.innerHTML = `<form class="form-panel weight-form" id="weight-form"><div><label for="weight-day">Date</label><input id="weight-day" type="date" value="${localDate()}" required></div><div><label for="weight-kg">Body weight (kg)</label><input id="weight-kg" type="number" inputmode="decimal" min="1" max="700" step="any" required></div><button class="button primary">Save weight</button><p class="error" id="weight-error" role="alert"></p></form><section class="panel"><h2>Body weight over time</h2><p class="subtitle">${latest ? 'Latest: ' + format(latest.kg) + ' kg · ' + esc(dateLabel(latest.day)) : 'Add your first measurement to see your trend.'}</p>${lineChart(entries.map(e=>({day:e.day,value:e.kg})),'Body weight over time')}<p class="session-note">One entry per date. Saving the same date updates that measurement.</p>${entries.length ? `<details><summary>Measurement history</summary><table><thead><tr><th>Date</th><th>Weight</th></tr></thead><tbody>${[...entries].reverse().map(e=>`<tr><td>${esc(dateLabel(e.day))}</td><td>${format(e.kg)} kg</td></tr>`).join('')}</tbody></table></details>` : ''}</section>`;
+}
