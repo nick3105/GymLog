@@ -116,6 +116,29 @@ class JournalTests(unittest.TestCase):
         token = restarted.get("/api/session").json["csrf"]
         self.assertEqual(restarted.post("/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}).status_code, 429)
 
+    def test_guest_activation_and_isolation(self):
+        template = self.template()
+        self.post("/api/weights", {"day": "2026-11-06", "kg": 80})
+        code = self.post("/api/invite", {"profile": "martin"}).json["code"]
+        guest = self.app.test_client()
+        token = guest.get("/api/session").json["csrf"]
+        payload = {"profile": "martin", "code": code, "password": "guest-test-password"}
+        result = guest.post("/api/activate", json=payload, headers={"X-CSRF-Token": token})
+        self.assertEqual(result.status_code, 200)
+        headers = {"X-CSRF-Token": result.json["csrf"]}
+        state = guest.get("/api/state").json
+        self.assertEqual((state["templates"], state["sessions"], state["weights"]), ([], [], []))
+        self.assertEqual(guest.get("/api/state", headers={"X-GymLog-Profile": "nick"}).status_code, 401)
+        self.assertEqual(guest.post("/api/invite", json={"profile": "gaia"}, headers=headers).status_code, 403)
+        self.assertEqual(guest.post("/api/activate", json=payload, headers=headers).status_code, 403)
+        self.assertEqual(guest.post("/api/weights", json={"day": "2026-11-06", "kg": 70}, headers=headers).status_code, 200)
+        self.assertEqual(self.client.get("/api/state").json["weights"][0]["kg"], 80)
+        self.assertEqual(self.client.get("/api/state").json["templates"][0]["id"], template["id"])
+        other = self.app.test_client()
+        token = other.get("/api/session").json["csrf"]
+        self.assertEqual(other.post("/api/login", json={"profile": "martin", "password": payload["password"]}, headers={"X-CSRF-Token": token}).status_code, 200)
+        self.assertEqual(other.get("/api/state").json["weights"][0]["kg"], 70)
+
     def test_weight_upsert_and_access(self):
         payload = {"day": "2026-11-06", "kg": 80.2}
         self.assertEqual(self.post("/api/weights", payload).status_code, 200)

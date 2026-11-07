@@ -4,7 +4,7 @@ This is the new **server-backed version**. It has one owner, reusable workout te
 
 ## Profile selection and progress
 
-The landing page lists Martin, Anna Lisa, Gaia and Nick. Nick is the only active profile for this release; the other profiles have no access to his journal. The Weight Tracker stores one measurement per date; saving an existing date replaces its weight. Select an exercise name in the builder, active session or review to see its best and latest estimated 1RM and history. Closing the dashboard restores the same screen and inputs.
+The landing page lists Martin, Anna Lisa, Gaia and Nick. Each profile has a separate journal and password. Nick keeps his existing login and data. On Nick’s home page, open Manage invitations and generate a one-time code for a guest. Share it privately; the recipient chooses their profile, opens First time? Use an invitation, and sets their own password. A new code replaces any unused code for that profile. Codes expire in 24 hours. The Weight Tracker stores one measurement per date; saving an existing date replaces its weight. Select an exercise name in the builder, active session or review to see its best and latest estimated 1RM and history. Closing the dashboard restores the same screen and inputs.
 
 ## Included flows
 
