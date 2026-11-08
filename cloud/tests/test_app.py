@@ -139,6 +139,18 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(other.post("/api/login", json={"profile": "martin", "password": payload["password"]}, headers={"X-CSRF-Token": token}).status_code, 200)
         self.assertEqual(other.get("/api/state").json["weights"][0]["kg"], 70)
 
+    def test_per_set_targets_and_optional_rpe(self):
+        targets = [{"reps": 3, "weight": 100, "rpe": 9},
+                   {"reps": 8, "weight": 80, "rpe": None}]
+        body = {"name": "Top and backoff", "exercises": [{"id": "bench-press", "targets": targets}]}
+        result = self.post("/api/templates", body)
+        self.assertEqual(result.status_code, 201)
+        self.assertEqual(result.json["exercises"][0]["sets"], 2)
+        self.assertEqual(result.json["exercises"][0]["targets"], targets)
+        self.assertEqual(self.client.get("/api/state").json["templates"][0]["exercises"][0]["targets"], targets)
+        targets[0]["rpe"] = 8.3
+        self.assertEqual(self.post("/api/templates", body).status_code, 400)
+
     def test_weight_upsert_and_access(self):
         payload = {"day": "2026-11-06", "kg": 80.2}
         self.assertEqual(self.post("/api/weights", payload).status_code, 200)

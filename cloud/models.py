@@ -55,13 +55,27 @@ def validate_template(body, catalogue):
         if exercise_id in seen:
             raise ValueError("Each exercise may appear only once in a workout.")
         seen.add(exercise_id)
-        result.append({
-            "id": exercise_id,
-            "name": catalogue[exercise_id]["name"],
-            "sets": number(entry.get("sets"), "Sets", 1, 20, integer=True),
-            "targetReps": number(entry.get("targetReps"), "Target reps", 1, 100, integer=True),
-            "targetWeight": number(entry.get("targetWeight"), "Target weight", 0, 1000, optional=True),
-        })
+        item = {"id": exercise_id, "name": catalogue[exercise_id]["name"]}
+        if "targets" in entry:
+            rows = entry["targets"]
+            if not isinstance(rows, list) or not 1 <= len(rows) <= 20:
+                raise ValueError("Choose between 1 and 20 sets.")
+            targets = []
+            for row in rows:
+                if not isinstance(row, dict):
+                    raise ValueError("Invalid set target.")
+                rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
+                if rpe is not None and (rpe * 2) % 1:
+                    raise ValueError("Use target RPE steps of 0.5.")
+                targets.append({"reps": number(row.get("reps"), "Target reps", 1, 100, integer=True),
+                                "weight": number(row.get("weight"), "Target weight", 0, 1000, optional=True),
+                                "rpe": rpe})
+            item.update(sets=len(targets), targets=targets)
+        else:
+            item.update(sets=number(entry.get("sets"), "Sets", 1, 20, integer=True),
+                        targetReps=number(entry.get("targetReps"), "Target reps", 1, 100, integer=True),
+                        targetWeight=number(entry.get("targetWeight"), "Target weight", 0, 1000, optional=True))
+        result.append(item)
     return {"name": name.strip(), "exercises": result}
 
 
