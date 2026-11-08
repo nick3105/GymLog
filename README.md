@@ -1,5 +1,7 @@
 # GymLog
 
+[Business Requirements Document](docs/BRD.md)
+
 **[Open your GymLog training journal](https://nickkkk3105.pythonanywhere.com/)** — no downloads. Sign in with your GymLog password on any device.
 
 The app has one personal account, saved workout templates and a permanent session history. Create a workout, start it, record actual weight/reps and optional RPE for every set, then finish and save. Each exercise shows the last recorded session and a live Estimated 1RM.
