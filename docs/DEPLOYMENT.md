@@ -95,6 +95,29 @@ cd backend && uv sync --no-dev
 
 Then **Reload** in the Web tab. `instance/` is never touched by updates.
 
+## Automatic updates for the shared development site
+
+Configure a GitHub repository webhook for push events with content type
+`application/json` and payload URL
+`https://nickkkk3105.pythonanywhere.com/_deploy/github`. Use a random secret
+of at least 32 bytes and store the same secret on PythonAnywhere in a file
+outside the repository with permissions `0600`.
+
+In the PythonAnywhere WSGI configuration, add the following after
+`from wsgi import application` (adjust the secret path to match the host):
+
+```python
+from pathlib import Path
+from deploy_webhook import wrap
+
+application = wrap(application, Path(project).parent, __file__, Path.home() / ".gymlog-deploy-secret")
+```
+
+Reload once to activate the receiver. A signed push to `main` fetches the
+latest revision, installs locked runtime dependencies, and requests a reload.
+Check the webhook delivery response for the commit and verify `/api/health`
+after the reload. Disable the webhook in GitHub to pause automatic updates.
+
 ## Backup and recovery
 
 Back up before every risky change. With the web app disabled, `cp -a` the whole
