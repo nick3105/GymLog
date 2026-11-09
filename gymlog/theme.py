@@ -1,7 +1,0 @@
-"""Shared colours keep the interface consistent."""
-BG = "#101216"
-PANEL = "#1B1F26"
-MUTED = "#9CA6B5"
-TEXT = "#F4F6F8"
-ACCENT = "#C5F467"
-HOVER = "#ACD953"

@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+/* GymLog palette, carried over from cloud/static/base.css. */
+@theme {
+  --color-ink: #10120f;
+  --color-panel: #191c17;
+  --color-border: #2b3027;
+  --color-text: #f1f3ec;
+  --color-muted: #979f90;
+  --color-lime: #c5f467;
+}
+
+body {
+  @apply bg-ink text-text antialiased;
+}
