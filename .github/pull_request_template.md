@@ -4,8 +4,8 @@ What user-visible problem does this solve? Link the issue.
 
 ## Verification
 
-- [ ] Model tests pass
-- [ ] App opens; relevant flow tried manually
+- [ ] CI checks pass (see README → Checks)
+- [ ] App runs locally; relevant flow tried manually in the browser
 - [ ] Screenshot attached for visible changes
 - [ ] README updated if setup/behaviour changed
 - [ ] I can explain the code, including any AI suggestions
