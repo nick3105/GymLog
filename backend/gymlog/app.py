@@ -5,7 +5,6 @@ import hmac
 import json
 import os
 import secrets
-import time
 from datetime import date, timedelta
 from functools import wraps
 from pathlib import Path
@@ -15,7 +14,13 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import storage
-from .models import best_1rm, number, validate_session, validate_template
+from .models import (
+    best_1rm,
+    number,
+    validate_registration,
+    validate_session,
+    validate_template,
+)
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND_DIST = ROOT.parents[1] / "frontend" / "dist"
@@ -25,10 +30,11 @@ def create_app(config=None):
     app = Flask(__name__, static_folder="static", static_url_path="/assets")
     instance = Path(os.environ.get("GYMLOG_INSTANCE", str(ROOT.parent / "instance"))).resolve()
     settings = instance / "settings.json"
-    owner = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
+    secrets_file = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
     app.config.update(
-        SECRET_KEY=owner.get("secret_key"),
-        OWNER_PASSWORD_HASH=owner.get("password_hash"),
+        SECRET_KEY=secrets_file.get("secret_key"),
+        # Only read once, to turn Nick's pre-accounts journal into a user (see storage).
+        OWNER_PASSWORD_HASH=secrets_file.get("password_hash"),
         DATABASE=str(instance / "gymlog.sqlite3"),
         SESSION_COOKIE_NAME="gymlog_owner",
         SESSION_COOKIE_HTTPONLY=True,
@@ -41,9 +47,10 @@ def create_app(config=None):
     )
     if config:
         app.config.update(config)
-    if not app.config["SECRET_KEY"] or not app.config["OWNER_PASSWORD_HASH"]:
-        raise RuntimeError("Run `uv run python setup_owner.py` before starting GymLog.")
-    storage.initialize(app.config["DATABASE"])
+    if not app.config["SECRET_KEY"]:
+        raise RuntimeError("Run `uv run python setup_secret.py` before starting GymLog.")
+    database = app.config["DATABASE"]
+    storage.initialize(database, app.config["OWNER_PASSWORD_HASH"])
     catalogue = json.loads((ROOT / "exercises.json").read_text(encoding="utf-8"))
     if (
         not isinstance(catalogue, list)
@@ -52,49 +59,34 @@ def create_app(config=None):
     ):
         raise RuntimeError("exercises.json must contain unique exercise IDs.")
     catalogue_by_id = {e["id"]: e for e in catalogue}
-    profiles = ("nick", "martin", "anna-lisa", "gaia")
-    main_db = app.config["DATABASE"]
-    with storage.connect(main_db) as db:
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS accounts (profile TEXT PRIMARY KEY, password_hash TEXT, invite_hash TEXT, expires REAL)"
-        )
-
-    def password_hash(profile):
-        if profile == "nick":
-            return app.config["OWNER_PASSWORD_HASH"]
-        with storage.connect(main_db) as db:
-            row = db.execute(
-                "SELECT password_hash FROM accounts WHERE profile=?", (profile,)
-            ).fetchone()
-            return row[0] if row else None
 
     def version(digest):
+        # Stored in the cookie so that changing a password signs out other devices.
         return hashlib.sha256(digest.encode()).hexdigest()
 
-    def signed_in():
-        profile = session.get("profile", "nick")
-        digest = password_hash(profile) if profile in profiles else None
-        return bool(digest and session.get("owner") == version(digest))
+    def current_user():
+        user = storage.get_user(database, session.get("user_id"))
+        if user and hmac.compare_digest(session.get("auth", ""), version(user["password_hash"])):
+            return user
+        return None
 
-    def login_session(profile, digest):
+    def login_session(user):
         session.clear()
         session.permanent = True
-        session.update(profile=profile, owner=version(digest), csrf=secrets.token_urlsafe(32))
-        return jsonify(authenticated=True, profile=profile, csrf=session["csrf"])
+        session.update(
+            user_id=user["id"],
+            auth=version(user["password_hash"]),
+            csrf=secrets.token_urlsafe(32),
+        )
+        return jsonify(authenticated=True, username=user["username"], csrf=session["csrf"])
 
     def authenticated(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            if not signed_in():
+            user = current_user()
+            if user is None:
                 return jsonify(error="Please sign in to your GymLog."), 401
-            profile = session.get("profile", "nick")
-            if request.headers.get("X-GymLog-Profile", profile) != profile:
-                return jsonify(error="Please sign in to the selected profile."), 401
-            g.database = (
-                main_db
-                if profile == "nick"
-                else str(Path(main_db).with_name(f"gymlog-{profile}.sqlite3"))
-            )
+            g.user_id = user["id"]
             return function(*args, **kwargs)
 
         return wrapper
@@ -153,11 +145,20 @@ def create_app(config=None):
     def session_status():
         if "csrf" not in session:
             session["csrf"] = secrets.token_urlsafe(32)
+        user = current_user()
         return jsonify(
-            authenticated=signed_in(),
-            profile=session.get("profile", "nick") if signed_in() else None,
+            authenticated=user is not None,
+            username=user["username"] if user else None,
             csrf=session["csrf"],
         )
+
+    @app.post("/api/register")
+    def register():
+        username, password = validate_registration(request.get_json())
+        user_id = storage.create_user(database, username, generate_password_hash(password))
+        if user_id is None:
+            return jsonify(error="That username is taken. Choose another one."), 409
+        return login_session(storage.get_user(database, user_id)), 201
 
     @app.post("/api/login")
     def login():
@@ -166,72 +167,24 @@ def create_app(config=None):
             (request.remote_addr or "unknown").encode(),
             hashlib.sha256,
         ).hexdigest()
-        if storage.login_blocked(app.config["DATABASE"], address):
+        if storage.login_blocked(database, address):
             return jsonify(error="Too many sign-in attempts. Try again in 15 minutes."), 429
         body = request.get_json()
+        username = body.get("username") if isinstance(body, dict) else None
         password = body.get("password") if isinstance(body, dict) else None
-        profile = body.get("profile", "nick") if isinstance(body, dict) else "nick"
-        digest = password_hash(profile) if profile in profiles else None
+        user = None
+        if isinstance(username, str) and len(username) <= 100:
+            user = storage.find_user(database, username.strip())
         valid = (
-            bool(digest)
+            user is not None
             and isinstance(password, str)
             and len(password) <= 1024
-            and check_password_hash(digest, password)
+            and check_password_hash(user["password_hash"], password)
         )
-        storage.record_login(app.config["DATABASE"], address, valid)
+        storage.record_login(database, address, valid)
         if not valid:
-            return jsonify(error="That password was not recognised."), 401
-        return login_session(profile, digest)
-
-    @app.post("/api/invite")
-    @authenticated
-    def invite():
-        if session.get("profile", "nick") != "nick":
-            return jsonify(error="Only Nick can issue invitations."), 403
-        body = request.get_json()
-        profile = body.get("profile") if isinstance(body, dict) else None
-        if profile not in profiles[1:]:
-            raise ValueError("Choose a guest profile.")
-        code = secrets.token_urlsafe(18)
-        with storage.connect(main_db) as db:
-            result = db.execute(
-                """INSERT INTO accounts VALUES (?, NULL, ?, ?)
-                ON CONFLICT(profile) DO UPDATE SET invite_hash=excluded.invite_hash,
-                expires=excluded.expires WHERE accounts.password_hash IS NULL""",
-                (profile, version(code), time.time() + 86400),
-            )
-            if not result.rowcount:
-                return jsonify(error="This profile already has a password."), 409
-        return jsonify(code=code)
-
-    @app.post("/api/activate")
-    def activate():
-        body = request.get_json()
-        if not isinstance(body, dict):
-            raise ValueError("Enter an invitation code and password.")
-        profile, code, password = (body.get(key) for key in ("profile", "code", "password"))
-        if profile not in profiles[1:] or not isinstance(code, str) or len(code) > 128:
-            raise ValueError("Invalid invitation.")
-        if not isinstance(password, str) or not 12 <= len(password) <= 1024:
-            raise ValueError("Choose a password of at least 12 characters.")
-        candidate = version(code.strip())
-        with storage.connect(main_db) as db:
-            row = db.execute(
-                "SELECT 1 FROM accounts WHERE profile=? AND invite_hash=? AND expires>? AND password_hash IS NULL",
-                (profile, candidate, time.time()),
-            ).fetchone()
-        if not row:
-            return jsonify(error="Invalid or expired invitation."), 403
-        digest = generate_password_hash(password)
-        storage.initialize(Path(main_db).with_name(f"gymlog-{profile}.sqlite3"))
-        with storage.connect(main_db) as db:
-            result = db.execute(
-                "UPDATE accounts SET password_hash=?, invite_hash=NULL, expires=NULL WHERE profile=? AND invite_hash=? AND expires>? AND password_hash IS NULL",
-                (digest, profile, candidate, time.time()),
-            )
-            if not result.rowcount:
-                return jsonify(error="Invalid or expired invitation."), 403
-        return login_session(profile, digest)
+            return jsonify(error="That username and password do not match."), 401
+        return login_session(user)
 
     @app.post("/api/logout")
     def logout():
@@ -243,16 +196,16 @@ def create_app(config=None):
     def state():
         return jsonify(
             exercises=catalogue,
-            templates=storage.documents(g.database, "templates"),
-            sessions=storage.documents(g.database, "sessions"),
-            weights=storage.weights(g.database),
+            templates=storage.documents(database, g.user_id, "templates"),
+            sessions=storage.documents(database, g.user_id, "sessions"),
+            weights=storage.weights(database, g.user_id),
         )
 
     @app.post("/api/templates")
     @authenticated
     def create_template():
         document = validate_template(request.get_json(), catalogue_by_id)
-        return jsonify(storage.add_template(g.database, document)), 201
+        return jsonify(storage.add_template(database, g.user_id, document)), 201
 
     @app.post("/api/sessions")
     @authenticated
@@ -263,11 +216,11 @@ def create_app(config=None):
         template_id = body.get("templateId")
         if not isinstance(template_id, str):
             raise ValueError("Select a workout template.")
-        template = storage.get_template(g.database, template_id)
+        template = storage.get_template(database, g.user_id, template_id)
         if template is None:
             return jsonify(error="That workout template could not be found."), 404
         document = validate_session(body, template)
-        existing = storage.existing_session(g.database, document["clientId"])
+        existing = storage.existing_session(database, g.user_id, document["clientId"])
         if existing:
             comparable = {key: existing[key] for key in document}
             for exercise in comparable["exercises"]:
@@ -277,7 +230,7 @@ def create_app(config=None):
                     error="This session was already saved with different values. Reload your history."
                 ), 409
             return jsonify(existing)
-        return jsonify(storage.add_session(g.database, document)), 201
+        return jsonify(storage.add_session(database, g.user_id, document)), 201
 
     @app.post("/api/weights")
     @authenticated
@@ -290,6 +243,6 @@ def create_app(config=None):
         except (ValueError, TypeError):
             raise ValueError("Choose a valid date.") from None
         kg = number(body.get("kg"), "Body weight", 1, 700)
-        return jsonify(storage.save_weight(g.database, day, kg))
+        return jsonify(storage.save_weight(database, g.user_id, day, kg))
 
     return app

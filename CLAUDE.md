@@ -14,7 +14,7 @@ the BRD it moves to `/` and `gymlog/static/` is deleted.
 ## Running things
 
 - Backend: `cd backend && uv run flask --app gymlog run --debug` (port 5000). Never use `pip`.
-  First run needs `uv run python setup_owner.py` to create `backend/instance/settings.json`.
+  First run needs `uv run python setup_secret.py` to create `backend/instance/settings.json`.
 - Frontend: `cd frontend && npm run dev`, open `http://localhost:5173/next/`. Vite proxies `/api`.
 - Checks (CI runs exactly these):
   - `cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest && node --test tests/model.test.mjs`
@@ -25,7 +25,7 @@ the BRD it moves to `/` and `gymlog/static/` is deleted.
 ```
 backend/gymlog/      app.py (routes, auth), models.py (validation, 1RM), storage.py (SQLite)
 backend/instance/    private databases and settings.json — git-ignored, never read or print
-backend/tests/       pytest; pass SECRET_KEY, OWNER_PASSWORD_HASH and a temp DATABASE to create_app
+backend/tests/       pytest; pass SECRET_KEY and a temp DATABASE to create_app, then /api/register
 backend/wsgi.py      PythonAnywhere entry point
 frontend/src/        React + TypeScript; Tailwind classes only, palette in index.css @theme
 docs/BRD.md          business requirements

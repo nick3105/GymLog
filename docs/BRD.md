@@ -10,11 +10,11 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 
 | ID | Function | Requirement |
 |---|---|---|
-| ACC-01 | **Choose User** | Show four selectable profiles: Martin, Anna Lisa, Gaia, and Nick. |
-| ACC-02 | **Generate Invitation** | Allow Nick to generate a one-time invitation code for a profile that has not yet been activated. A code expires after 24 hours; generating a new code replaces the previous unused one. |
-| ACC-03 | **Activate Profile** | Let an invited user enter their code and set a password of at least 12 characters. |
-| ACC-04 | **Sign In** | Let users sign in to their selected profile with their own password. |
-| ACC-05 | **Sign Out** | End the current sign-in and return to profile selection. Warn before discarding unfinished work. |
+| ACC-01 | **Create Account** | Let anyone create an account with a unique username (3–30 lowercase letters, numbers, `-` or `_`; case-insensitive) and a password of at least 12 characters. Signing up signs the user in. |
+| ACC-02 | **Keep Existing Accounts** | Users from the earlier profile version keep their journal and password; their username is their former profile name (`nick`, `martin`, `anna-lisa`, `gaia`). |
+| ACC-03 | **Protect Sign-in** | Store passwords only as hashes. After 10 failed sign-ins from one address, block further attempts for 15 minutes. |
+| ACC-04 | **Sign In** | Let users sign in with their username and password. |
+| ACC-05 | **Sign Out** | End the current sign-in and return to the sign-in screen. Warn before discarding unfinished work. |
 | NAV-01 | **View Home** | Provide four starting points: **Start workout**, **Create workout**, **Review workouts**, and **Weight Tracker**. |
 | NAV-02 | **Navigate from Sidebar** | Make Home and all four main functions accessible from the sidebar. |
 | NAV-03 | **Refresh Journal** | Reload the signed-in user's saved data without interrupting an active workout. |
@@ -73,7 +73,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 |---|---|---|
 | WGT-01 | **Select Measurement Date** | Choose the date for a body weight measurement. |
 | WGT-02 | **Save Body Weight** | Save the entered weight in kg against the selected date. |
-| WGT-03 | **Update Daily Measurement** | Keep one measurement per date per profile. Saving another weight for the same date replaces the previous value. |
+| WGT-03 | **Update Daily Measurement** | Keep one measurement per date per user. Saving another weight for the same date replaces the previous value. |
 | WGT-04 | **View Latest Body Weight** | Display the most recent measurement and its date. |
 | WGT-05 | **View Body Weight Trend** | Display saved measurements in a line chart ordered by date. |
 | WGT-06 | **View Measurement History** | Expand a list of saved dates and weights. |
@@ -81,7 +81,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 ## 6. Data and scope requirements
 
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
-- **Cross-device access:** Saved records are available after signing in to the same profile on another device.
+- **Cross-device access:** Saved records are available after signing in to the same account on another device.
 - **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
 - **Current boundaries:** Editing saved templates, correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
-- **Release acceptance:** Verify profile isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.
+- **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.

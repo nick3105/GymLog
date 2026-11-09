@@ -23,9 +23,9 @@ When `/next/` covers the BRD it moves to `/` and `gymlog/static/` is deleted.
 You need [uv](https://docs.astral.sh/uv/) and [Node.js](https://nodejs.org/) 22 or newer.
 
 ```sh
-# once: choose a local password for Nick's profile (stored hashed in backend/instance/)
+# once: create the session key in backend/instance/
 cd backend
-uv run python setup_owner.py
+uv run python setup_secret.py
 
 # terminal 1 — API and current UI on http://127.0.0.1:5000
 cd backend
@@ -37,7 +37,7 @@ npm install
 npm run dev
 ```
 
-The new UI should say **API: connected**. Your local `backend/instance/` is a separate,
+Create an account at http://127.0.0.1:5000/. The new UI should say **API: connected**. Your local `backend/instance/` is a separate,
 throwaway journal — never copy the production one to your computer.
 
 ## Checks
@@ -68,7 +68,7 @@ backend/
   gymlog/exercises.json  the exercise catalogue
   gymlog/static/         the current UI
   tests/                 pytest (API, serving) and node --test (current UI's helpers)
-  setup_owner.py         sets Nick's password and the session key
+  setup_secret.py        creates the session-signing key
   wsgi.py                PythonAnywhere entry point
 frontend/src/            the new React UI; colours in index.css
 docs/                    BRD and deployment
