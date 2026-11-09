@@ -2,8 +2,7 @@ import { localDate, bestEstimate, lastPerformance, validateSets } from './traini
 
 const $ = selector => document.querySelector(selector);
 let csrf = '';
-let profile = 'nick';
-const profileNames = { nick: 'Nick', martin: 'Martin', 'anna-lisa': 'Anna Lisa', gaia: 'Gaia' };
+let username = '';
 let data = { exercises: [], templates: [], sessions: [] };
 let builder = { name: '', exercises: [] };
 let active = null;
@@ -16,7 +15,7 @@ const icon = name => `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
 const dateLabel = day => new Date(`${day}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 async function api(path, body) {
-  const options = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-GymLog-Profile': profile }, cache: 'no-store' };
+  const options = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, cache: 'no-store' };
   if (body !== undefined) {
     options.method = 'POST';
     options.headers['X-CSRF-Token'] = csrf;
@@ -51,15 +50,13 @@ function status(text) {
 }
 function showLogin(message = '') {
   signedIn = false;
-  $('#login-profile').textContent = 'SIGN IN · ' + profileNames[profile];
-  $('#activation').hidden = profile === 'nick';
   $('#app-screen').hidden = true;
   $('#login-screen').hidden = false;
   $('#login-error').textContent = message;
 }
 function showApp() {
   signedIn = true;
-  $('#profile-badge').textContent = profileNames[profile] + ' · KG';
+  $('#profile-badge').textContent = username + ' · KG';
   $('#login-screen').hidden = true;
   $('#app-screen').hidden = false;
   render();
@@ -75,7 +72,7 @@ $('#login-form').addEventListener('submit', async event => {
   $('#login-error').textContent = '';
   try {
     const session = await api('session'); csrf = session.csrf;
-    const result = await api('login', { profile, password: $('#password').value }); csrf = result.csrf;
+    const result = await api('login', { username: $('#username').value, password: $('#password').value }); csrf = result.csrf; username = result.username;
     data = await api('state'); $('#password').value = ''; showApp();
   } catch (problem) { $('#login-error').textContent = problem.message; }
   finally { button.disabled = false; }
@@ -88,7 +85,7 @@ async function signOut() {
     await api('logout', {});
     active = null; builder = { name: '', exercises: [] };
     data = { exercises: [], templates: [], sessions: [] };
-    csrf = ''; showProfiles();
+    csrf = ''; username = ''; $('#login-form').reset(); showLogin();
     history.replaceState(null, '', '#home');
   } catch (problem) { handleError(problem); }
 }
@@ -132,7 +129,6 @@ function render() {
   if (!signedIn) return;
   error(); toast('');
   let page = route();
-  $('#invite-panel').hidden = profile !== 'nick' || page !== 'home';
   if (page === 'session' && !active) { page = 'start'; history.replaceState(null, '', '#start'); }
   const section = page.startsWith('review/') ? 'review' : page;
   const names = { home: 'Home', start: 'Start workout', create: 'Create workout', session: 'Active session', review: 'Review workouts', weight: 'Weight Tracker' };
@@ -304,28 +300,12 @@ async function boot() {
   $('#login-submit').disabled = true;
   try {
     const session = await api('session'); csrf = session.csrf;
-    if (session.authenticated && session.profile === profile) { data = await api('state'); showApp(); }
+    if (session.authenticated) { username = session.username; data = await api('state'); showApp(); }
     else showLogin();
   } catch (problem) { showLogin(problem.message); }
   finally { $('#login-submit').disabled = false; }
 }
-function showProfiles() {
-  $('#invite-result').textContent = '';
-  $('#activate-form').reset();
-  $('#login-form').reset();
-  $('#activation').open = false;
-  $('#profiles').hidden = false;
-  $('#login-screen').hidden = true;
-  $('#app-screen').hidden = true;
-}
-document.querySelectorAll('[data-profile]').forEach(choice => choice.addEventListener('click', async event => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  profile = button.dataset.profile;
-  $('#profiles').hidden = true;
-  try { await boot(); } finally { button.disabled = false; }
-}));
-$('#back-profiles').addEventListener('click', showProfiles);
+boot();
 
 
 function exerciseLink(exercise, prefix = '') {
@@ -362,30 +342,20 @@ function renderWeights() {
   view.innerHTML = `<form class="form-panel weight-form" id="weight-form"><div><label for="weight-day">Date</label><input id="weight-day" type="date" value="${localDate()}" required></div><div><label for="weight-kg">Body weight (kg)</label><input id="weight-kg" type="number" inputmode="decimal" min="1" max="700" step="any" required></div><button class="button primary">Save weight</button><p class="error" id="weight-error" role="alert"></p></form><section class="panel"><h2>Body weight over time</h2><p class="subtitle">${latest ? 'Latest: ' + format(latest.kg) + ' kg · ' + esc(dateLabel(latest.day)) : 'Add your first measurement to see your trend.'}</p>${lineChart(entries.map(e=>({day:e.day,value:e.kg})),'Body weight over time')}<p class="session-note">One entry per date. Saving the same date updates that measurement.</p>${entries.length ? `<details><summary>Measurement history</summary><table><thead><tr><th>Date</th><th>Weight</th></tr></thead><tbody>${[...entries].reverse().map(e=>`<tr><td>${esc(dateLabel(e.day))}</td><td>${format(e.kg)} kg</td></tr>`).join('')}</tbody></table></details>` : ''}</section>`;
 }
 
-$('#activate-form').addEventListener('submit', async event => {
+$('#register-form').addEventListener('submit', async event => {
   event.preventDefault();
   const button = event.currentTarget.querySelector('button');
   button.disabled = true;
+  $('#login-error').textContent = '';
   try {
     csrf = (await api('session')).csrf;
-    const result = await api('activate', {profile, code: $('#invite-code').value, password: $('#new-password').value});
-    csrf = result.csrf;
+    const result = await api('register', {username: $('#new-username').value, password: $('#new-password').value});
+    csrf = result.csrf; username = result.username;
+    $('#register').open = false;
     event.target.reset();
     data = await api('state');
     history.replaceState(null, '', '#home');
     showApp();
   } catch (problem) { $('#login-error').textContent = problem.message; }
-  finally { button.disabled = false; }
-});
-
-$('#invite-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const button = event.currentTarget.querySelector('button');
-  button.disabled = true;
-  try {
-    const guest = $('#invite-profile').value;
-    const result = await api('invite', {profile: guest});
-    $('#invite-result').textContent = 'Share privately with ' + profileNames[guest] + ': ' + result.code + ' (valid for 24 hours, one use).';
-  } catch (problem) { $('#invite-result').textContent = problem.message; }
   finally { button.disabled = false; }
 });

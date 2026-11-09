@@ -14,7 +14,6 @@ def client(tmp_path):
     config = {
         "TESTING": True,
         "SECRET_KEY": "test-only-secret-key",
-        "OWNER_PASSWORD_HASH": "unused",
         "DATABASE": str(tmp_path / "test.sqlite3"),
         "FRONTEND_DIST": dist,
     }
@@ -37,4 +36,4 @@ def test_unknown_paths_fall_back_to_index(client, path):
 
 
 def test_current_ui_stays_at_root(client):
-    assert "Choose your user" in client.get("/").text
+    assert "Create an account" in client.get("/").text

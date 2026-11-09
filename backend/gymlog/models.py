@@ -1,6 +1,7 @@
 """Validation and calculations, independent of Flask and SQLite."""
 
 import math
+import re
 from datetime import date
 from uuid import UUID
 
@@ -19,6 +20,21 @@ def number(value, label, minimum, maximum, integer=False, optional=False):
     if integer and not result.is_integer():
         raise ValueError(f"{label} must be a whole number.")
     return int(result) if integer else result
+
+
+USERNAME = re.compile(r"[a-z0-9_-]{3,30}")
+
+
+def validate_registration(body):
+    """Return a normalised (username, password) pair or raise a readable ValueError."""
+    if not isinstance(body, dict):
+        raise ValueError("Enter a username and password.")
+    username, password = body.get("username"), body.get("password")
+    if not isinstance(username, str) or not USERNAME.fullmatch(username.strip().lower()):
+        raise ValueError("Usernames are 3–30 characters: lowercase letters, numbers, - and _.")
+    if not isinstance(password, str) or not 12 <= len(password) <= 1024:
+        raise ValueError("Choose a password of at least 12 characters.")
+    return username.strip().lower(), password
 
 
 def estimated_1rm(weight, reps, rpe=None):

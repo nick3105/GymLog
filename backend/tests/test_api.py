@@ -1,5 +1,6 @@
 """Integration checks use a temporary private database and two browser sessions."""
 
+import sqlite3
 import tempfile
 import unittest
 from copy import deepcopy
@@ -16,30 +17,40 @@ class JournalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.password = "test-only-password-for-temp-db"
-        cls.password_hash = generate_password_hash(cls.password)
 
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.config = {
             "TESTING": True,
             "SECRET_KEY": "test-only-secret-key",
-            "OWNER_PASSWORD_HASH": self.password_hash,
             "SESSION_COOKIE_SECURE": False,
             "DATABASE": str(Path(self.folder.name) / "test.sqlite3"),
         }
         self.app = create_app(self.config)
         self.client = self.app.test_client()
-        self.token = self.login(self.client)
+        self.token = self.register(self.client, "nick", self.password)
 
     def tearDown(self):
         self.folder.cleanup()
 
-    def login(self, client):
+    def register(self, client, username, password):
         token = client.get("/api/session").json["csrf"]
         response = client.post(
-            "/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}
+            "/api/register",
+            json={"username": username, "password": password},
+            headers={"X-CSRF-Token": token},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201, response.json)
+        return response.json["csrf"]
+
+    def login(self, client, username="nick", password=None):
+        token = client.get("/api/session").json["csrf"]
+        response = client.post(
+            "/api/login",
+            json={"username": username, "password": password or self.password},
+            headers={"X-CSRF-Token": token},
+        )
+        self.assertEqual(response.status_code, 200, response.json)
         return response.json["csrf"]
 
     def post(self, path, body):
@@ -142,58 +153,63 @@ class JournalTests(unittest.TestCase):
         token = other.get("/api/session").json["csrf"]
         for _ in range(10):
             result = other.post(
-                "/api/login", json={"password": "wrong"}, headers={"X-CSRF-Token": token}
+                "/api/login",
+                json={"username": "nick", "password": "wrong"},
+                headers={"X-CSRF-Token": token},
             )
             self.assertEqual(result.status_code, 401)
         restarted = create_app(self.config).test_client()
         token = restarted.get("/api/session").json["csrf"]
         self.assertEqual(
             restarted.post(
-                "/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}
+                "/api/login",
+                json={"username": "nick", "password": self.password},
+                headers={"X-CSRF-Token": token},
             ).status_code,
             429,
         )
 
-    def test_guest_activation_and_isolation(self):
+    def test_registration_rules(self):
+        stranger = self.app.test_client()
+        token = stranger.get("/api/session").json["csrf"]
+        for body, status in [
+            ({"username": "NICK", "password": "another-long-password"}, 409),
+            ({"username": "a b", "password": "another-long-password"}, 400),
+            ({"username": "ab", "password": "another-long-password"}, 400),
+            ({"username": "martin", "password": "too-short"}, 400),
+            ({"username": "martin"}, 400),
+        ]:
+            result = stranger.post("/api/register", json=body, headers={"X-CSRF-Token": token})
+            self.assertEqual(result.status_code, status, body)
+        self.assertFalse(stranger.get("/api/session").json["authenticated"])
+        self.login(stranger, "Nick ")
+        self.assertEqual(stranger.get("/api/session").json["username"], "nick")
+
+    def test_users_are_isolated(self):
         template = self.template()
         self.post("/api/weights", {"day": "2026-11-06", "kg": 80})
-        code = self.post("/api/invite", {"profile": "martin"}).json["code"]
-        guest = self.app.test_client()
-        token = guest.get("/api/session").json["csrf"]
-        payload = {"profile": "martin", "code": code, "password": "guest-test-password"}
-        result = guest.post("/api/activate", json=payload, headers={"X-CSRF-Token": token})
-        self.assertEqual(result.status_code, 200)
-        headers = {"X-CSRF-Token": result.json["csrf"]}
-        state = guest.get("/api/state").json
+        martin = self.app.test_client()
+        headers = {"X-CSRF-Token": self.register(martin, "Martin", "martin-test-password")}
+        state = martin.get("/api/state").json
         self.assertEqual((state["templates"], state["sessions"], state["weights"]), ([], [], []))
-        self.assertEqual(
-            guest.get("/api/state", headers={"X-GymLog-Profile": "nick"}).status_code, 401
-        )
-        self.assertEqual(
-            guest.post("/api/invite", json={"profile": "gaia"}, headers=headers).status_code, 403
-        )
-        self.assertEqual(
-            guest.post("/api/activate", json=payload, headers=headers).status_code, 403
-        )
-        self.assertEqual(
-            guest.post(
-                "/api/weights", json={"day": "2026-11-06", "kg": 70}, headers=headers
-            ).status_code,
-            200,
-        )
+        self.assertEqual(martin.get("/api/session").json["username"], "martin")
+        foreign = martin.post("/api/sessions", json=self.session(template), headers=headers)
+        self.assertEqual(foreign.status_code, 404)
+        weight = {"day": "2026-11-06", "kg": 70}
+        self.assertEqual(martin.post("/api/weights", json=weight, headers=headers).status_code, 200)
         self.assertEqual(self.client.get("/api/state").json["weights"][0]["kg"], 80)
-        self.assertEqual(self.client.get("/api/state").json["templates"][0]["id"], template["id"])
-        other = self.app.test_client()
-        token = other.get("/api/session").json["csrf"]
-        self.assertEqual(
-            other.post(
-                "/api/login",
-                json={"profile": "martin", "password": payload["password"]},
-                headers={"X-CSRF-Token": token},
-            ).status_code,
-            200,
-        )
-        self.assertEqual(other.get("/api/state").json["weights"][0]["kg"], 70)
+        self.assertEqual(self.client.get("/api/state").json["templates"], [template])
+        phone = self.app.test_client()
+        self.login(phone, "martin", "martin-test-password")
+        self.assertEqual(phone.get("/api/state").json["weights"], [weight])
+
+    def test_password_change_signs_out_other_devices(self):
+        with sqlite3.connect(self.config["DATABASE"]) as db:
+            db.execute(
+                "UPDATE users SET password_hash=? WHERE username='nick'",
+                (generate_password_hash("a-brand-new-password"),),
+            )
+        self.assertEqual(self.client.get("/api/state").status_code, 401)
 
     def test_per_set_targets_and_optional_rpe(self):
         targets = [{"reps": 3, "weight": 100, "rpe": 9}, {"reps": 8, "weight": 80, "rpe": None}]
