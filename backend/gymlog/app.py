@@ -1,4 +1,4 @@
-"""Single-owner GymLog web app. Run via run.py or import with WSGI."""
+"""GymLog web app: JSON API, the current UI at / and the React preview at /next/."""
 from datetime import date, timedelta
 from functools import wraps
 import hashlib
@@ -13,15 +13,16 @@ from flask import Flask, g, jsonify, request, send_from_directory, session
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
-import storage
-from models import best_1rm, number, validate_session, validate_template
+from . import storage
+from .models import best_1rm, number, validate_session, validate_template
 
 ROOT = Path(__file__).resolve().parent
+FRONTEND_DIST = ROOT.parents[1] / "frontend" / "dist"
 
 
 def create_app(config=None):
     app = Flask(__name__, static_folder="static", static_url_path="/assets")
-    instance = Path(os.environ.get("GYMLOG_INSTANCE", str(ROOT / "instance"))).resolve()
+    instance = Path(os.environ.get("GYMLOG_INSTANCE", str(ROOT.parent / "instance"))).resolve()
     settings = instance / "settings.json"
     owner = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
     app.config.update(
@@ -31,14 +32,16 @@ def create_app(config=None):
         SESSION_COOKIE_NAME="gymlog_owner",
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=True,
+        # `flask run --debug` serves plain HTTP locally; production is HTTPS only.
+        SESSION_COOKIE_SECURE=not app.debug,
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
         MAX_CONTENT_LENGTH=128 * 1024,
+        FRONTEND_DIST=FRONTEND_DIST,
     )
     if config:
         app.config.update(config)
     if not app.config["SECRET_KEY"] or not app.config["OWNER_PASSWORD_HASH"]:
-        raise RuntimeError("Run python setup_owner.py before starting GymLog.")
+        raise RuntimeError("Run `uv run python setup_owner.py` before starting GymLog.")
     storage.initialize(app.config["DATABASE"])
     catalogue = json.loads((ROOT / "exercises.json").read_text(encoding="utf-8"))
     if not isinstance(catalogue, list) or not catalogue or len({e["id"] for e in catalogue}) != len(catalogue):
@@ -115,6 +118,20 @@ def create_app(config=None):
     @app.get("/")
     def home():
         return send_from_directory(ROOT / "static", "index.html")
+
+    @app.get("/next/", defaults={"path": ""})
+    @app.get("/next/<path:path>")
+    def frontend(path):
+        # The React app replaces the UI above screen by screen. Real files are
+        # served as-is; any other path is a React route and gets index.html.
+        dist = Path(app.config["FRONTEND_DIST"])
+        if path and (dist / path).is_file():
+            return send_from_directory(dist, path)
+        return send_from_directory(dist, "index.html")
+
+    @app.get("/api/health")
+    def health():
+        return jsonify(status="ok")
 
     @app.get("/api/session")
     def session_status():

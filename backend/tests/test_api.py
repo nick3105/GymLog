@@ -7,8 +7,8 @@ import unittest
 from uuid import uuid4
 
 from werkzeug.security import generate_password_hash
-from app import create_app
-from models import estimated_1rm
+from gymlog import create_app
+from gymlog.models import estimated_1rm
 
 
 class JournalTests(unittest.TestCase):

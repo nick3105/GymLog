@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { estimate, bestEstimate, lastPerformance, validateSets } from '../static/training-model.mjs';
+import { estimate, bestEstimate, lastPerformance, validateSets } from '../gymlog/static/training-model.mjs';
 
 test('Epley estimates only supported completed sets', () => {
   assert.equal(estimate(80, 5), 93.3);
