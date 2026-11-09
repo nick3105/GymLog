@@ -33,10 +33,10 @@ and on a real phone before merging. A screenshot from the phone goes into the pu
 
 ## Running things
 
-- Backend (API + current UI): `cd backend && uv run flask --app gymlog run --debug`, then
+- Backend: `cd backend && uv run flask --app gymlog run --debug`, then
   open http://127.0.0.1:5000/. The first time, run `uv run python setup_secret.py` before that.
   uv installs Python and the libraries by itself — never use `pip` or `python -m venv`.
-- Frontend (new React UI): `cd frontend && npm install && npm run dev`, then open
+- Frontend: `cd frontend && npm install && npm run dev`, then open
   http://localhost:5173/next/. Vite forwards `/api` to Flask, so the backend must be running too.
 - On a real phone: run Vite with `npm run dev -- --host` and open the Network URL it prints,
   plus `/next/`, from a phone on the same Wi-Fi.
@@ -47,19 +47,6 @@ and on a real phone before merging. A screenshot from the phone goes into the pu
   - `cd frontend && npm run lint && npm run format:check && npm run build`
   - `uv run ruff format .` and `npm run format` fix formatting for you.
 
-## Where we are: replacing the UI
-
-One Flask app in `backend/` serves everything on PythonAnywhere:
-
-| URL | What |
-| --- | --- |
-| `/` | the current UI: hand-written JS in `backend/gymlog/static/` — what users see today |
-| `/next/` | the new React UI from `frontend/`, built screen by screen |
-| `/api/...` | the JSON API both UIs use |
-
-New screens are built **only in React**. Touch `gymlog/static/` only to fix a production bug.
-When React covers the BRD it moves to `/` and `gymlog/static/` is deleted.
-
 ## Project layout
 
 ```
@@ -68,7 +55,7 @@ backend/
   gymlog/models.py       validation and calculations (1RM) — no Flask, no SQL
   gymlog/storage.py      every SQL query — no Flask, no rules
   gymlog/exercises.json  the exercise catalogue
-  gymlog/static/         the current UI (being replaced)
+  gymlog/static/         legacy hand-written UI — bug fixes only, new screens go in frontend/
   instance/              private databases and settings.json — git-ignored
   tests/                 pytest, one file per feature or bug
   setup_secret.py        creates the session-signing key
@@ -77,8 +64,8 @@ frontend/
   src/                   React + TypeScript screens; colours in src/index.css
 docs/BRD.md              business requirements (ACC, NAV, PLN, RUN, REV, WGT)
 docs/DEPLOYMENT.md       PythonAnywhere, backup, recovery
-specs/                   what to build, one file per feature (create with the first spec)
-issues/                  what is broken, one file per bug (create with the first issue)
+specs/                   what to build, one file per feature
+issues/                  what is broken, one file per bug
 ```
 
 The dependency direction is one-way: **React → `/api` → `app.py` → `models.py` / `storage.py`**.
@@ -148,8 +135,7 @@ Dark charcoal, light text, one lime accent doing all the work an accent does.
 - Backend: `backend/tests/test_<feature>.py` per feature, one test per bug in `issues/`. Build the
   app with `create_app({"SECRET_KEY": ..., "DATABASE": <tmp_path file>})` and drive it through
   `test_client()` and `/api/register` — never against `backend/instance/`.
-- Frontend logic (formatting, validation helpers) gets unit tests once there is any; vitest is
-  the agreed runner — add it with the first React logic that needs a test.
+- Frontend logic (formatting, validation helpers) gets unit tests with vitest.
 - A test states the correct behaviour and may be red until the code catches up. **Never edit,
   delete or skip a test to make it pass.** If a test looks wrong, say so and stop.
 - Each BRD section ends with its acceptance checks as tests (BRD "Release acceptance").
