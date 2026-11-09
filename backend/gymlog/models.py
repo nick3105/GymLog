@@ -1,6 +1,7 @@
 """Validation and calculations, independent of Flask and SQLite."""
-from datetime import date
+
 import math
+from datetime import date
 from uuid import UUID
 
 
@@ -49,7 +50,11 @@ def validate_template(body, catalogue):
         raise ValueError("Choose between 1 and 20 exercises.")
     result, seen = [], set()
     for entry in entries:
-        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str) or entry["id"] not in catalogue:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("id"), str)
+            or entry["id"] not in catalogue
+        ):
             raise ValueError("Choose exercises from the exercise catalogue.")
         exercise_id = entry["id"]
         if exercise_id in seen:
@@ -67,14 +72,24 @@ def validate_template(body, catalogue):
                 rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
                 if rpe is not None and (rpe * 2) % 1:
                     raise ValueError("Use target RPE steps of 0.5.")
-                targets.append({"reps": number(row.get("reps"), "Target reps", 1, 100, integer=True),
-                                "weight": number(row.get("weight"), "Target weight", 0, 1000, optional=True),
-                                "rpe": rpe})
+                targets.append(
+                    {
+                        "reps": number(row.get("reps"), "Target reps", 1, 100, integer=True),
+                        "weight": number(
+                            row.get("weight"), "Target weight", 0, 1000, optional=True
+                        ),
+                        "rpe": rpe,
+                    }
+                )
             item.update(sets=len(targets), targets=targets)
         else:
-            item.update(sets=number(entry.get("sets"), "Sets", 1, 20, integer=True),
-                        targetReps=number(entry.get("targetReps"), "Target reps", 1, 100, integer=True),
-                        targetWeight=number(entry.get("targetWeight"), "Target weight", 0, 1000, optional=True))
+            item.update(
+                sets=number(entry.get("sets"), "Sets", 1, 20, integer=True),
+                targetReps=number(entry.get("targetReps"), "Target reps", 1, 100, integer=True),
+                targetWeight=number(
+                    entry.get("targetWeight"), "Target weight", 0, 1000, optional=True
+                ),
+            )
         result.append(item)
     return {"name": name.strip(), "exercises": result}
 
@@ -94,7 +109,7 @@ def validate_session(body, template):
     if not isinstance(entries, list) or len(entries) != len(template["exercises"]):
         raise ValueError("Complete every exercise in the workout.")
     completed = []
-    for actual, planned in zip(entries, template["exercises"]):
+    for actual, planned in zip(entries, template["exercises"], strict=True):
         if not isinstance(actual, dict) or actual.get("id") != planned["id"]:
             raise ValueError("Session exercises must match the selected workout.")
         rows = actual.get("sets")
@@ -107,10 +122,25 @@ def validate_session(body, template):
             rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
             if rpe is not None and (rpe * 2) % 1:
                 raise ValueError("Use RPE steps of 0.5 (for example 7 or 7.5).")
-            sets.append({
-                "weight": number(row.get("weight"), "Weight", 0, 1000),
-                "reps": number(row.get("reps"), "Reps", 1, 100, integer=True),
-                "rpe": rpe,
-            })
-        completed.append({**planned, "plannedSets": planned["sets"], "sets": sets, "estimated1rm": best_1rm(sets)})
-    return {"clientId": client_id, "templateId": template["id"], "name": template["name"], "day": day, "exercises": completed}
+            sets.append(
+                {
+                    "weight": number(row.get("weight"), "Weight", 0, 1000),
+                    "reps": number(row.get("reps"), "Reps", 1, 100, integer=True),
+                    "rpe": rpe,
+                }
+            )
+        completed.append(
+            {
+                **planned,
+                "plannedSets": planned["sets"],
+                "sets": sets,
+                "estimated1rm": best_1rm(sets),
+            }
+        )
+    return {
+        "clientId": client_id,
+        "templateId": template["id"],
+        "name": template["name"],
+        "day": day,
+        "exercises": completed,
+    }

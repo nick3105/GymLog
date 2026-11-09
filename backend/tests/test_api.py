@@ -1,14 +1,15 @@
 """Integration checks use a temporary private database and two browser sessions."""
-from copy import deepcopy
-import json
-from pathlib import Path
+
 import tempfile
 import unittest
+from copy import deepcopy
+from pathlib import Path
 from uuid import uuid4
 
 from werkzeug.security import generate_password_hash
-from app import create_app
-from models import estimated_1rm
+
+from gymlog import create_app
+from gymlog.models import estimated_1rm
 
 
 class JournalTests(unittest.TestCase):
@@ -19,10 +20,13 @@ class JournalTests(unittest.TestCase):
 
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
-        self.config = {"TESTING": True, "SECRET_KEY": "test-only-secret-key",
-                       "OWNER_PASSWORD_HASH": self.password_hash,
-                       "SESSION_COOKIE_SECURE": False,
-                       "DATABASE": str(Path(self.folder.name) / "test.sqlite3")}
+        self.config = {
+            "TESTING": True,
+            "SECRET_KEY": "test-only-secret-key",
+            "OWNER_PASSWORD_HASH": self.password_hash,
+            "SESSION_COOKIE_SECURE": False,
+            "DATABASE": str(Path(self.folder.name) / "test.sqlite3"),
+        }
         self.app = create_app(self.config)
         self.client = self.app.test_client()
         self.token = self.login(self.client)
@@ -32,7 +36,9 @@ class JournalTests(unittest.TestCase):
 
     def login(self, client):
         token = client.get("/api/session").json["csrf"]
-        response = client.post("/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token})
+        response = client.post(
+            "/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}
+        )
         self.assertEqual(response.status_code, 200)
         return response.json["csrf"]
 
@@ -40,16 +46,35 @@ class JournalTests(unittest.TestCase):
         return self.client.post(path, json=body, headers={"X-CSRF-Token": self.token})
 
     def template(self):
-        response = self.post("/api/templates", {"name": "Upper A", "exercises": [
-            {"id": "bench-press", "sets": 2, "targetReps": 8, "targetWeight": 60},
-            {"id": "barbell-row", "sets": 1, "targetReps": 10, "targetWeight": None}]})
+        response = self.post(
+            "/api/templates",
+            {
+                "name": "Upper A",
+                "exercises": [
+                    {"id": "bench-press", "sets": 2, "targetReps": 8, "targetWeight": 60},
+                    {"id": "barbell-row", "sets": 1, "targetReps": 10, "targetWeight": None},
+                ],
+            },
+        )
         self.assertEqual(response.status_code, 201, response.json)
         return response.json
 
     def session(self, template):
-        return {"clientId": str(uuid4()), "templateId": template["id"], "day": "2026-11-06", "exercises": [
-            {"id": "bench-press", "sets": [{"weight": 60, "reps": 8, "rpe": None}, {"weight": 62.5, "reps": 8, "rpe": 8.5}]},
-            {"id": "barbell-row", "sets": [{"weight": 50, "reps": 10, "rpe": ""}]}]}
+        return {
+            "clientId": str(uuid4()),
+            "templateId": template["id"],
+            "day": "2026-11-06",
+            "exercises": [
+                {
+                    "id": "bench-press",
+                    "sets": [
+                        {"weight": 60, "reps": 8, "rpe": None},
+                        {"weight": 62.5, "reps": 8, "rpe": 8.5},
+                    ],
+                },
+                {"id": "barbell-row", "sets": [{"weight": 50, "reps": 10, "rpe": ""}]},
+            ],
+        }
 
     def test_two_devices_and_server_restart_keep_actuals_and_template(self):
         template = self.template()
@@ -87,7 +112,12 @@ class JournalTests(unittest.TestCase):
 
     def test_invalid_inputs_never_save(self):
         for exercises in [[], [{"id": []}], [{"id": "not-real"}]]:
-            self.assertEqual(self.post("/api/templates", {"name": "Invalid", "exercises": exercises}).status_code, 400)
+            self.assertEqual(
+                self.post(
+                    "/api/templates", {"name": "Invalid", "exercises": exercises}
+                ).status_code,
+                400,
+            )
         template = self.template()
         base = self.session(template)
         for value in [None, "", -1, 1001, True, "NaN"]:
@@ -102,7 +132,8 @@ class JournalTests(unittest.TestCase):
             payload = deepcopy(base)
             payload["exercises"][0]["sets"][0]["rpe"] = value
             self.assertEqual(self.post("/api/sessions", payload).status_code, 400, value)
-        payload = deepcopy(base); payload["exercises"][0]["sets"].pop()
+        payload = deepcopy(base)
+        payload["exercises"][0]["sets"].pop()
         self.assertEqual(self.post("/api/sessions", payload).status_code, 400)
         self.assertEqual(self.client.get("/api/state").json["sessions"], [])
 
@@ -110,11 +141,18 @@ class JournalTests(unittest.TestCase):
         other = self.app.test_client()
         token = other.get("/api/session").json["csrf"]
         for _ in range(10):
-            result = other.post("/api/login", json={"password": "wrong"}, headers={"X-CSRF-Token": token})
+            result = other.post(
+                "/api/login", json={"password": "wrong"}, headers={"X-CSRF-Token": token}
+            )
             self.assertEqual(result.status_code, 401)
         restarted = create_app(self.config).test_client()
         token = restarted.get("/api/session").json["csrf"]
-        self.assertEqual(restarted.post("/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}).status_code, 429)
+        self.assertEqual(
+            restarted.post(
+                "/api/login", json={"password": self.password}, headers={"X-CSRF-Token": token}
+            ).status_code,
+            429,
+        )
 
     def test_guest_activation_and_isolation(self):
         template = self.template()
@@ -128,26 +166,45 @@ class JournalTests(unittest.TestCase):
         headers = {"X-CSRF-Token": result.json["csrf"]}
         state = guest.get("/api/state").json
         self.assertEqual((state["templates"], state["sessions"], state["weights"]), ([], [], []))
-        self.assertEqual(guest.get("/api/state", headers={"X-GymLog-Profile": "nick"}).status_code, 401)
-        self.assertEqual(guest.post("/api/invite", json={"profile": "gaia"}, headers=headers).status_code, 403)
-        self.assertEqual(guest.post("/api/activate", json=payload, headers=headers).status_code, 403)
-        self.assertEqual(guest.post("/api/weights", json={"day": "2026-11-06", "kg": 70}, headers=headers).status_code, 200)
+        self.assertEqual(
+            guest.get("/api/state", headers={"X-GymLog-Profile": "nick"}).status_code, 401
+        )
+        self.assertEqual(
+            guest.post("/api/invite", json={"profile": "gaia"}, headers=headers).status_code, 403
+        )
+        self.assertEqual(
+            guest.post("/api/activate", json=payload, headers=headers).status_code, 403
+        )
+        self.assertEqual(
+            guest.post(
+                "/api/weights", json={"day": "2026-11-06", "kg": 70}, headers=headers
+            ).status_code,
+            200,
+        )
         self.assertEqual(self.client.get("/api/state").json["weights"][0]["kg"], 80)
         self.assertEqual(self.client.get("/api/state").json["templates"][0]["id"], template["id"])
         other = self.app.test_client()
         token = other.get("/api/session").json["csrf"]
-        self.assertEqual(other.post("/api/login", json={"profile": "martin", "password": payload["password"]}, headers={"X-CSRF-Token": token}).status_code, 200)
+        self.assertEqual(
+            other.post(
+                "/api/login",
+                json={"profile": "martin", "password": payload["password"]},
+                headers={"X-CSRF-Token": token},
+            ).status_code,
+            200,
+        )
         self.assertEqual(other.get("/api/state").json["weights"][0]["kg"], 70)
 
     def test_per_set_targets_and_optional_rpe(self):
-        targets = [{"reps": 3, "weight": 100, "rpe": 9},
-                   {"reps": 8, "weight": 80, "rpe": None}]
+        targets = [{"reps": 3, "weight": 100, "rpe": 9}, {"reps": 8, "weight": 80, "rpe": None}]
         body = {"name": "Top and backoff", "exercises": [{"id": "bench-press", "targets": targets}]}
         result = self.post("/api/templates", body)
         self.assertEqual(result.status_code, 201)
         self.assertEqual(result.json["exercises"][0]["sets"], 2)
         self.assertEqual(result.json["exercises"][0]["targets"], targets)
-        self.assertEqual(self.client.get("/api/state").json["templates"][0]["exercises"][0]["targets"], targets)
+        self.assertEqual(
+            self.client.get("/api/state").json["templates"][0]["exercises"][0]["targets"], targets
+        )
         targets[0]["rpe"] = 8.3
         self.assertEqual(self.post("/api/templates", body).status_code, 400)
 

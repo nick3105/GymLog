@@ -2,7 +2,7 @@
 
 ## One shared repository
 
-One student creates an empty GitHub repository and invites the other three as collaborators in repository Settings. Everyone clones the same repository and follows the README setup locally. Never commit `.venv`, `node_modules`, `frontend/dist` or anything from `cloud/instance/`.
+One student creates an empty GitHub repository and invites the other three as collaborators in repository Settings. Everyone clones the same repository and follows the README setup locally. Never commit `.venv`, `node_modules`, `frontend/dist` or anything from `backend/instance/`.
 
 ## One small task per branch
 
