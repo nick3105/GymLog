@@ -6,30 +6,34 @@ Teammates are beginners: keep code plain and explain changes in two sentences.
 
 ## Migration in progress
 
-The repo is moving from `cloud/` (Flask + hand-written JS, live on PythonAnywhere) to
-`backend/` + `frontend/`. **Do not change `cloud/`** — it is production until the cutover MR.
-Port behaviour from it, keeping its tests' intent.
+`backend/` is production. It serves the current hand-written UI (`backend/gymlog/static/`) at `/`
+and the new React UI (`frontend/`) at `/next/`. New screens are built in React against the
+existing `/api` routes; touch `gymlog/static/` only to fix production bugs. When React covers
+the BRD it moves to `/` and `gymlog/static/` is deleted.
 
 ## Running things
 
 - Backend: `cd backend && uv run flask --app gymlog run --debug` (port 5000). Never use `pip`.
-- Frontend: `cd frontend && npm run dev`. Vite proxies `/api` to Flask, so open the Vite URL.
+  First run needs `uv run python setup_owner.py` to create `backend/instance/settings.json`.
+- Frontend: `cd frontend && npm run dev`, open `http://localhost:5173/next/`. Vite proxies `/api`.
 - Checks (CI runs exactly these):
-  - `cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest`
+  - `cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest && node --test tests/model.test.mjs`
   - `cd frontend && npm run lint && npm run format:check && npm run build`
 
 ## Layout
 
 ```
-backend/gymlog/      Flask app factory (create_app), API routes under /api
-backend/tests/       pytest; build apps with create_app({...}) and use test_client()
+backend/gymlog/      app.py (routes, auth), models.py (validation, 1RM), storage.py (SQLite)
+backend/instance/    private databases and settings.json — git-ignored, never read or print
+backend/tests/       pytest; pass SECRET_KEY, OWNER_PASSWORD_HASH and a temp DATABASE to create_app
 backend/wsgi.py      PythonAnywhere entry point
 frontend/src/        React + TypeScript; Tailwind classes only, palette in index.css @theme
 docs/BRD.md          business requirements
+docs/DEPLOYMENT.md   PythonAnywhere, backup, recovery
 ```
 
-- Production: Flask serves `frontend/dist` and falls back to `index.html` for client routes.
-  Keep every API route under `/api` so it never collides with a frontend route.
+- Flask serves `frontend/dist` under `/next/` and falls back to `index.html` for client routes.
+  Keep every API route under `/api`. Writes need the `X-CSRF-Token` from `GET /api/session`.
 - Business rules (1RM, validation) live in plain Python, not in route functions and not in
   React — the frontend shows what the API decides.
 

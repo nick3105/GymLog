@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* GymLog palette, carried over from cloud/static/base.css. */
+/* GymLog palette, matching backend/gymlog/static/base.css. */
 @theme {
   --color-ink: #10120f;
   --color-panel: #191c17;

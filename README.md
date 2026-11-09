@@ -4,42 +4,48 @@ Plan strength workouts, log every set, follow your estimated 1RM and body weight
 or a computer. Requirements: [docs/BRD.md](docs/BRD.md).
 
 **Live journal:** https://nickkkk3105.pythonanywhere.com/ (the old GitHub Pages address redirects
-there via the root `index.html`).
+there via the root `index.html`). Hosting, backup and renewal: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Status: moving to a new stack
+## Status: replacing the UI
 
-| Folder | What | State |
+One Flask app in `backend/` serves everything:
+
+| URL | What | State |
 |---|---|---|
-| `cloud/` | Flask + hand-written JS + SQLite | **production** — see [cloud/README.md](cloud/README.md) for hosting, backup and renewal |
-| `backend/` | Flask JSON API (Python, uv) | new, being built |
-| `frontend/` | React + TypeScript + Tailwind (Vite) | new, being built |
+| `/` | the current UI (hand-written JS in `backend/gymlog/static/`) | **what users see** |
+| `/next/` | the new React UI from `frontend/` | being built, screen by screen |
+| `/api/...` | the JSON API both UIs use | shared |
 
-Once the new app covers the BRD, a cutover PR migrates the production data, switches
-PythonAnywhere to `backend/wsgi.py` and deletes `cloud/`.
+When `/next/` covers the BRD it moves to `/` and `gymlog/static/` is deleted.
 
 ## Run it locally
 
 You need [uv](https://docs.astral.sh/uv/) and [Node.js](https://nodejs.org/) 22 or newer.
 
 ```sh
-# terminal 1 — API on http://127.0.0.1:5000
+# once: choose a local password for Nick's profile (stored hashed in backend/instance/)
+cd backend
+uv run python setup_owner.py
+
+# terminal 1 — API and current UI on http://127.0.0.1:5000
 cd backend
 uv run flask --app gymlog run --debug
 
-# terminal 2 — website on the URL Vite prints (http://localhost:5173)
+# terminal 2 — new UI on http://localhost:5173/next/
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the Vite URL. The page should say **API: connected**.
+The new UI should say **API: connected**. Your local `backend/instance/` is a separate,
+throwaway journal — never copy the production one to your computer.
 
 ## Checks
 
 The same commands run in GitHub Actions on every pull request.
 
 ```sh
-cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest
+cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest && node --test tests/model.test.mjs
 cd frontend && npm run lint && npm run format:check && npm run build
 ```
 
@@ -48,22 +54,33 @@ cd frontend && npm run lint && npm run format:check && npm run build
 ## How it fits together
 
 ```
-browser ──► frontend (React)  ──fetch /api/...──►  backend (Flask)  ──►  database
+browser ──► React (/next/) or current UI (/) ──fetch /api/...──► Flask ──► SQLite (backend/instance/)
 ```
 
 - In development Vite serves the React app and forwards `/api` requests to Flask.
-- In production `npm run build` produces `frontend/dist`; Flask serves those files and the API
-  from one PythonAnywhere web app.
+- In production Flask serves both UIs and the API from one PythonAnywhere web app.
 
 ```
 backend/
-  gymlog/__init__.py   create_app(): API routes and serving the built frontend
-  tests/               pytest
-  wsgi.py              PythonAnywhere entry point
-frontend/
-  src/App.tsx          the React app
-  src/index.css        Tailwind and the GymLog colour palette
-docs/BRD.md            business requirements
-CLAUDE.md              conventions for the AI assistant (useful for humans too)
-CONTRIBUTING.md        branch, review and merge workflow
+  gymlog/app.py          create_app(): routes, sign-in, CSRF and security headers
+  gymlog/models.py       input validation and the estimated 1RM rule
+  gymlog/storage.py      SQLite queries
+  gymlog/exercises.json  the exercise catalogue
+  gymlog/static/         the current UI
+  tests/                 pytest (API, serving) and node --test (current UI's helpers)
+  setup_owner.py         sets Nick's password and the session key
+  wsgi.py                PythonAnywhere entry point
+frontend/src/            the new React UI; colours in index.css
+docs/                    BRD and deployment
 ```
+
+## Exercise catalogue
+
+Add exercises to `backend/gymlog/exercises.json`, then reload the app:
+
+```json
+{"id": "incline-bench-press", "name": "Incline bench press", "group": "Chest"}
+```
+
+IDs must be unique and never change: they link past results (PLN-12). Saved workouts keep a
+snapshot of the name, so renaming an exercise does not rewrite history.
