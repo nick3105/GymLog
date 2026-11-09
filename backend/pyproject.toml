@@ -20,3 +20,5 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# The formatter wraps code to line-length; long SQL and message strings stay intact.
+ignore = ["E501"]
