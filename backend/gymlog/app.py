@@ -227,6 +227,17 @@ def create_app(config=None):
         document = validate_template(request.get_json(), catalogue_by_id)
         return jsonify(storage.add_template(database, g.user_id, document)), 201
 
+    @app.post("/api/templates/<template_id>")
+    @authenticated
+    def edit_template(template_id):
+        """Validate an owned routine and update it without rewriting history."""
+        template = storage.get_template(database, g.user_id, template_id)
+        if template is None:
+            return jsonify(error="That workout template could not be found."), 404
+        changes = validate_template(request.get_json(), catalogue_by_id)
+        document = storage.update_template(database, g.user_id, {**template, **changes})
+        return jsonify(document)
+
     @app.post("/api/sessions")
     @authenticated
     def finish_session():
