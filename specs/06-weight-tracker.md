@@ -1,6 +1,6 @@
 # Task 6 — Weight Tracker
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/weight-tracker`. Needs task 1. Builds the line chart task 7 reuses.
 

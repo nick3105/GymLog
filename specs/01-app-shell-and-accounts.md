@@ -1,6 +1,6 @@
 # Task 1 — App shell and accounts
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/app-shell`. Unblocks tasks 4, 5 and 6.
 

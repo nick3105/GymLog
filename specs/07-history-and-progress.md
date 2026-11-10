@@ -1,6 +1,6 @@
 # Task 7 — History and exercise progress
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/history-progress`. Needs tasks 3 and 6 (and adds links into 4 and 5 if they
 > are merged).

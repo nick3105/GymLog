@@ -1,6 +1,6 @@
 # Task 4 — Create a workout
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/workout-builder`. Needs task 1.
 

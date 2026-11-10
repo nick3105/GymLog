@@ -1,6 +1,6 @@
 # Task 3 — Exercise stats API
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/exercise-stats-api`. Backend only: Python and pytest. Unblocks tasks 5 and 7.
 

@@ -1,6 +1,6 @@
 # Task 2 — Ship the React app to production
 
-> Assignee:
+> Assignee: Martin Zvelebil
 >
 > Branch `feature/deploy-react`. No BRD ID: this is what makes every React task reach users.
 
