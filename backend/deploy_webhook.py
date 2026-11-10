@@ -43,7 +43,7 @@ def wrap(application, repo, wsgi_file, secret_file):
             return respond("400 Bad Request", "Invalid JSON")
         if (
             payload.get("repository", {}).get("full_name") != "nick3105/GymLog"
-            or payload.get("ref") != "refs/heads/main"
+            or payload.get("ref") != "refs/heads/deploy"
             or payload.get("deleted")
         ):
             return respond("200 OK", "No deployment requested")
@@ -51,8 +51,13 @@ def wrap(application, repo, wsgi_file, secret_file):
         try:
             with Path(secret_file).with_suffix(".lock").open("a") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
+                # `deploy` is rebuilt from main with the React build on every merge
+                # (.github/workflows/deploy.yml), so take it as it is instead of pulling.
                 subprocess.run(
-                    ["git", "pull", "--ff-only", "origin", "main"],
+                    ["git", "fetch", "origin", "deploy"], cwd=repo, check=True, timeout=45
+                )
+                subprocess.run(
+                    ["git", "checkout", "--force", "-B", "deploy", "origin/deploy"],
                     cwd=repo,
                     check=True,
                     timeout=45,

@@ -1,30 +1,69 @@
-import { Dumbbell } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 
-type Health = 'checking' | 'ok' | 'down'
+import AuthForm from './components/AuthForm'
+import Layout from './components/Layout'
+import { useJournal } from './journal'
+import Create from './pages/Create'
+import Home from './pages/Home'
+import Review from './pages/Review'
+import ReviewDetail from './pages/ReviewDetail'
+import Session from './pages/Session'
+import Start from './pages/Start'
+import Weight from './pages/Weight'
+
+// Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
+function SignedIn({ children }: { children: ReactNode }) {
+  const { status } = useJournal()
+  if (status === 'loading') return <p className="text-muted p-6">Opening your journal…</p>
+  if (status === 'signed-out') return <Navigate to="/signin" replace />
+  return children
+}
+
+function SignedOut({ children }: { children: ReactNode }) {
+  const { status } = useJournal()
+  if (status === 'loading') return <p className="text-muted p-6">Opening your journal…</p>
+  if (status === 'signed-in') return <Navigate to="/" replace />
+  return children
+}
+
+const router = createBrowserRouter([
+  {
+    path: '/signin',
+    element: (
+      <SignedOut>
+        <AuthForm mode="login" />
+      </SignedOut>
+    ),
+  },
+  {
+    path: '/register',
+    element: (
+      <SignedOut>
+        <AuthForm mode="register" />
+      </SignedOut>
+    ),
+  },
+  {
+    path: '/',
+    element: (
+      <SignedIn>
+        <Layout />
+      </SignedIn>
+    ),
+    children: [
+      { index: true, element: <Home /> },
+      { path: 'start', element: <Start /> },
+      { path: 'session', element: <Session /> },
+      { path: 'create', element: <Create /> },
+      { path: 'review', element: <Review /> },
+      { path: 'review/:id', element: <ReviewDetail /> },
+      { path: 'weight', element: <Weight /> },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+])
 
 export default function App() {
-  const [health, setHealth] = useState<Health>('checking')
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((response) => setHealth(response.ok ? 'ok' : 'down'))
-      .catch(() => setHealth('down'))
-  }, [])
-
-  return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 p-6">
-      <p className="flex items-center gap-2 text-2xl font-bold">
-        <Dumbbell className="text-lime" aria-hidden />
-        gymlog<span className="text-lime">.</span>
-      </p>
-      <h1 className="text-4xl font-semibold">Show up. Keep getting stronger.</h1>
-      <p className="text-muted">
-        API:{' '}
-        <span className={health === 'ok' ? 'text-lime' : undefined}>
-          {health === 'checking' ? 'checking…' : health === 'ok' ? 'connected' : 'unreachable'}
-        </span>
-      </p>
-    </main>
-  )
+  return <RouterProvider router={router} />
 }
