@@ -55,6 +55,28 @@ def best_1rm(sets):
     return max((value for value in estimates if value is not None), default=None)
 
 
+def exercise_stats(sessions, exercise_id):
+    """Last performance and the estimated 1RM trend of one exercise, from any template."""
+    ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
+    last = None
+    points = []
+    for session in ordered:
+        for exercise in session["exercises"]:
+            if exercise["id"] != exercise_id:
+                continue
+            last = {"day": session["day"], "sets": exercise["sets"]}
+            estimate = best_1rm(exercise["sets"])
+            if estimate is not None:
+                points.append({"day": session["day"], "estimate": estimate})
+    estimates = [point["estimate"] for point in points]
+    return {
+        "last": last,
+        "points": points,
+        "best": max(estimates, default=None),
+        "latest": estimates[-1] if estimates else None,
+    }
+
+
 def validate_template(body, catalogue):
     if not isinstance(body, dict):
         raise ValueError("A workout object is required.")

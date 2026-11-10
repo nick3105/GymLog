@@ -2,6 +2,8 @@
 
 > Assignee: Martin Zvelebil
 >
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
+>
 > Branch `feature/deploy-react`. No BRD ID: this is what makes every React task reach users.
 
 ## Why
@@ -13,15 +15,15 @@ the gym.
 
 ## What
 
-- [ ] A GitHub Actions workflow `.github/workflows/deploy.yml`: on every push to `main`, run
+- [x] A GitHub Actions workflow `.github/workflows/deploy.yml`: on every push to `main`, run
       `npm ci && npm run build` in `frontend/` and push the result to a branch called `deploy`
       that contains the whole repository **plus** `frontend/dist`.
-- [ ] `docs/DEPLOYMENT.md`: PythonAnywhere follows `deploy` instead of `main`
+- [x] `docs/DEPLOYMENT.md`: PythonAnywhere follows `deploy` instead of `main`
       (`git switch deploy`, then `git pull` on every update). Write the one-time switch and the
       updated "Updating after a merge" steps.
-- [ ] A health check: `GET /api/health` also returns which commit is running (read from an
+- [x] A health check: `GET /api/health` also returns which commit is running (read from an
       environment variable or a file the workflow writes), so anyone can see what is live.
-- [ ] Nobody ever commits to `deploy` by hand — say so in the workflow and in `CONTRIBUTING.md`.
+- [x] Nobody ever commits to `deploy` by hand — say so in the workflow and in `CONTRIBUTING.md`.
 
 ## Out of scope
 

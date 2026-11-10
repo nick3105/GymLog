@@ -2,6 +2,8 @@
 
 > Assignee: Martin Zvelebil
 >
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
+>
 > Branch `feature/log-workout`. Needs tasks 1 and 3. The most-used screen in the app.
 
 ## Why
@@ -15,25 +17,27 @@ safely saved. Every second of friction here is felt on every set of every workou
 Implements RUN-01 to RUN-10 on `/next/start`. The API is `POST /api/sessions` (its validation is
 the source of truth) and `GET /api/exercises/<id>/stats` from task 3.
 
-- [ ] **Pick a workout** (RUN-01): saved templates with their exercises and set counts.
+- [x] **Pick a workout** (RUN-01): saved templates with their exercises and set counts.
       Templates in either shape — per-set `targets` or one `targetReps`/`targetWeight` per
       exercise — both work.
-- [ ] **The session** (RUN-02): one card per exercise, one row per planned set.
-- [ ] Above each exercise, **Last time** from the stats API: date and sets, or "No previous
+- [x] **The session** (RUN-02): one card per exercise, one row per planned set.
+- [x] Above each exercise, **Last time** from the stats API: date and sets, or "No previous
       results" (RUN-04).
-- [ ] Each set row: actual weight (kg, 0 allowed), actual reps, optional RPE (RUN-05/06/07). The
+- [x] Each set row: actual weight (kg, 0 allowed), actual reps, optional RPE (RUN-05/06/07). The
       planned target is the placeholder (RUN-03). Numeric keyboards; inputs at least 16 px.
-- [ ] **Live estimated 1RM** per exercise, updating as you type (RUN-08). This needs the 1RM rule
+- [x] **Live estimated 1RM** per exercise, updating as you type (RUN-08). This needs the 1RM rule
       in the browser: write it as `src/oneRepMax.ts` with a vitest test that uses **the same
       examples as** `test_estimate_rules` in `backend/tests/test_api.py`, so the two cannot drift.
-- [ ] **Finish & save** (RUN-09): disabled until every set has weight and reps. Generates one
+- [x] **Finish & save** (RUN-09): disabled until every set has weight and reps. Generates one
       `clientId` per session so a retry never creates a duplicate. On failure the inputs stay
       and the error sentence is shown; on success, a confirmation and the session in history.
-- [ ] **Discard** asks first (RUN-10). Leaving the page or signing out with an unsaved session
-      asks first too (ACC-05).
-- [ ] **Survives the phone:** the active session is kept in `sessionStorage` per user, so
+- [x] **Discard** asks first (RUN-10). Leaving the page or signing out with an unsaved session
+      asks first too (ACC-05). *Built as:* signing out and closing the tab ask first; moving to
+      another screen inside the app keeps the workout (it is stored) and shows a **Resume** bar
+      instead of asking.
+- [x] **Survives the phone:** the active session is kept in `sessionStorage` per user, so
       locking the phone, switching apps or an accidental reload does not lose it.
-- [ ] Phone layout: Finish & save sticky at the bottom; the set you are on is easy to find.
+- [x] Phone layout: Finish & save sticky at the bottom; the set you are on is easy to find.
 
 ## Out of scope
 

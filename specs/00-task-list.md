@@ -39,6 +39,8 @@ A possible split for four people:
 
 ## Already done
 
+- Tasks 1–8 — built together on `feature/react-app`: the React app is GymLog, the old UI is gone.
+  Still open from task 8: the walkthrough on a real phone against production.
 - ACC-01 to ACC-05 (register, keep old accounts, protect, sign in, sign out) — task 10,
   `10-register-and-login.md`, built in the API and the current UI at `/`.
 - PLN-12 (exercise catalogue) — `backend/gymlog/exercises.json`, a repository task.

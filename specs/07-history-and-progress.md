@@ -2,6 +2,8 @@
 
 > Assignee: Martin Zvelebil
 >
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
+>
 > Branch `feature/history-progress`. Needs tasks 3 and 6 (and adds links into 4 and 5 if they
 > are merged).
 
@@ -15,16 +17,16 @@ must never cost you the workout you are in the middle of typing.
 
 Implements REV-01 to REV-07 on `/next/review`.
 
-- [ ] **History** (REV-01): completed sessions, newest first — date, workout name, number of
+- [x] **History** (REV-01): completed sessions, newest first — date, workout name, number of
       exercises and sets.
-- [ ] **Session details** (REV-02): tap a session → each exercise with its sets (weight, reps,
+- [x] **Session details** (REV-02): tap a session → each exercise with its sets (weight, reps,
       RPE or "–") and the exercise's estimated 1RM.
-- [ ] **Exercise progress** (REV-03 to REV-06): a full-screen sheet with the exercise name, best
+- [x] **Exercise progress** (REV-03 to REV-06): a full-screen sheet with the exercise name, best
       and latest estimated 1RM, and the 1RM trend using `LineChart` from task 6. Data comes from
       `GET /api/exercises/<id>/stats` (task 3). Empty state: "No estimates yet."
-- [ ] Every exercise name in session details is a link to its progress. If tasks 4 and 5 are
+- [x] Every exercise name in session details is a link to its progress. If tasks 4 and 5 are
       merged, add the same link in the workout builder and the active session (REV-03).
-- [ ] **Back** closes the sheet and returns to exactly where you were — scroll position and every
+- [x] **Back** closes the sheet and returns to exactly where you were — scroll position and every
       unsaved input in the builder or session kept (REV-07). The browser/phone back gesture does
       the same.
 

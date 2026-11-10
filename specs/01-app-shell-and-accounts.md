@@ -2,6 +2,8 @@
 
 > Assignee: Martin Zvelebil
 >
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
+>
 > Branch `feature/app-shell`. Unblocks tasks 4, 5 and 6.
 
 ## Why
@@ -16,21 +18,21 @@ Implements ACC-01, ACC-03, ACC-04, ACC-05, NAV-01, NAV-02, NAV-03 in the React a
 The API already exists: `GET /api/session`, `POST /api/register`, `/api/login`, `/api/logout`,
 `GET /api/state`.
 
-- [ ] Add `react-router` for pages (agreed library — no other additions). Routes: `/next/` home,
+- [x] Add `react-router` for pages (agreed library — no other additions). Routes: `/next/` home,
       `/next/start`, `/next/create`, `/next/review`, `/next/weight`, `/next/signin`,
       `/next/register`. The four feature pages show a "Coming soon" placeholder.
-- [ ] `src/api.ts`: one small `api(path, body?)` function. It fetches the CSRF token from
+- [x] `src/api.ts`: one small `api(path, body?)` function. It fetches the CSRF token from
       `GET /api/session`, sends it as `X-CSRF-Token` on every POST, and turns an error response
       into an `Error` with the server's sentence.
-- [ ] **Sign in** and **Create account** pages: username and password fields, the server's error
+- [x] **Sign in** and **Create account** pages: username and password fields, the server's error
       shown under the form. Signing up signs you in (ACC-01).
-- [ ] Not signed in → any page redirects to Sign in. Signed in → Sign in redirects home.
-- [ ] **Home** (NAV-01): four big buttons — Start workout, Create workout, Review workouts,
+- [x] Not signed in → any page redirects to Sign in. Signed in → Sign in redirects home.
+- [x] **Home** (NAV-01): four big buttons — Start workout, Create workout, Review workouts,
       Weight Tracker — and the signed-in username.
-- [ ] **Navigation** (NAV-02): a bottom bar on phones (Home + the four pages, icon and label),
+- [x] **Navigation** (NAV-02): a bottom bar on phones (Home + the four pages, icon and label),
       a left sidebar from `md:` up. The current page is highlighted in lime.
-- [ ] **Sign out** (ACC-05) and **Refresh** (NAV-03) in a top bar. Refresh reloads `/api/state`.
-- [ ] Keep `/api/state` in one place (a React context) so later pages read it, not refetch it.
+- [x] **Sign out** (ACC-05) and **Refresh** (NAV-03) in a top bar. Refresh reloads `/api/state`.
+- [x] Keep `/api/state` in one place (a React context) so later pages read it, not refetch it.
 
 ## Out of scope
 
