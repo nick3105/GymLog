@@ -1,6 +1,6 @@
 # GymLog — Business Requirements Document
 
-**Version 1.0 · Current functionality baseline**
+**Version 1.1 · Implemented baseline and planned work**
 
 ## Purpose
 
@@ -85,3 +85,16 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 - **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
 - **Current boundaries:** Editing saved templates, correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.
+
+## Implementation status
+
+The preceding sections describe the existing baseline. The table below tracks proposed changes separately. Implemented status is based on repository code, with live behavior verified separately.
+
+| ID | Function | Status | Requirement |
+| --- | --- | --- | --- |
+| CAT-01 | Expand the Exercise Catalogue | Planned | Import exercises from an external API to expand the workout picker. Preserve stable IDs and existing history. Keep the local catalogue available if the provider is unavailable. Provider, licensing and update frequency are open. |
+| PLN-13 | Reorder Exercises | Planned | In Create Workout, drag exercise blocks into a new order. Keep their set targets attached and save the order for future sessions. Provide move controls for keyboard and touch use. |
+| RUN-04 | View Last Performance | Implemented in code | In an active workout, display the last completed results for that exercise above its set rows in smaller, readable text. Check legibility on mobile as part of acceptance. |
+| REV-08 | Review Weekly Muscle Volume | Planned | In Review Workouts, let users select a calendar week and see weighted completed sets per muscle group. Show the week dates and explain how totals are calculated. |
+| CAT-02 | Map Exercises to Muscle Groups | Planned | Store a coefficient from 0 to 1 for each exercise and muscle group. Sum coefficients across completed sets. For example, three bench press sets at illustrative coefficients of 1.0 chest and 0.3 triceps contribute 3.0 and 0.9 weighted sets. Track unmapped exercises separately. Review reputable strength-training literature and document where coefficients are product assumptions. |
+| REV-09 | Estimate Weekly Set Targets | Planned | Offer an approximate weekly set range per muscle group based on user-provided inputs. Consider age, sex, body weight, training goal and grouped experience levels. Use a reputable strength-training source and apply adjustments only where evidence supports them. Treat the result as a starting point and state how it relates to weighted sets. |
