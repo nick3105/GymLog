@@ -4,6 +4,7 @@ import { useBlocker, useNavigate } from 'react-router'
 
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
+import { searchExercises } from '../exerciseSearch'
 import { useJournal } from '../journal'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
@@ -35,10 +36,12 @@ export default function Create() {
   const [name, setName] = useState('')
   const [planned, setPlanned] = useState<Planned[]>([])
   const [choice, setChoice] = useState('')
+  const [query, setQuery] = useState('')
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
   const dirty = name.trim() !== '' || planned.length > 0
+  const matches = searchExercises(journal.exercises, query)
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -57,9 +60,8 @@ export default function Create() {
     else blocker.reset()
   }, [blocker])
 
-  function add() {
+  function add(exercise: Exercise | undefined) {
     setProblem('')
-    const exercise = journal.exercises.find((item) => item.id === choice)
     if (!exercise) {
       setProblem('Choose an exercise first.')
       return
@@ -139,8 +141,49 @@ export default function Create() {
           />
         </div>
         <div>
+          <label htmlFor="exercise-search" className={label}>
+            Search exercises
+          </label>
+          <input
+            id="exercise-search"
+            type="search"
+            className={input}
+            placeholder="e.g. lat pulldown"
+            autoComplete="off"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {query.trim() !== '' && (
+            <ul className="mt-2 flex flex-col gap-1">
+              {matches.slice(0, 8).map((exercise) => (
+                <li key={exercise.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      add(exercise)
+                      setQuery('')
+                    }}
+                    className="border-border flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left"
+                  >
+                    <span>{exercise.name}</span>
+                    <span className="text-muted shrink-0 text-sm">{exercise.group}</span>
+                  </button>
+                </li>
+              ))}
+              {matches.length === 0 && (
+                <li className="text-muted px-1 text-sm">No exercise matches "{query.trim()}".</li>
+              )}
+              {matches.length > 8 && (
+                <li className="text-muted px-1 text-sm">
+                  {matches.length - 8} more — type more to narrow it down.
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+        <div>
           <label htmlFor="exercise-choice" className={label}>
-            Add an exercise
+            Or choose by muscle
           </label>
           <div className="flex gap-2">
             <select
@@ -160,7 +203,11 @@ export default function Create() {
                 </optgroup>
               ))}
             </select>
-            <button type="button" onClick={add} className={`${secondaryButton} shrink-0`}>
+            <button
+              type="button"
+              onClick={() => add(journal.exercises.find((item) => item.id === choice))}
+              className={`${secondaryButton} shrink-0`}
+            >
               Add
             </button>
           </div>

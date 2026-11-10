@@ -14,6 +14,7 @@ SPLIT_ORDER = [
     "Triceps",
     "Back",
     "Biceps",
+    "Forearms",
     "Quads",
     "Hamstrings & glutes",
     "Calves",
@@ -40,6 +41,10 @@ def test_ids_and_names_are_unique_and_readable():
     assert len(set(names)) == len(names)
     for exercise_id in ids:
         assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", exercise_id), exercise_id
+
+
+def test_catalogue_covers_a_whole_gym():
+    assert len(CATALOGUE) >= 600
 
 
 def test_original_exercises_keep_their_id_and_name():

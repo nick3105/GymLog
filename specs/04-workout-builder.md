@@ -23,7 +23,8 @@ in `models.validate_template` is the source of truth for every limit.
       to its card instead of a second card. The catalogue stays selectable afterwards.
 - [x] The exercise picker is grouped by muscle (task 11): a native `<select>` with one
       `<optgroup>` per `group`, in the order `/api/state` returns them — no hard-coded group
-      list in React. Phones show their own scrollable picker with the group headings.
+      list in React. Phones show their own scrollable picker with the group headings. A search
+      field above it finds any of the 650 by name (task 11).
 - [x] Each set row: target reps (required), target weight in kg (optional), target RPE
       (optional, 1–10 in 0.5 steps) (PLN-05, PLN-07, PLN-08, PLN-09). Numeric keyboards on
       phones.
