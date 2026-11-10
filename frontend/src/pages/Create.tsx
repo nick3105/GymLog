@@ -4,6 +4,7 @@ import { useBlocker, useNavigate } from 'react-router'
 
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
+import ExercisePicker from '../components/ExercisePicker'
 import { useJournal } from '../journal'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
@@ -19,22 +20,12 @@ const targetFields: { key: keyof TargetInput; label: string; mode: 'decimal' | '
   { key: 'rpe', label: 'RPE', mode: 'decimal' },
 ]
 
-// The catalogue grouped by muscle, keeping the order the API sends.
-function groupExercises(exercises: Exercise[]): [string, Exercise[]][] {
-  const groups = new Map<string, Exercise[]>()
-  for (const exercise of exercises) {
-    groups.set(exercise.group, [...(groups.get(exercise.group) ?? []), exercise])
-  }
-  return [...groups.entries()]
-}
-
 // PLN-01 to PLN-11: plan a workout once, with targets for every set.
 export default function Create() {
   const { journal, setJournal, setBuilderDirty } = useJournal()
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [planned, setPlanned] = useState<Planned[]>([])
-  const [choice, setChoice] = useState('')
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
@@ -57,13 +48,8 @@ export default function Create() {
     else blocker.reset()
   }, [blocker])
 
-  function add() {
+  function add(exercise: Exercise) {
     setProblem('')
-    const exercise = journal.exercises.find((item) => item.id === choice)
-    if (!exercise) {
-      setProblem('Choose an exercise first.')
-      return
-    }
     // PLN-03: the same exercise again adds a set to its card.
     if (planned.some((item) => item.id === exercise.id)) {
       setPlanned(
@@ -138,33 +124,11 @@ export default function Create() {
             onChange={(event) => setName(event.target.value)}
           />
         </div>
-        <div>
-          <label htmlFor="exercise-choice" className={label}>
-            Add an exercise
-          </label>
-          <div className="flex gap-2">
-            <select
-              id="exercise-choice"
-              className={input}
-              value={choice}
-              onChange={(event) => setChoice(event.target.value)}
-            >
-              <option value="">Choose an exercise</option>
-              {groupExercises(journal.exercises).map(([group, exercises]) => (
-                <optgroup key={group} label={group}>
-                  {exercises.map((exercise) => (
-                    <option key={exercise.id} value={exercise.id}>
-                      {exercise.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <button type="button" onClick={add} className={`${secondaryButton} shrink-0`}>
-              Add
-            </button>
-          </div>
-        </div>
+        <ExercisePicker
+          exercises={journal.exercises}
+          plannedIds={planned.map((item) => item.id)}
+          onAdd={add}
+        />
       </div>
 
       {planned.length === 0 && (
