@@ -1,5 +1,7 @@
 # Task 1 — App shell and accounts
 
+> Assignee:
+>
 > Branch `feature/app-shell`. Unblocks tasks 4, 5 and 6.
 
 ## Why

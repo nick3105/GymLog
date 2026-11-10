@@ -1,5 +1,7 @@
 # Task 8 — Switch users to the new app
 
+> Assignee:
+>
 > Branch `feature/switch-to-react`. Needs tasks 1–7 merged and deployed. Do it together.
 
 ## Why
