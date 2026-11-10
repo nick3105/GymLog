@@ -14,10 +14,10 @@ the same thing twice again.
       at `/` with the client-route fallback; `/next/...` redirects to the same path at `/` so old
       bookmarks keep working.
 - [ ] Delete `backend/gymlog/static/` and `backend/tests/model.test.mjs`, and remove the
-      `node --test` step from CI and `CLAUDE.md`.
+      `node --test` step from CI and `AGENTS.md`.
 - [ ] The security headers still apply to every page (`Content-Security-Policy`,
       `X-Frame-Options`), and the React app works under them.
-- [ ] README, `CLAUDE.md` and `docs/DEPLOYMENT.md` describe one app.
+- [ ] README, `AGENTS.md` and `docs/DEPLOYMENT.md` describe one app.
 - [ ] Walk through the BRD "Release acceptance" list on a real phone against production.
 
 ## Out of scope
