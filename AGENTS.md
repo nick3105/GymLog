@@ -31,6 +31,30 @@ seconds of attention. Design every screen for that first; the desktop is the bon
 **Every visible change is checked at 375 × 667 (iPhone SE)** in the browser's device toolbar,
 and on a real phone before merging. A screenshot from the phone goes into the pull request.
 
+## Coding stack
+
+**Use only what is listed here.** Anything else — a language, library, framework, CSS file,
+database or service — needs the team's agreement first: ask the user, and if they agree, add it
+to this table in the same pull request. "It is a small library" is not an exception.
+
+| Part | Language | Libraries and tools |
+| --- | --- | --- |
+| UI (`frontend/`) | TypeScript, React 19 | Vite, Tailwind CSS v4, `lucide-react` (icons) |
+| UI, agreed for later | | `react-router` (task 1), `vitest` (task 5) |
+| API (`backend/`) | Python 3.12 | Flask 3 |
+| Data | SQL | SQLite, through Python's built-in `sqlite3` in `storage.py` — no ORM |
+| Checks | | `pytest`, `ruff` (Python); `oxlint`, `prettier` + Tailwind plugin, `tsc` (TypeScript) |
+| Tools | | `uv` for Python (never `pip` or `venv`), `npm` for the UI, GitHub Actions for CI |
+| Hosting | | PythonAnywhere |
+
+- **Every new screen or feature is built in React** (`frontend/src/`), served at `/next/` until
+  task 8 moves it to `/`. The old UI in `backend/gymlog/static/` (plain HTML, CSS and
+  JavaScript) only gets fixes for bugs that hurt users today — never new features. If a request
+  would change it, say so and ask first.
+- Python's standard library is always fine (`datetime`, `json`, `math`, `sqlite3`, …).
+- Libraries are added only with `uv add` or `npm install`, so `uv.lock` and
+  `package-lock.json` record them — never by copying code or a `<script>` link into the repo.
+
 ## Running things
 
 - Backend: `cd backend && uv run flask --app gymlog run --debug`, then
@@ -106,8 +130,8 @@ The grader and the team read this code. Plain beats clever.
   `src/components/`, one screen per file in `src/pages/`. Props are typed; no `any`.
 - Styling is Tailwind classes only — no new CSS files, no inline `style`. Colours are added to
   `@theme` in `src/index.css`, never hard-coded in a component.
-- Icons come from `lucide-react`. Do not add any other library — UI kit, state manager, chart,
-  date or form library — without asking first.
+- Icons come from `lucide-react`. No library outside **Coding stack** — UI kit, state manager,
+  chart, date or form library — without asking first.
 - Every refusal explains itself in plain English: "Weight must be between 0 and 1000." —
   never `False`, a status code or "Invalid input".
 - Comments explain *why*, only where the reason is not obvious.
