@@ -5,7 +5,7 @@ one is a slice you can show someone: it ends with a working screen or a working 
 branch, and tests that go from red to green.
 
 Every task follows the course planning sheet: **Why / What / Out of scope / Done when**, with
-concrete values in the checks. Read `CLAUDE.md` first — especially **Mobile first**.
+concrete values in the checks. Read `AGENTS.md` first — especially **Mobile first**.
 
 | # | Task | Spec | Branch | BRD | Needs |
 | --- | --- | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ A possible split for four people:
    main.
 2. Read the spec. Write or run its tests and watch them fail.
 3. Build until they pass. Change no test to make it pass.
-4. Check the screen at 375 × 667 and on a real phone (see `CLAUDE.md`).
-5. Run all the checks from `CLAUDE.md`, paste the output into the pull request with a phone
+4. Check the screen at 375 × 667 and on a real phone (see `AGENTS.md`).
+5. Run all the checks from `AGENTS.md`, paste the output into the pull request with a phone
    screenshot, and ask a teammate to review.
 6. Commit with the message the spec suggests.
