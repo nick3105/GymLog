@@ -68,7 +68,9 @@ def wrap(application, repo, wsgi_file, secret_file):
                 ).strip()
                 Path(wsgi_file).touch(exist_ok=True)
         except (OSError, subprocess.SubprocessError):
-            return respond("500 Internal Server Error", "Deployment failed; check PythonAnywhere logs")
+            return respond(
+                "500 Internal Server Error", "Deployment failed; check PythonAnywhere logs"
+            )
         return respond("200 OK", f"Reload requested for {commit}")
 
     return dispatch
