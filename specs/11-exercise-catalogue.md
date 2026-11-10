@@ -44,12 +44,21 @@ Implements PLN-02 and PLN-12 in `backend/gymlog/exercises.json`.
       store only ID and name, so nothing saved changes.
 - [x] `backend/tests/test_exercises.py` checks all of this, so a later edit cannot break it.
 - [x] Task 4 shows the list grouped (see `04-workout-builder.md`).
-- [x] **Search** on Create workout: 650 is too many to scroll on a phone. Typing shows the first
-      8 matches as 48 px rows; one tap adds the exercise and clears the search. Every word typed
-      must appear in the name or the group, in any order, ignoring capitals, spaces and dashes
-      (`pull up` finds Pull-up); names that start with the search come first. The grouped
-      dropdown stays below it ("Or choose by muscle") for browsing.
-      `frontend/src/exerciseSearch.ts`, tested in `exerciseSearch.test.ts`.
+- [x] **One picker** on Create workout (`components/ExercisePicker.tsx`) — 650 is too many for
+      a dropdown on a phone. A search field ("Add an exercise") and a chip per muscle (All,
+      Chest, …, Core; 44 px). Typing, a chip, or both show the matches in a scrolling list of
+      48 px rows with their group; one tap adds the exercise and clears the search (the chip
+      stays, for adding several from one muscle). Exercises already in the workout show a ✓.
+- [x] **Search that forgives** (`frontend/src/exerciseSearch.ts`, tested in
+      `exerciseSearch.test.ts`, plain TypeScript, no library):
+  - every typed word must match the name or the group, in any order; capitals, dashes and a
+    plural `s` don't matter (`pull ups` → Pull-up, `cable flyes` → Cable fly)
+  - one typo per word (two in words of 7+ letters): `benhc press` → Bench press
+  - gym shorthand: `db`, `bb`, `kb`, `rdl`, `sldl`, `dl`, `ohp`, `bp`, `bss`; muscle nicknames:
+    `abs`, `pecs`, `delts`, `lats`, `traps`
+  - ranking: whole word > start of a word > typo; a name that starts with the first word
+    typed gets a bonus; shorter names win ties, then catalogue order (common ones first)
+  - words under 4 letters match only the start of a word, so `row` doesn't find "Narrow"
 
 ## Out of scope
 
@@ -68,7 +77,8 @@ Implements PLN-02 and PLN-12 in `backend/gymlog/exercises.json`.
   - There are at least 600 exercises.
 - `npm test` passes `exerciseSearch.test.ts`.
 - `/api/state` returns the new list. At 375 px on Create workout: typing `lat pull` shows
-  Lat pulldown first, one tap adds it as a card, and the search clears; the dropdown still shows
-  the groups. A workout saved before this change still opens and starts.
+  Lat pulldown first, one tap adds it as a card, and the search clears; `benhc pres` → Bench
+  press first; `db row` → Dumbbell row first; the Biceps chip lists all 50, and typing `hammer`
+  narrows it to biceps only. A workout saved before this change still opens and starts.
 
 Commit as `Feature: a real exercise catalogue`.
