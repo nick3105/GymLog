@@ -1,6 +1,8 @@
 # Task 8 — Switch users to the new app
 
-> Assignee:
+> Assignee: Martin Zvelebil
+>
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
 >
 > Branch `feature/switch-to-react`. Needs tasks 1–7 merged and deployed. Do it together.
 
@@ -12,14 +14,14 @@ the same thing twice again.
 
 ## What
 
-- [ ] React serves at `/` instead of `/next/`: Vite `base: '/'`, Flask serves `frontend/dist`
+- [x] React serves at `/` instead of `/next/`: Vite `base: '/'`, Flask serves `frontend/dist`
       at `/` with the client-route fallback; `/next/...` redirects to the same path at `/` so old
       bookmarks keep working.
-- [ ] Delete `backend/gymlog/static/` and `backend/tests/model.test.mjs`, and remove the
+- [x] Delete `backend/gymlog/static/` and `backend/tests/model.test.mjs`, and remove the
       `node --test` step from CI and `AGENTS.md`.
-- [ ] The security headers still apply to every page (`Content-Security-Policy`,
+- [x] The security headers still apply to every page (`Content-Security-Policy`,
       `X-Frame-Options`), and the React app works under them.
-- [ ] README, `AGENTS.md` and `docs/DEPLOYMENT.md` describe one app.
+- [x] README, `AGENTS.md` and `docs/DEPLOYMENT.md` describe one app.
 - [ ] Walk through the BRD "Release acceptance" list on a real phone against production.
 
 ## Out of scope

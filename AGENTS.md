@@ -39,36 +39,33 @@ to this table in the same pull request. "It is a small library" is not an except
 
 | Part | Language | Libraries and tools |
 | --- | --- | --- |
-| UI (`frontend/`) | TypeScript, React 19 | Vite, Tailwind CSS v4, `lucide-react` (icons) |
-| UI, agreed for later | | `react-router` (task 1), `vitest` (task 5) |
+| UI (`frontend/`) | TypeScript, React 19 | Vite, Tailwind CSS v4, `react-router` (pages), `lucide-react` (icons) |
 | API (`backend/`) | Python 3.12 | Flask 3 |
 | Data | SQL | SQLite, through Python's built-in `sqlite3` in `storage.py` — no ORM |
-| Checks | | `pytest`, `ruff` (Python); `oxlint`, `prettier` + Tailwind plugin, `tsc` (TypeScript) |
-| Tools | | `uv` for Python (never `pip` or `venv`), `npm` for the UI, GitHub Actions for CI |
+| Checks | | `pytest`, `ruff` (Python); `vitest`, `oxlint`, `prettier` + Tailwind plugin, `tsc` (TypeScript) |
+| Tools | | `uv` for Python (never `pip` or `venv`), `npm` for the UI, GitHub Actions for CI and the build |
 | Hosting | | PythonAnywhere |
 
-- **Every new screen or feature is built in React** (`frontend/src/`), served at `/next/` until
-  task 8 moves it to `/`. The old UI in `backend/gymlog/static/` (plain HTML, CSS and
-  JavaScript) only gets fixes for bugs that hurt users today — never new features. If a request
-  would change it, say so and ask first.
+- **Every screen is React** (`frontend/src/`). No HTML pages, templates or JavaScript in
+  `backend/` — Flask only serves the API and the built app.
 - Python's standard library is always fine (`datetime`, `json`, `math`, `sqlite3`, …).
 - Libraries are added only with `uv add` or `npm install`, so `uv.lock` and
   `package-lock.json` record them — never by copying code or a `<script>` link into the repo.
 
 ## Running things
 
-- Backend: `cd backend && uv run flask --app gymlog run --debug`, then
-  open http://127.0.0.1:5000/. The first time, run `uv run python setup_secret.py` before that.
-  uv installs Python and the libraries by itself — never use `pip` or `python -m venv`.
-- Frontend: `cd frontend && npm install && npm run dev`, then open
-  http://localhost:5173/next/. Vite forwards `/api` to Flask, so the backend must be running too.
-- On a real phone: run Vite with `npm run dev -- --host` and open the Network URL it prints,
-  plus `/next/`, from a phone on the same Wi-Fi.
+- Backend: `cd backend && uv run flask --app gymlog run --debug` (the API on port 5000). The
+  first time, run `uv run python setup_secret.py` before that. uv installs Python and the
+  libraries by itself — never use `pip` or `python -m venv`.
+- Frontend: `cd frontend && npm install && npm run dev`, then open http://localhost:5173/.
+  Vite forwards `/api` to Flask, so the backend must be running too.
+- On a real phone: run Vite with `npm run dev -- --host` and open the Network URL it prints
+  from a phone on the same Wi-Fi.
 - Start with a fresh local journal: stop Flask, delete `backend/instance/`, run
   `setup_secret.py` again.
 - Checks — CI runs exactly these on every pull request, so run them before pushing:
-  - `cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest && node --test tests/model.test.mjs`
-  - `cd frontend && npm run lint && npm run format:check && npm run build`
+  - `cd backend && uv run ruff format --check . && uv run ruff check . && uv run pytest`
+  - `cd frontend && npm run lint && npm run format:check && npm test && npm run build`
   - `uv run ruff format .` and `npm run format` fix formatting for you.
 
 ## Project layout
@@ -79,13 +76,18 @@ backend/
   gymlog/models.py       validation and calculations (1RM) — no Flask, no SQL
   gymlog/storage.py      every SQL query — no Flask, no rules
   gymlog/exercises.json  the exercise catalogue
-  gymlog/static/         legacy hand-written UI — bug fixes only, new screens go in frontend/
   instance/              private databases and settings.json — git-ignored
   tests/                 pytest, one file per feature or bug
   setup_secret.py        creates the session-signing key
   wsgi.py                PythonAnywhere entry point
-frontend/
-  src/                   React + TypeScript screens; colours in src/index.css
+  deploy_webhook.py      checks out the deploy branch on PythonAnywhere
+frontend/src/
+  pages/                 one screen per file
+  components/            shared pieces (Layout, LineChart, ProgressSheet, …)
+  api.ts                 the one function that calls /api
+  JournalProvider.tsx    signed-in user, their journal, the workout in progress
+  ui.ts                  shared Tailwind classes (buttons, inputs, cards)
+  index.css              colours
 docs/BRD.md              business requirements (ACC, NAV, PLN, RUN, REV, WGT)
 docs/DEPLOYMENT.md       PythonAnywhere, backup, recovery
 specs/                   what to build, one file per feature
@@ -148,6 +150,7 @@ Dark charcoal, light text, one lime accent doing all the work an accent does.
 | Text | `text-text` | `#f1f3ec` | all text |
 | Muted | `text-muted` | `#979f90` | labels, secondary text |
 | Lime | `text-lime` / `bg-lime` | `#c5f467` | the primary action, progress, the selected thing |
+| Danger | `text-danger` | `#ff9b8a` | error sentences and Discard |
 
 - Lime means "do this" or "you did this". One lime button per screen.
 - Errors are a sentence next to the field that caused them, not a colour alone and not a pop-up.

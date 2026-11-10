@@ -1,4 +1,4 @@
-"""GymLog web app: JSON API, the current UI at / and the React preview at /next/."""
+"""GymLog web app: the JSON API under /api and the React app at every other path."""
 
 import hashlib
 import hmac
@@ -9,13 +9,14 @@ from datetime import date, timedelta
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, g, jsonify, request, send_from_directory, session
+from flask import Flask, g, jsonify, redirect, request, send_from_directory, session
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import storage
 from .models import (
     best_1rm,
+    exercise_stats,
     number,
     validate_registration,
     validate_session,
@@ -27,7 +28,7 @@ FRONTEND_DIST = ROOT.parents[1] / "frontend" / "dist"
 
 
 def create_app(config=None):
-    app = Flask(__name__, static_folder="static", static_url_path="/assets")
+    app = Flask(__name__, static_folder=None)
     instance = Path(os.environ.get("GYMLOG_INSTANCE", str(ROOT.parent / "instance"))).resolve()
     settings = instance / "settings.json"
     secrets_file = json.loads(settings.read_text(encoding="utf-8")) if settings.exists() else {}
@@ -123,23 +124,34 @@ def create_app(config=None):
             return jsonify(error=error.description), error.code
         return error
 
-    @app.get("/")
-    def home():
-        return send_from_directory(ROOT / "static", "index.html")
-
     @app.get("/next/", defaults={"path": ""})
     @app.get("/next/<path:path>")
+    def old_preview(path):
+        # React was previewed at /next/ before it became the app; keep old bookmarks working.
+        return redirect("/" + path, code=301)
+
+    @app.get("/", defaults={"path": ""})
+    @app.get("/<path:path>")
     def frontend(path):
-        # The React app replaces the UI above screen by screen. Real files are
-        # served as-is; any other path is a React route and gets index.html.
+        # Real files from the build are served as-is; any other path is a React route.
+        if path.startswith("api/"):
+            return jsonify(error="That API address does not exist."), 404
         dist = Path(app.config["FRONTEND_DIST"])
         if path and (dist / path).is_file():
             return send_from_directory(dist, path)
+        if "." in path.rsplit("/", 1)[-1]:
+            # A missing file (settings.json, an old script) is a 404, never the app.
+            return "Not found.", 404
+        if not (dist / "index.html").is_file():
+            return "The app is not built yet. Run `npm run build` in frontend/.", 503
         return send_from_directory(dist, "index.html")
 
     @app.get("/api/health")
     def health():
-        return jsonify(status="ok")
+        # The deploy workflow writes commit.txt into the build, so anyone can see what is live.
+        commit_file = Path(app.config["FRONTEND_DIST"]) / "commit.txt"
+        commit = commit_file.read_text().strip() if commit_file.is_file() else "local"
+        return jsonify(status="ok", commit=commit)
 
     @app.get("/api/session")
     def session_status():
@@ -200,6 +212,14 @@ def create_app(config=None):
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
         )
+
+    @app.get("/api/exercises/<exercise_id>/stats")
+    @authenticated
+    def stats(exercise_id):
+        if exercise_id not in catalogue_by_id:
+            return jsonify(error="That exercise is not in the catalogue."), 404
+        sessions = storage.documents(database, g.user_id, "sessions")
+        return jsonify(exercise_stats(sessions, exercise_id))
 
     @app.post("/api/templates")
     @authenticated

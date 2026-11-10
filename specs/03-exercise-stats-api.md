@@ -1,6 +1,8 @@
 # Task 3 — Exercise stats API
 
-> Assignee:
+> Assignee: Martin Zvelebil
+>
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
 >
 > Branch `feature/exercise-stats-api`. Backend only: Python and pytest. Unblocks tasks 5 and 7.
 
@@ -15,16 +17,16 @@ uses, and the screens should only display the answer.
 
 Implements the data behind RUN-04 and REV-04, REV-05, REV-06.
 
-- [ ] `GET /api/exercises/<exercise_id>/stats`, signed in only. It returns:
+- [x] `GET /api/exercises/<exercise_id>/stats`, signed in only. It returns:
       - `last`: the most recent completed session containing this exercise — `{day, sets}` with
         each set's weight, reps and RPE — or `null` when there is none. "Most recent" is by
         session `day`, then by completion time. Sessions from **any** template count (RUN-04).
       - `points`: one `{day, estimate}` per completed session where the exercise has an eligible
         set, oldest first, using `models.best_1rm` on the saved sets (REV-06).
       - `best` and `latest`: the highest and the most recent `estimate`, or `null` (REV-04/05).
-- [ ] An exercise ID not in the catalogue → 404 with a sentence. Another user's sessions are never
+- [x] An exercise ID not in the catalogue → 404 with a sentence. Another user's sessions are never
       counted.
-- [ ] The calculation is a plain function in `models.py` (no Flask, no SQL) taking the user's
+- [x] The calculation is a plain function in `models.py` (no Flask, no SQL) taking the user's
       sessions and an exercise ID, so it is tested without a request.
 
 ## Out of scope

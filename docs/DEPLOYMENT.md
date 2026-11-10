@@ -14,8 +14,8 @@ Everything personal lives in `backend/instance/`, which Git ignores:
 | `settings.json` | session-signing key (plus Nick's old password hash, used once by the upgrade) |
 | `gymlog-<profile>.sqlite3` | old per-guest journals; copied into `gymlog.sqlite3` by the upgrade, then unused |
 
-Never commit, upload or share these files. Flask serves only `gymlog/static/` and
-`frontend/dist/`, never the source or `instance/`.
+Never commit, upload or share these files. Flask serves only `frontend/dist/` (the built app),
+never the source or `instance/`.
 
 ## One-time switch from `cloud/` to `backend/`
 
@@ -74,9 +74,6 @@ database is reused as-is, so nothing is migrated. Replace `nickkkk3105` if the a
 `.../GymLog/cloud/.venv`, restore the previous WSGI file (`from wsgi import application` with
 `project = '/home/nickkkk3105/GymLog/cloud'`), Reload. Then tell the team.
 
-`/next/` (the React preview) returns 404 in production until a later PR builds the frontend
-for PythonAnywhere. That is expected.
-
 ## Upgrade to user accounts (automatic)
 
 The first start after the register/login change rewrites `gymlog.sqlite3` in place: Nick (from
@@ -85,11 +82,47 @@ files are copied in. It runs in one transaction — if anything fails the app do
 database is unchanged; send the Error log to the team. Back up `instance/` first (step 1 above).
 Everyone is signed out once because the cookie format changed.
 
-## Updating after a merge
+## How a merge reaches production
+
+PythonAnywhere runs the **`deploy` branch**, not `main`. On every merge to `main`,
+`.github/workflows/deploy.yml` builds the React app and pushes `main` plus `frontend/dist/` as
+`deploy` (with `frontend/dist/commit.txt` naming the commit). The push to `deploy` calls the
+webhook below, which checks the new `deploy` out, runs `uv sync` and reloads the app.
+`/api/health` then shows `"commit"` equal to the latest commit on `main`.
+
+Nobody commits to `deploy` by hand — it is replaced on every merge.
+
+## One-time switch to the `deploy` branch
+
+Do this right after merging the pull request that made React the app (it deleted the old UI, so
+until these steps run the site answers "The app is not built yet").
+
+1. Check that the **Deploy** workflow on `main` is green in the Actions tab and the `deploy`
+   branch exists on GitHub.
+2. Back up `instance/` (see **Backup and recovery**), then in a **Bash console**:
+
+   ```sh
+   cd ~/GymLog
+   git fetch origin deploy
+   git checkout --force -B deploy origin/deploy
+   cd backend && uv sync --no-dev
+   ```
+
+3. **Reload** in the Web tab. Check:
+   - `https://nickkkk3105.pythonanywhere.com/` shows the sign-in screen of the new app
+   - `/api/health` shows the same commit as the latest `main`
+   - you can sign in and your workouts, sessions and weights are there
+
+From then on the webhook does this on every merge. **Rollback:** `git checkout --force <older
+commit of deploy>` in the console and Reload; or `git switch --detach 2fd4410` for the last
+version with the old UI.
+
+## Updating by hand (webhook off)
 
 ```sh
 cd ~/GymLog
-git pull --ff-only
+git fetch origin deploy
+git checkout --force -B deploy origin/deploy
 cd backend && uv sync --no-dev
 ```
 
@@ -113,8 +146,9 @@ from deploy_webhook import wrap
 application = wrap(application, Path(project).parent, __file__, Path.home() / ".gymlog-deploy-secret")
 ```
 
-Reload once to activate the receiver. A signed push to `main` fetches the
-latest revision, installs locked runtime dependencies, and requests a reload.
+Reload once to activate the receiver. A signed push to `deploy` checks out the
+new build, installs locked runtime dependencies, and requests a reload. Pushes
+to any other branch are ignored.
 Check the webhook delivery response for the commit and verify `/api/health`
 after the reload. Disable the webhook in GitHub to pause automatic updates.
 

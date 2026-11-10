@@ -32,8 +32,6 @@ Implements PLN-02 and PLN-12 in `backend/gymlog/exercises.json`.
 
 ## Out of scope
 
-- The old UI at `/`: it gets the new exercises in its flat list, nothing else (AGENTS.md:
-  bug fixes only).
 - Users adding their own exercises, search, equipment filters, exercise pictures.
 - A second group per exercise (bench press also trains triceps) — one main muscle is enough to
   find it.
@@ -45,7 +43,7 @@ Implements PLN-02 and PLN-12 in `backend/gymlog/exercises.json`.
   - The nine original IDs are there with their original names.
   - Every group is one of the nine above, each group is one block, and the blocks are in split
     order.
-- `/api/state` returns the new list; in the old UI at `/` the Create workout dropdown shows it,
+- `/api/state` returns the new list; at 375 px the Create workout picker shows it grouped,
   and a workout saved before this change still opens and starts.
 
 Commit as `Feature: a real exercise catalogue`.

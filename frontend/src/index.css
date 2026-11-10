@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* GymLog palette, matching backend/gymlog/static/base.css. */
+/* GymLog palette: dark charcoal, light text, one lime accent. See "How it looks" in AGENTS.md. */
 @theme {
   --color-ink: #10120f;
   --color-panel: #191c17;
@@ -8,6 +8,7 @@
   --color-text: #f1f3ec;
   --color-muted: #979f90;
   --color-lime: #c5f467;
+  --color-danger: #ff9b8a;
 }
 
 body {

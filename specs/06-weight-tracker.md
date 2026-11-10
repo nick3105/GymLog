@@ -1,6 +1,8 @@
 # Task 6 — Weight Tracker
 
-> Assignee:
+> Assignee: Martin Zvelebil
+>
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
 >
 > Branch `feature/weight-tracker`. Needs task 1. Builds the line chart task 7 reuses.
 
@@ -15,17 +17,17 @@ noise, not a disaster.
 Implements WGT-01 to WGT-06 on `/next/weight`. The API is `POST /api/weights` and the `weights`
 list in `/api/state`.
 
-- [ ] A date field defaulting to today, and a weight field in kg with a decimal keyboard
+- [x] A date field defaulting to today, and a weight field in kg with a decimal keyboard
       (WGT-01, WGT-02). Save shows the server's sentence on error.
-- [ ] Saving a date that already has a weight replaces it (WGT-03, enforced by the API) — the
+- [x] Saving a date that already has a weight replaces it (WGT-03, enforced by the API) — the
       screen says "Updated" instead of "Saved" so the user knows.
-- [ ] Latest weight and its date, large, at the top (WGT-04).
-- [ ] **`src/components/LineChart.tsx`**: a small reusable SVG line chart — points by date,
+- [x] Latest weight and its date, large, at the top (WGT-04).
+- [x] **`src/components/LineChart.tsx`**: a small reusable SVG line chart — points by date,
       oldest left, a label for the first and last date, the unit, and an empty state sentence.
       No chart library. Task 7 reuses it for 1RM, so take dates, values, a unit and an empty
       message as props, nothing weight-specific (WGT-05).
-- [ ] A collapsible list of all measurements, newest first (WGT-06).
-- [ ] Phone layout: the form at the top, chart full width, readable without zooming.
+- [x] A collapsible list of all measurements, newest first (WGT-06).
+- [x] Phone layout: the form at the top, chart full width, readable without zooming.
 
 ## Out of scope
 

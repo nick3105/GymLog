@@ -1,6 +1,8 @@
 # Task 4 — Create a workout
 
-> Assignee:
+> Assignee: Martin Zvelebil
+>
+> **Done** on branch `feature/react-app` (React app at `/`, so `/next/...` below is now `/...`).
 >
 > Branch `feature/workout-builder`. Needs task 1.
 
@@ -15,22 +17,22 @@ set and a lighter back-off set" quick to enter without a keyboard full of fiddly
 Implements PLN-01 to PLN-11 on `/next/create`. The API is `POST /api/templates`; its validation
 in `models.validate_template` is the source of truth for every limit.
 
-- [ ] Name the workout (PLN-01).
-- [ ] Choose an exercise from the catalogue in `/api/state` and add it (PLN-02, PLN-03). A new
+- [x] Name the workout (PLN-01).
+- [x] Choose an exercise from the catalogue in `/api/state` and add it (PLN-02, PLN-03). A new
       exercise appears as a card with three set rows. Adding the same exercise again adds one set
       to its card instead of a second card. The catalogue stays selectable afterwards.
-- [ ] The exercise picker is grouped by muscle (task 11): a native `<select>` with one
+- [x] The exercise picker is grouped by muscle (task 11): a native `<select>` with one
       `<optgroup>` per `group`, in the order `/api/state` returns them — no hard-coded group
       list in React. Phones show their own scrollable picker with the group headings.
-- [ ] Each set row: target reps (required), target weight in kg (optional), target RPE
+- [x] Each set row: target reps (required), target weight in kg (optional), target RPE
       (optional, 1–10 in 0.5 steps) (PLN-05, PLN-07, PLN-08, PLN-09). Numeric keyboards on
       phones.
-- [ ] Add a set; remove a set (never the last one); remove a whole exercise (PLN-04, PLN-05,
+- [x] Add a set; remove a set (never the last one); remove a whole exercise (PLN-04, PLN-05,
       PLN-06).
-- [ ] **Save** sends the targets per set and shows the server's sentence on error (PLN-10).
+- [x] **Save** sends the targets per set and shows the server's sentence on error (PLN-10).
       Success returns to Start workout with a short confirmation.
-- [ ] **Cancel** asks before discarding anything typed (PLN-11).
-- [ ] Phone layout: one exercise card per row, set rows stacked, Save sticky at the bottom.
+- [x] **Cancel** asks before discarding anything typed (PLN-11).
+- [x] Phone layout: one exercise card per row, set rows stacked, Save sticky at the bottom.
 
 ## Out of scope
 
