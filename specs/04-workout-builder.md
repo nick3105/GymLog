@@ -19,6 +19,9 @@ in `models.validate_template` is the source of truth for every limit.
 - [ ] Choose an exercise from the catalogue in `/api/state` and add it (PLN-02, PLN-03). A new
       exercise appears as a card with three set rows. Adding the same exercise again adds one set
       to its card instead of a second card. The catalogue stays selectable afterwards.
+- [ ] The exercise picker is grouped by muscle (task 11): a native `<select>` with one
+      `<optgroup>` per `group`, in the order `/api/state` returns them — no hard-coded group
+      list in React. Phones show their own scrollable picker with the group headings.
 - [ ] Each set row: target reps (required), target weight in kg (optional), target RPE
       (optional, 1–10 in 0.5 steps) (PLN-05, PLN-07, PLN-08, PLN-09). Numeric keyboards on
       phones.
@@ -41,6 +44,8 @@ in `models.validate_template` is the source of truth for every limit.
   100 kg RPE 9 and set 2 = 8 reps at 80 kg, RPE empty (remove the third row). Save → success.
   Reload; in `/api/state` the template has exactly those two targets, the second with
   `"rpe": null`.
+- **Grouped picker.** The picker shows "Chest" first and "Core" last, every exercise under its
+  group; adding Lateral raise puts it in a card with the group "Shoulders".
 - **Same exercise twice.** Add Squat, then Squat again → one Squat card with 4 sets.
 - **Last set.** On a card with one set, the remove-set button is disabled or absent.
 - **Server says no.** Target RPE 8.3 → the server's sentence about 0.5 steps is shown next to the
