@@ -39,7 +39,8 @@ A possible split for four people:
 
 ## Already done
 
-- ACC-02 (existing accounts keep their password and data) — the upgrade in `storage.py`.
+- ACC-01 to ACC-05 (register, keep old accounts, protect, sign in, sign out) — task 10,
+  `10-register-and-login.md`, built in the API and the current UI at `/`.
 - PLN-12 (exercise catalogue) — `backend/gymlog/exercises.json`, a repository task.
 - Every rule in the BRD is already enforced by the API (`models.py`). Tasks 1, 4, 5, 6 and 7
   build screens on top of it; they should not need new validation rules.
