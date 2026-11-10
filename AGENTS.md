@@ -145,6 +145,15 @@ Dark charcoal, light text, one lime accent doing all the work an accent does.
 - **Specs before code.** Each feature gets `specs/<n>-<name>.md` in the course planning format:
   **Why / What / Out of scope / Done when**, with concrete values and the BRD IDs it covers.
   Its "Done when" includes how it looks and works at 375 px.
+- **Every spec has an assignee.** The line `Assignee:` sits right under the title; empty means
+  nobody has taken it yet. One person per spec — they own it until it is merged.
+- **Starting a spec means claiming it:**
+  1. Read its `Assignee:` line. If it names someone else, stop and tell the user — don't build
+     someone else's task without their say.
+  2. If it is empty, ask the user for their name (suggest `git config user.name`), write it
+     there, and make that the first commit on the branch: `Assign task <n> to <name>`.
+  3. Offer to push the branch and open a draft pull request straight away, so the team sees the
+     task is taken.
 - Each bug gets `issues/<nnn>-<name>.md`: what happens, what should happen, how to reproduce.
 - **One task per branch** (`feature/<name>`, `fix/<nnn>-<name>`), a pull request into `main`,
   one reviewer from the team. **Never commit to `main`.** Fill in the PR template.
@@ -152,6 +161,10 @@ Dark charcoal, light text, one lime accent doing all the work an accent does.
   Subject line first; a short body only when the why is not obvious.
 - **Change code only when asked** to build one spec or fix one issue. Fix that one thing. Other
   bugs or ideas you notice: mention them, do not fix them.
+- **When unsure, ask — don't guess.** If the spec, the BRD or the code leaves a choice open
+  while building (a missing value, two readings of a rule, a design decision, a needed library),
+  stop and ask the user, with the options and your recommendation. Write the answer into the
+  spec so the next person doesn't have to ask again.
 - After every change run the checks above and paste the final output. The output is the proof,
   not a sentence.
 - **Confirm before** creating repos, pushing, opening or merging pull requests, or anything

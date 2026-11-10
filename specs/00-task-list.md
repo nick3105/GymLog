@@ -48,9 +48,11 @@ A possible split for four people:
 
 1. `git switch main && git pull`, then `git switch -c <branch from the table>`. Never commit to
    main.
-2. Read the spec. Write or run its tests and watch them fail.
-3. Build until they pass. Change no test to make it pass.
-4. Check the screen at 375 × 667 and on a real phone (see `AGENTS.md`).
-5. Run all the checks from `AGENTS.md`, paste the output into the pull request with a phone
+2. Put your name on the spec's `Assignee:` line (only if it is empty) and commit it first:
+   `Assign task <n> to <name>`.
+3. Read the spec. Write or run its tests and watch them fail.
+4. Build until they pass. Change no test to make it pass.
+5. Check the screen at 375 × 667 and on a real phone (see `AGENTS.md`).
+6. Run all the checks from `AGENTS.md`, paste the output into the pull request with a phone
    screenshot, and ask a teammate to review.
-6. Commit with the message the spec suggests.
+7. Commit with the message the spec suggests.

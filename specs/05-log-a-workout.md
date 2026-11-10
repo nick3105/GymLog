@@ -1,5 +1,7 @@
 # Task 5 — Log a workout
 
+> Assignee:
+>
 > Branch `feature/log-workout`. Needs tasks 1 and 3. The most-used screen in the app.
 
 ## Why
