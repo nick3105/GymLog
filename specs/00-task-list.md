@@ -18,6 +18,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 7 | History and exercise progress | `07-history-and-progress.md` | `feature/history-progress` | REV-01–07 | 3, 6 |
 | 8 | Switch users to the new app | `08-switch-to-react.md` | `feature/switch-to-react` | all | 1–7 |
 | 11 | A real exercise catalogue | `11-exercise-catalogue.md` | `feature/exercise-catalogue` | PLN-02, PLN-12 | — |
+| 12 | Move production to a real database | `12-real-database.md` | `feature/real-database` | — | 8 |
 
 ## Who can start when
 
