@@ -235,6 +235,57 @@ class JournalTests(unittest.TestCase):
         self.login(phone)
         self.assertEqual(phone.get("/api/state").json["weights"], [payload])
 
+    def test_weight_goals_are_private_and_can_be_changed_or_cleared(self):
+        self.assertIsNone(self.client.get("/api/state").json["weightGoal"])
+        self.post("/api/weights", {"day": "2026-11-06", "kg": 80.2})
+        saved = self.post("/api/weight-goal", {"kg": 75, "mode": "lose"})
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json, {"weightGoal": {"kg": 75, "mode": "lose"}})
+        self.assertEqual(
+            self.client.get("/api/state").json["weightGoal"], {"kg": 75, "mode": "lose"}
+        )
+
+        phone = self.app.test_client()
+        self.login(phone)
+        self.assertEqual(phone.get("/api/state").json["weightGoal"], {"kg": 75, "mode": "lose"})
+
+        stranger = self.app.test_client()
+        headers = {"X-CSRF-Token": self.register(stranger, "martin", "martin-test-password")}
+        self.assertIsNone(stranger.get("/api/state").json["weightGoal"])
+        other_goal = stranger.post(
+            "/api/weight-goal", json={"kg": 60, "mode": "gain"}, headers=headers
+        )
+        self.assertEqual(other_goal.json, {"weightGoal": {"kg": 60, "mode": "gain"}})
+        self.assertEqual(
+            self.client.get("/api/state").json["weightGoal"], {"kg": 75, "mode": "lose"}
+        )
+
+        updated = self.post("/api/weight-goal", {"kg": 74.5, "mode": "lose"})
+        self.assertEqual(updated.json, {"weightGoal": {"kg": 74.5, "mode": "lose"}})
+        for value in [0, 701, "", True, "NaN"]:
+            self.assertEqual(
+                self.post("/api/weight-goal", {"kg": value, "mode": "lose"}).status_code,
+                400,
+            )
+        self.assertEqual(
+            self.client.get("/api/state").json["weightGoal"], {"kg": 74.5, "mode": "lose"}
+        )
+
+        self.assertEqual(
+            self.post("/api/weight-goal", {"kg": 80.2, "mode": "lose"}).status_code, 400
+        )
+        self.assertEqual(
+            self.post("/api/weight-goal", {"kg": 80.2, "mode": "gain"}).status_code, 400
+        )
+        self.assertEqual(self.post("/api/weight-goal", {"kg": 85, "mode": "gain"}).status_code, 200)
+        self.assertEqual(
+            self.client.get("/api/state").json["weightGoal"], {"kg": 85, "mode": "gain"}
+        )
+
+        cleared = self.post("/api/weight-goal", {"kg": None, "mode": "gain"})
+        self.assertEqual(cleared.json, {"weightGoal": None})
+        self.assertIsNone(self.client.get("/api/state").json["weightGoal"])
+
     def test_estimate_rules(self):
         self.assertEqual(estimated_1rm(80, 5, 8), 98.7)
         self.assertEqual(estimated_1rm(80, 5, 10), 93.3)

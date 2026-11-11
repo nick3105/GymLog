@@ -93,7 +93,7 @@ def test_upgrade_runs_once(legacy):
     client, _ = sign_in(create_app(config), "nick", "nick-old-password")
     assert len(client.get("/api/state").json["templates"]) == 1
     with sqlite3.connect(config["DATABASE"]) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert db.execute("SELECT count(*) FROM users").fetchone()[0] == 2
 
 
@@ -107,3 +107,95 @@ def test_failed_upgrade_changes_nothing(legacy):
         assert "users" not in tables
         assert db.execute("PRAGMA user_version").fetchone()[0] == 0
     create_app(config)
+
+
+def test_v1_database_adds_goal_storage_without_losing_journal_data(tmp_path):
+    database = tmp_path / "gymlog.sqlite3"
+    with sqlite3.connect(database) as db:
+        db.executescript(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE templates (
+                id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                document TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE sessions (
+                id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                client_id TEXT NOT NULL, document TEXT NOT NULL, created_at TEXT NOT NULL,
+                UNIQUE (user_id, client_id));
+            CREATE TABLE body_weights (
+                user_id INTEGER NOT NULL REFERENCES users(id), day TEXT NOT NULL, kg REAL NOT NULL,
+                PRIMARY KEY (user_id, day));
+            CREATE TABLE login_attempts (
+                address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL);
+            PRAGMA user_version = 1;
+            """
+        )
+        db.execute(
+            "INSERT INTO users VALUES (1, 'nick', ?, '2026-11-01')",
+            (generate_password_hash("nick-old-password"),),
+        )
+        db.execute("INSERT INTO body_weights VALUES (1, '2026-11-01', 80.2)")
+
+    config = {
+        "TESTING": True,
+        "SECRET_KEY": "test-only-secret-key",
+        "SESSION_COOKIE_SECURE": False,
+        "DATABASE": str(database),
+    }
+    app = create_app(config)
+    client, status = sign_in(app, "nick", "nick-old-password")
+    assert status == 200
+    state = client.get("/api/state").json
+    assert state["weights"] == [{"day": "2026-11-01", "kg": 80.2}]
+    assert state["weightGoal"] is None
+    with sqlite3.connect(database) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+
+
+def test_v2_weight_goal_migrates_as_weight_loss(tmp_path):
+    database = tmp_path / "gymlog.sqlite3"
+    with sqlite3.connect(database) as db:
+        db.executescript(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE templates (
+                id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                document TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE sessions (
+                id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+                client_id TEXT NOT NULL, document TEXT NOT NULL, created_at TEXT NOT NULL,
+                UNIQUE (user_id, client_id));
+            CREATE TABLE body_weights (
+                user_id INTEGER NOT NULL REFERENCES users(id), day TEXT NOT NULL, kg REAL NOT NULL,
+                PRIMARY KEY (user_id, day));
+            CREATE TABLE body_weight_goals (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id), kg REAL NOT NULL);
+            CREATE TABLE login_attempts (
+                address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL);
+            PRAGMA user_version = 2;
+            """
+        )
+        db.execute(
+            "INSERT INTO users VALUES (1, 'nick', ?, '2026-11-01')",
+            (generate_password_hash("nick-old-password"),),
+        )
+        db.execute("INSERT INTO body_weights VALUES (1, '2026-11-01', 80.2)")
+        db.execute("INSERT INTO body_weight_goals VALUES (1, 75)")
+
+    app = create_app(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test-only-secret-key",
+            "SESSION_COOKIE_SECURE": False,
+            "DATABASE": str(database),
+        }
+    )
+    client, status = sign_in(app, "nick", "nick-old-password")
+    assert status == 200
+    assert client.get("/api/state").json["weightGoal"] == {"kg": 75, "mode": "lose"}
+    with sqlite3.connect(database) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3

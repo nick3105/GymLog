@@ -33,6 +33,10 @@ npm run dev
 Open http://localhost:5173/ and create an account. Your local `backend/instance/` is a separate,
 throwaway journal — never copy the production one to your computer.
 
+The Weight Tracker lets each signed-in user save one private weight-loss or weight-gain goal.
+The target must be below or above the latest measurement for the selected direction. It shows
+remaining kilograms from the latest measurement, and the goal follows the account across devices.
+
 On a phone on the same Wi-Fi: run `npm run dev -- --host` and open the Network address it prints.
 
 ## Checks

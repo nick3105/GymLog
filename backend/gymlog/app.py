@@ -211,6 +211,7 @@ def create_app(config=None):
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
+            weightGoal=storage.weight_goal(database, g.user_id),
         )
 
     @app.get("/api/exercises/<exercise_id>/stats")
@@ -275,5 +276,25 @@ def create_app(config=None):
             raise ValueError("Choose a valid date.") from None
         kg = number(body.get("kg"), "Body weight", 1, 700)
         return jsonify(storage.save_weight(database, g.user_id, day, kg))
+
+    @app.post("/api/weight-goal")
+    @authenticated
+    def set_weight_goal():
+        body = request.get_json()
+        if not isinstance(body, dict) or "kg" not in body:
+            raise ValueError("A goal weight is required.")
+        mode = body.get("mode")
+        if not isinstance(mode, str) or mode not in {"lose", "gain"}:
+            raise ValueError("Choose whether you want to lose or gain weight.")
+        kg = None if body["kg"] is None else number(body["kg"], "Goal weight", 1, 700)
+        if kg is not None:
+            measurements = storage.weights(database, g.user_id)
+            if measurements:
+                latest = measurements[-1]["kg"]
+                if mode == "lose" and kg >= latest:
+                    raise ValueError("A weight-loss goal must be below your latest weight.")
+                if mode == "gain" and kg <= latest:
+                    raise ValueError("A weight-gain goal must be above your latest weight.")
+        return jsonify(weightGoal=storage.save_weight_goal(database, g.user_id, kg, mode))
 
     return app

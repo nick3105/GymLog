@@ -4,19 +4,24 @@ Assignee: annalisa2912
 
 ## Why
 
-The Weight Tracker shows measurements and their trend, but users who are trying to lose weight
-cannot see their target or how many kilograms remain. A simple, user-chosen goal makes that
+The Weight Tracker shows measurements and their trend, but users cannot see a chosen weight
+target or how many kilograms remain to gain or lose. A simple, user-chosen goal makes that
 progress visible without estimating how quickly it will happen.
 
 ## What
 
-- Let a signed-in user set, change, or clear one optional goal weight in kg from the Weight
-  Tracker.
+- Let a signed-in user choose whether they want to lose or gain weight, then set, change, or
+  clear one optional goal weight in kg from the Weight Tracker.
+- When a latest measurement exists, require a weight-loss goal to be lower than it and a
+  weight-gain goal to be higher than it. If no measurement exists, allow setting a goal either way.
 - Save the goal privately for that user through the existing API architecture. It must remain
   available after sign-out, reload, and sign-in on another device.
-- When a goal and a latest weight exist, show the goal and the remaining kilograms to lose:
-  `max(latest weight − goal weight, 0)`. Show **Goal reached** when the latest weight is at or
-  below the goal; never show a negative amount to lose.
+- When a goal and a latest weight exist, show the goal and remaining kilograms in the selected
+  direction: for weight loss `max(latest weight − goal weight, 0)`; for weight gain
+  `max(goal weight − latest weight, 0)`. Show **Goal reached** when the latest weight reaches or
+  passes the goal in the selected direction; never show a negative remaining amount.
+- When measurements and a goal exist, show a labelled horizontal goal line in the existing weight
+  chart and include the goal in its vertical range.
 - When a goal exists but there is no weight measurement yet, show the goal and explain that a
   measurement is needed to calculate what remains. When no goal exists, keep the existing Weight
   Tracker flow clear and offer a way to set one.
@@ -27,18 +32,21 @@ progress visible without estimating how quickly it will happen.
 
 ## Out of scope
 
-- Weight-gain or maintenance goals, BMI, health advice, target-date predictions, or recommended
-  goal weights.
+- Maintenance goals, BMI, health advice, target-date predictions, or recommended goal weights.
 - A progress percentage or starting-weight snapshot; this task reports the current remaining kg.
-- Changes to measurement history, chart scaling, or measurement editing.
+- Changes to measurement history or measurement editing.
 
 ## Done when
 
-- On a 375 × 667 screen, set a goal of 75 kg with a latest measurement of 80.2 kg. The Weight
-  Tracker shows the goal and **5.2 kg to lose**, with no horizontal scrolling.
+- On a 375 × 667 screen, choose lose and set a goal of 75 kg with a latest measurement of
+  80.2 kg. The Weight Tracker shows **5.2 kg to lose**, with no horizontal scrolling.
 - Save a new latest measurement of 79.8 kg. The remaining amount updates to **4.8 kg to lose**.
-- With a latest measurement of 75 kg or less, show **Goal reached** and no negative remaining
-  amount.
+- Choose gain with a latest measurement of 80.2 kg and a goal of 85 kg. Show **4.8 kg to gain**.
+- Reject a loss target equal to or above the latest measurement and a gain target equal to or
+  below it, with a clear sentence beside the field.
+- The chart shows a labelled horizontal goal line at **75 kg**, distinct from the measurement line.
+- With a latest measurement of 75 kg or less, show a prominent positive **Goal reached — great
+  work!** message and no negative remaining amount.
 - With no measurements, setting a goal succeeds and the page explains that a measurement is
   needed to calculate the remaining amount.
 - Change the goal, then clear it. Reloading the page reflects the saved or cleared state.
