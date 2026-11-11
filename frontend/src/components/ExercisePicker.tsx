@@ -47,7 +47,7 @@ export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) 
             type="button"
             aria-pressed={group === name}
             onClick={() => setGroup(name)}
-            className={`min-h-11 rounded-full border px-3 text-sm font-medium ${
+            className={`min-h-11 rounded-full border px-3 text-sm font-normal ${
               group === name ? 'border-accent text-accent' : 'border-border text-text'
             }`}
           >

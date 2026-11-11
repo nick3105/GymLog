@@ -30,11 +30,11 @@ export default function AuthForm({ mode }: Props) {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-4 py-10">
-      <p className="flex items-center gap-2 text-2xl font-bold">
+      <p className="flex items-center gap-2 text-2xl font-light">
         <Dumbbell className="text-accent" aria-hidden />
         gymlog<span className="text-accent">.</span>
       </p>
-      <h1 className="text-3xl font-semibold">
+      <h1 className="text-3xl font-normal">
         {creating ? 'Create your account.' : 'Show up. Keep getting stronger.'}
       </h1>
       <form onSubmit={submit} className="flex flex-col gap-4">
@@ -85,7 +85,7 @@ export default function AuthForm({ mode }: Props) {
         {creating ? 'Already have an account? ' : 'New here? '}
         <Link
           to={creating ? '/signin' : '/register'}
-          className="text-accent inline-flex min-h-11 items-center font-semibold"
+          className="text-accent inline-flex min-h-11 items-center font-normal"
         >
           {creating ? 'Sign in' : 'Create an account'}
         </Link>

@@ -37,7 +37,7 @@ export default function Start() {
     <>
       <Notice />
       <div className="mb-4 flex items-end justify-between gap-2">
-        <h1 className="text-3xl font-bold">Start workout</h1>
+        <h1 className="text-3xl font-light">Start workout</h1>
         <Link to="/create" className={textButton}>
           + New
         </Link>
@@ -53,7 +53,7 @@ export default function Start() {
         <ul className="flex flex-col gap-3">
           {journal.templates.map((template) => (
             <li key={template.id} className={card}>
-              <h2 className="text-xl font-semibold">{template.name}</h2>
+              <h2 className="text-xl font-normal">{template.name}</h2>
               <p className="text-muted mb-2 text-sm">
                 {template.exercises.length} exercises ·{' '}
                 {template.exercises.reduce((total, exercise) => total + exercise.sets, 0)} sets
@@ -69,7 +69,7 @@ export default function Start() {
               <button
                 type="button"
                 onClick={() => start(template)}
-                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-semibold"
+                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-normal"
               >
                 <Play className="size-5" aria-hidden />
                 Start

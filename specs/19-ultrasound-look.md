@@ -32,7 +32,9 @@ on a phone.
 - Cards are `rounded-lg` panels without a border; inputs are rounded-full.
 - Field labels are uppercase with wide letter spacing, as on ultrasound.money.
 - A red and blue glow sits behind the top of every page.
-- Text uses Inter; big numbers (latest weight, stats) use Roboto Mono. Both are installed with
+- Text uses Inter at light weight (300), like ultrasound.money: `font-light` by default and for
+  headings and big numbers, `font-normal` for titles, buttons and labels; never bold.
+- Big numbers (latest weight, stats) use Roboto Mono. Both are installed with
   npm (`@fontsource-variable/inter`, `@fontsource-variable/roboto-mono`) so they work offline
   and are recorded in `package-lock.json`.
 - Update "How it looks" and "Coding stack" in `AGENTS.md`.

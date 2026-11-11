@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <>
       <Notice />
-      <h1 className="mb-1 text-3xl font-bold">Hi, {username}.</h1>
+      <h1 className="mb-1 text-3xl font-light">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {choices.map(({ to, title, text, icon: Icon }, index) => (
@@ -51,7 +51,7 @@ export default function Home() {
           >
             <Icon className="size-7 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
-              <span className="block text-lg font-semibold">{title}</span>
+              <span className="block text-lg font-normal">{title}</span>
               <span className={`block text-sm ${index === 0 ? 'text-white/80' : 'text-muted'}`}>
                 {text}
               </span>

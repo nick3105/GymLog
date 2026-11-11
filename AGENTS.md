@@ -160,6 +160,9 @@ main action and a red and blue glow behind the top of the page (spec 19).
 - Cards are `rounded-lg` panels without a border; buttons and inputs are `rounded-full`.
 - Text is Inter (`font-sans`, the default); big numbers are Roboto Mono (`font-mono`). Labels are
   uppercase with `tracking-widest`.
+- Weights are light: `font-light` is the default (set on `body`) and for headings and big
+  numbers; `font-normal` for titles, buttons and labels. No `font-medium`, `font-semibold` or
+  `font-bold`.
 - Errors are a sentence next to the field that caused them, not a colour alone and not a pop-up.
 - Gym lighting is harsh and phones are held at arm's length: keep contrast high and text at
   least 16 px for anything you need to read mid-workout.
