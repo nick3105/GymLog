@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <>
       <Notice />
-      <h1 className="gradient-text mb-1 text-3xl font-extralight">Hi, {username}.</h1>
+      <h1 className="gradient-text mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {choices.map(({ to, title, text, icon: Icon }, index) => (

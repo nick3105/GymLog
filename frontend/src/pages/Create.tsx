@@ -142,7 +142,7 @@ export default function Create() {
 
   return (
     <form onSubmit={save} noValidate>
-      <h1 className="gradient-text mb-4 text-3xl font-extralight">
+      <h1 className="gradient-text mb-4 text-3xl font-bold">
         {id ? 'Edit workout' : 'Create workout'}
       </h1>
       {id && (

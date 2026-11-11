@@ -115,7 +115,7 @@ export default function Session() {
     <form onSubmit={finish} noValidate>
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="gradient-text truncate text-3xl font-extralight">{workout.name}</h1>
+          <h1 className="gradient-text truncate text-3xl font-bold">{workout.name}</h1>
           <p className="text-muted">{formatDay(workout.day)} · not saved until you finish</p>
         </div>
         <button

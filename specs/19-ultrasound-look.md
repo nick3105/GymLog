@@ -33,10 +33,10 @@ on a phone.
 - Cards are `rounded-lg` panels without a border; inputs are rounded-full.
 - Field labels are uppercase with wide letter spacing, as on ultrasound.money.
 - A red and blue glow sits behind the top of every page.
-- Every page title (`<h1>`) is extra-light text with their headline gradient,
+- Every page title (`<h1>`) is bold text with their headline gradient,
   `45deg, #ff01e6 → #ff5f51 39% → #00ffa3 90%` (`gradient-text` in `index.css`).
 - Text uses Inter at light weight (300), like ultrasound.money: `font-light` by default and for
-  headings and big numbers, `font-normal` for titles, buttons and labels; never bold.
+  big numbers, `font-normal` for titles, buttons and labels; only page titles are bold.
 - Big numbers (latest weight, stats) use Roboto Mono. Both are installed with
   npm (`@fontsource-variable/inter`, `@fontsource-variable/roboto-mono`) so they work offline
   and are recorded in `package-lock.json`.

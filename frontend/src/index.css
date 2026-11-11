@@ -43,6 +43,9 @@
   );
   background-clip: text;
   color: transparent;
+  /* As wide as the words, not the whole row, so all three colours show. */
+  width: fit-content;
+  max-width: 100%;
 }
 
 body {

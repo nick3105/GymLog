@@ -154,7 +154,7 @@ main action and a red and blue glow behind the top of the page (spec 19).
 | Accent | `text-accent` / `bg-accent` | `#5dadec` | links, progress, the selected thing |
 | Gradient | `from-gradient-start to-gradient-end` | `#22d3ee` → `#4f46e5` | the primary action |
 | Glow | `glow-red`, `glow-blue` | `#dd273b`, `#0037fa` | the page glow in `index.css` only |
-| Title | `gradient-text` | `#ff01e6` → `#ff5f51` → `#00ffa3` | the page `<h1>`, `font-extralight` |
+| Title | `gradient-text` | `#ff01e6` → `#ff5f51` → `#00ffa3` | the page `<h1>`, `font-bold` |
 | Danger | `text-danger` | `#ff9b8a` | error sentences and Discard |
 
 - The gradient means "do this". One gradient button per screen (`primaryButton` in `ui.ts`);
@@ -163,8 +163,7 @@ main action and a red and blue glow behind the top of the page (spec 19).
 - Text is Inter (`font-sans`, the default); big numbers are Roboto Mono (`font-mono`). Labels are
   uppercase with `tracking-widest`.
 - Weights are light: `font-light` is the default (set on `body`) and for headings and big
-  numbers; `font-normal` for titles, buttons and labels. No `font-medium`, `font-semibold` or
-  `font-bold`.
+  numbers; `font-normal` for titles, buttons and labels. Only page titles (`<h1>`) are `font-bold`.
 - Errors are a sentence next to the field that caused them, not a colour alone and not a pop-up.
 - Gym lighting is harsh and phones are held at arm's length: keep contrast high and text at
   least 16 px for anything you need to read mid-workout.

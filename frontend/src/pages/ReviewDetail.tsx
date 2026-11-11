@@ -35,7 +35,7 @@ export default function ReviewDetail() {
         <ArrowLeft className="size-5" aria-hidden />
         All sessions
       </Link>
-      <h1 className="gradient-text text-3xl font-extralight">{session.name}</h1>
+      <h1 className="gradient-text text-3xl font-bold">{session.name}</h1>
       <p className="text-muted mb-4">{formatDay(session.day)}</p>
       <div className="flex flex-col gap-4">
         {session.exercises.map((exercise) => (
