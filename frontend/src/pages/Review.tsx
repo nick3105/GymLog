@@ -19,7 +19,7 @@ export default function Review() {
 
   return (
     <>
-      <h1 className="mb-4 text-3xl font-light">Review workouts</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-extralight">Review workouts</h1>
       {journal.sessions.length === 0 ? (
         <EmptyState
           title="Your first session is waiting."

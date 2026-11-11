@@ -142,7 +142,9 @@ export default function Create() {
 
   return (
     <form onSubmit={save} noValidate>
-      <h1 className="mb-4 text-3xl font-light">{id ? 'Edit workout' : 'Create workout'}</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-extralight">
+        {id ? 'Edit workout' : 'Create workout'}
+      </h1>
       {id && (
         <p className="text-muted mb-4">
           Changes apply to future workouts. Completed history stays unchanged.

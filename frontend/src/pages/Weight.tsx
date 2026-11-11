@@ -63,7 +63,7 @@ export default function Weight() {
 
   return (
     <>
-      <h1 className="mb-4 text-3xl font-light">Weight Tracker</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-extralight">Weight Tracker</h1>
       <form onSubmit={save} noValidate className={`${card} mb-4 flex flex-col gap-3`}>
         <div className="grid grid-cols-2 gap-3">
           <div>

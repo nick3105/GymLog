@@ -10,12 +10,16 @@
   --color-border: #2d344a;
   --color-text: #ffffff;
   --color-muted: #8991ad;
+  --color-label: #b5bddb;
   --color-accent: #5dadec;
   --color-gradient-start: #22d3ee;
   --color-gradient-end: #4f46e5;
   --color-glow-red: #dd273b;
   --color-glow-blue: #0037fa;
   --color-danger: #ff9b8a;
+  --color-title-pink: #ff01e6;
+  --color-title-coral: #ff5f51;
+  --color-title-green: #00ffa3;
 
   --font-sans: 'Inter Variable', sans-serif;
   --font-mono: 'Roboto Mono Variable', monospace;
@@ -27,6 +31,18 @@
   background:
     linear-gradient(var(--color-panel), var(--color-panel)) padding-box,
     linear-gradient(to top right, var(--color-gradient-start), var(--color-gradient-end)) border-box;
+}
+
+/* Page titles: pink to coral to green text, like ultrasound.money's "ultra sound money". */
+@utility gradient-text {
+  background-image: linear-gradient(
+    45deg,
+    var(--color-title-pink),
+    var(--color-title-coral) 39%,
+    var(--color-title-green) 90%
+  );
+  background-clip: text;
+  color: transparent;
 }
 
 body {

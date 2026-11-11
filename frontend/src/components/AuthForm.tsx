@@ -34,7 +34,7 @@ export default function AuthForm({ mode }: Props) {
         <Dumbbell className="text-accent" aria-hidden />
         gymlog<span className="text-accent">.</span>
       </p>
-      <h1 className="text-3xl font-normal">
+      <h1 className="gradient-text text-3xl font-extralight">
         {creating ? 'Create your account.' : 'Show up. Keep getting stronger.'}
       </h1>
       <form onSubmit={submit} className="flex flex-col gap-4">

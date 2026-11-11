@@ -149,10 +149,12 @@ main action and a red and blue glow behind the top of the page (spec 19).
 | Panel | `bg-panel` | `#1b2236` | cards, bars, inputs |
 | Border | `border-border` | `#2d344a` | dividers |
 | Text | `text-text` | `#ffffff` | all text |
-| Muted | `text-muted` | `#8991ad` | labels, secondary text |
+| Muted | `text-muted` | `#8991ad` | secondary text |
+| Label | `text-label` | `#b5bddb` | uppercase labels |
 | Accent | `text-accent` / `bg-accent` | `#5dadec` | links, progress, the selected thing |
 | Gradient | `from-gradient-start to-gradient-end` | `#22d3ee` → `#4f46e5` | the primary action |
 | Glow | `glow-red`, `glow-blue` | `#dd273b`, `#0037fa` | the page glow in `index.css` only |
+| Title | `gradient-text` | `#ff01e6` → `#ff5f51` → `#00ffa3` | the page `<h1>`, `font-extralight` |
 | Danger | `text-danger` | `#ff9b8a` | error sentences and Discard |
 
 - The gradient means "do this". One gradient button per screen (`primaryButton` in `ui.ts`);

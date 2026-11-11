@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <>
       <Notice />
-      <h1 className="mb-1 text-3xl font-light">Hi, {username}.</h1>
+      <h1 className="gradient-text mb-1 text-3xl font-extralight">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {choices.map(({ to, title, text, icon: Icon }, index) => (
@@ -62,15 +62,15 @@ export default function Home() {
       </div>
       <dl className="mt-6 grid grid-cols-3 gap-3 text-center">
         <div className="bg-panel rounded-lg p-3">
-          <dt className="text-muted text-xs tracking-widest uppercase">Workouts</dt>
+          <dt className="text-label text-xs tracking-widest uppercase">Workouts</dt>
           <dd className="font-mono text-xl">{journal.templates.length}</dd>
         </div>
         <div className="bg-panel rounded-lg p-3">
-          <dt className="text-muted text-xs tracking-widest uppercase">Sessions</dt>
+          <dt className="text-label text-xs tracking-widest uppercase">Sessions</dt>
           <dd className="font-mono text-xl">{journal.sessions.length}</dd>
         </div>
         <div className="bg-panel rounded-lg p-3">
-          <dt className="text-muted text-xs tracking-widest uppercase">Last session</dt>
+          <dt className="text-label text-xs tracking-widest uppercase">Last session</dt>
           <dd className="font-mono text-sm">{lastSession ? formatDay(lastSession.day) : '–'}</dd>
         </div>
       </dl>

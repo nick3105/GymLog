@@ -21,6 +21,7 @@ on a phone.
   | `border` | `#2d344a` | slateus-600 |
   | `text` | `#ffffff` | white |
   | `muted` | `#8991ad` | slateus-400 |
+  | `label` (uppercase labels) | `#b5bddb` | slateus-200 |
   | `accent` (links, selected thing) | `#5dadec` | drop |
   | `gradient-start` → `gradient-end` | `#22d3ee` → `#4f46e5` | cyan-400 → indigo-600 |
   | `glow-red`, `glow-blue` | `#dd273b`, `#0037fa` | header-glow.svg |
@@ -32,6 +33,8 @@ on a phone.
 - Cards are `rounded-lg` panels without a border; inputs are rounded-full.
 - Field labels are uppercase with wide letter spacing, as on ultrasound.money.
 - A red and blue glow sits behind the top of every page.
+- Every page title (`<h1>`) is extra-light text with their headline gradient,
+  `45deg, #ff01e6 → #ff5f51 39% → #00ffa3 90%` (`gradient-text` in `index.css`).
 - Text uses Inter at light weight (300), like ultrasound.money: `font-light` by default and for
   headings and big numbers, `font-normal` for titles, buttons and labels; never bold.
 - Big numbers (latest weight, stats) use Roboto Mono. Both are installed with

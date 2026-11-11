@@ -13,7 +13,7 @@ export const textButton =
 export const input =
   'h-12 w-full min-w-0 rounded-full border border-border bg-ink px-4 text-base text-text placeholder:text-muted/70 focus:border-accent focus:outline-none'
 
-export const label = 'mb-1 block text-sm font-normal tracking-widest text-muted uppercase'
+export const label = 'mb-1 block text-sm font-normal tracking-widest text-label uppercase'
 
 export const card = 'rounded-lg bg-panel p-4'
 

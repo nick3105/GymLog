@@ -37,7 +37,7 @@ export default function Start() {
     <>
       <Notice />
       <div className="mb-4 flex items-end justify-between gap-2">
-        <h1 className="text-3xl font-light">Start workout</h1>
+        <h1 className="gradient-text text-3xl font-extralight">Start workout</h1>
         <Link to="/create" className={textButton}>
           + New
         </Link>

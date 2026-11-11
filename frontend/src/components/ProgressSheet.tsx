@@ -60,7 +60,7 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
           Back
         </button>
         <div>
-          <p className="text-muted text-xs font-normal tracking-widest uppercase">
+          <p className="text-label text-xs font-normal tracking-widest uppercase">
             Exercise progress
           </p>
           <h2 id="progress-title" className="text-2xl font-light">
