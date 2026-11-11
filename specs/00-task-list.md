@@ -19,6 +19,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 8 | Switch users to the new app | `08-switch-to-react.md` | `feature/switch-to-react` | all | 1–7 |
 | 11 | A real exercise catalogue | `11-exercise-catalogue.md` | `feature/exercise-catalogue` | PLN-02, PLN-12 | — |
 | 12 | Move production to a real database | `12-real-database.md` | `feature/real-database` | — | 8 |
+| 14 | Edit a body-weight measurement | `14-edit-weight-measurement.md` | `feature/edit-weight-measurement` | WGT-03, WGT-06 | 6 |
 
 ## Who can start when
 
