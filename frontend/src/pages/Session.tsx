@@ -137,7 +137,7 @@ export default function Session() {
                 <ExerciseLink id={exercise.id} name={exercise.name} />
                 <p className="shrink-0 text-right">
                   <span className="text-muted block text-xs">Est. 1RM</span>
-                  <span className="text-lime font-bold">
+                  <span className="text-accent font-bold">
                     {estimate === null ? '–' : `${formatNumber(estimate)} kg`}
                   </span>
                 </p>
@@ -176,7 +176,7 @@ export default function Session() {
                 return (
                   <div
                     key={setIndex}
-                    className={`mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2 ${isCurrent ? 'outline-lime/60 rounded-xl outline-2 outline-offset-4' : ''}`}
+                    className={`mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
                   >
                     <span className="text-muted text-center font-semibold">{setIndex + 1}</span>
                     {fields.map(({ key, label, mode }) => (

@@ -57,8 +57,8 @@ export default function Layout() {
       <header className="border-border bg-ink/95 sticky top-0 z-20 border-b pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center gap-2 px-4">
           <Link to="/" className="flex min-h-11 items-center gap-2 text-lg font-bold md:hidden">
-            <Dumbbell className="text-lime size-5" aria-hidden />
-            gymlog<span className="text-lime">.</span>
+            <Dumbbell className="text-accent size-5" aria-hidden />
+            gymlog<span className="text-accent">.</span>
           </Link>
           <span className="text-muted ml-auto truncate text-sm">{username}</span>
           <button
@@ -83,8 +83,8 @@ export default function Layout() {
 
       <nav className="border-border bg-panel fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r p-4 md:flex">
         <Link to="/" className="mb-6 flex min-h-11 items-center gap-2 px-2 text-xl font-bold">
-          <Dumbbell className="text-lime size-6" aria-hidden />
-          gymlog<span className="text-lime">.</span>
+          <Dumbbell className="text-accent size-6" aria-hidden />
+          gymlog<span className="text-accent">.</span>
         </Link>
         {pages.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -92,7 +92,7 @@ export default function Layout() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex min-h-11 items-center gap-3 rounded-xl px-3 font-medium ${isActive ? 'bg-lime/10 text-lime' : 'text-muted'}`
+              `flex min-h-11 items-center gap-3 rounded-xl px-3 font-medium ${isActive ? 'bg-accent/10 text-accent' : 'text-muted'}`
             }
           >
             <Icon className="size-5" aria-hidden />
@@ -106,7 +106,7 @@ export default function Layout() {
         {active && location.pathname !== '/session' && (
           <Link
             to="/session"
-            className="border-lime/40 bg-lime/10 text-lime mb-4 flex min-h-12 items-center justify-between rounded-xl border px-4 font-semibold"
+            className="border-accent/40 bg-accent/10 text-accent mb-4 flex min-h-12 items-center justify-between rounded-xl border px-4 font-semibold"
           >
             Workout in progress: {active.name}
             <span aria-hidden>Resume →</span>
@@ -123,7 +123,7 @@ export default function Layout() {
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${isActive ? 'text-lime' : 'text-muted'}`
+                  `flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${isActive ? 'text-accent' : 'text-muted'}`
                 }
               >
                 <Icon className="size-6" aria-hidden />

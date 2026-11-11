@@ -20,7 +20,7 @@ export default function ExerciseLink({ id, name }: { id: string; name: string })
       className="inline-flex min-h-11 min-w-0 items-center gap-1 text-left text-lg font-semibold"
     >
       <span className="truncate">{name}</span>
-      <ChevronRight className="text-lime size-4 shrink-0" aria-hidden />
+      <ChevronRight className="text-accent size-4 shrink-0" aria-hidden />
     </button>
   )
 }

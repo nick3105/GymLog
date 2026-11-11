@@ -47,12 +47,12 @@ export default function Home() {
           <Link
             key={to}
             to={to}
-            className={`flex min-h-20 items-center gap-4 rounded-2xl border p-4 ${index === 0 ? 'border-lime bg-lime text-ink' : 'border-border bg-panel'}`}
+            className={`flex min-h-20 items-center gap-4 rounded-lg p-4 ${index === 0 ? 'from-gradient-start to-gradient-end bg-linear-to-tr text-white' : 'bg-panel'}`}
           >
             <Icon className="size-7 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="block text-lg font-semibold">{title}</span>
-              <span className={`block text-sm ${index === 0 ? 'text-ink/75' : 'text-muted'}`}>
+              <span className={`block text-sm ${index === 0 ? 'text-white/80' : 'text-muted'}`}>
                 {text}
               </span>
             </span>
@@ -61,17 +61,17 @@ export default function Home() {
         ))}
       </div>
       <dl className="mt-6 grid grid-cols-3 gap-3 text-center">
-        <div className="border-border rounded-2xl border p-3">
-          <dt className="text-muted text-xs">Workouts</dt>
-          <dd className="text-xl font-bold">{journal.templates.length}</dd>
+        <div className="bg-panel rounded-lg p-3">
+          <dt className="text-muted text-xs tracking-widest uppercase">Workouts</dt>
+          <dd className="font-mono text-xl">{journal.templates.length}</dd>
         </div>
-        <div className="border-border rounded-2xl border p-3">
-          <dt className="text-muted text-xs">Sessions</dt>
-          <dd className="text-xl font-bold">{journal.sessions.length}</dd>
+        <div className="bg-panel rounded-lg p-3">
+          <dt className="text-muted text-xs tracking-widest uppercase">Sessions</dt>
+          <dd className="font-mono text-xl">{journal.sessions.length}</dd>
         </div>
-        <div className="border-border rounded-2xl border p-3">
-          <dt className="text-muted text-xs">Last session</dt>
-          <dd className="text-sm font-bold">{lastSession ? formatDay(lastSession.day) : '–'}</dd>
+        <div className="bg-panel rounded-lg p-3">
+          <dt className="text-muted text-xs tracking-widest uppercase">Last session</dt>
+          <dd className="font-mono text-sm">{lastSession ? formatDay(lastSession.day) : '–'}</dd>
         </div>
       </dl>
     </>

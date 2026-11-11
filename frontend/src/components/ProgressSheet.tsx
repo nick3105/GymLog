@@ -54,7 +54,7 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
         <button
           type="button"
           onClick={close}
-          className="text-lime inline-flex min-h-11 w-fit items-center gap-2 font-semibold"
+          className="text-accent inline-flex min-h-11 w-fit items-center gap-2 font-semibold"
         >
           <ArrowLeft className="size-5" aria-hidden />
           Back
@@ -74,13 +74,13 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
             <div className="grid grid-cols-2 gap-3">
               <div className={card}>
                 <p className="text-muted text-sm">Best estimated 1RM</p>
-                <p className="text-2xl font-bold">
+                <p className="font-mono text-2xl">
                   {stats.best === null ? '–' : `${formatNumber(stats.best)} kg`}
                 </p>
               </div>
               <div className={card}>
                 <p className="text-muted text-sm">Latest estimated 1RM</p>
-                <p className="text-2xl font-bold">
+                <p className="font-mono text-2xl">
                   {stats.latest === null ? '–' : `${formatNumber(stats.latest)} kg`}
                 </p>
               </div>

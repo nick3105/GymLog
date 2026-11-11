@@ -69,7 +69,7 @@ export default function Start() {
               <button
                 type="button"
                 onClick={() => start(template)}
-                className="border-lime text-lime inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border font-semibold"
+                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-semibold"
               >
                 <Play className="size-5" aria-hidden />
                 Start

@@ -100,7 +100,7 @@ export default function Weight() {
           </p>
         )}
         {message && (
-          <p role="status" className="text-lime text-sm font-medium">
+          <p role="status" className="text-accent text-sm font-medium">
             {message}
           </p>
         )}
@@ -124,7 +124,7 @@ export default function Weight() {
       <section className={`${card} flex flex-col gap-3`}>
         <div>
           <p className="text-muted text-sm">Latest</p>
-          <p className="text-3xl font-bold">
+          <p className="font-mono text-3xl">
             {latest ? `${formatNumber(latest.kg)} kg` : '–'}
             {latest && (
               <span className="text-muted ml-2 text-base font-normal">{formatDay(latest.day)}</span>
@@ -139,7 +139,7 @@ export default function Weight() {
         />
         {entries.length > 0 && (
           <details>
-            <summary className="text-lime flex min-h-11 cursor-pointer items-center font-semibold">
+            <summary className="text-accent flex min-h-11 cursor-pointer items-center font-semibold">
               All measurements ({entries.length})
             </summary>
             <ul>
@@ -155,7 +155,7 @@ export default function Weight() {
                     aria-label={`Edit weight for ${formatDay(entry.day)}`}
                     disabled={saving}
                     onClick={() => edit(entry)}
-                    className="border-border text-lime inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border disabled:opacity-50"
+                    className="border-border text-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border disabled:opacity-50"
                   >
                     <Pencil aria-hidden="true" size={18} />
                   </button>

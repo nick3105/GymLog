@@ -31,8 +31,8 @@ export default function AuthForm({ mode }: Props) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-4 py-10">
       <p className="flex items-center gap-2 text-2xl font-bold">
-        <Dumbbell className="text-lime" aria-hidden />
-        gymlog<span className="text-lime">.</span>
+        <Dumbbell className="text-accent" aria-hidden />
+        gymlog<span className="text-accent">.</span>
       </p>
       <h1 className="text-3xl font-semibold">
         {creating ? 'Create your account.' : 'Show up. Keep getting stronger.'}
@@ -85,7 +85,7 @@ export default function AuthForm({ mode }: Props) {
         {creating ? 'Already have an account? ' : 'New here? '}
         <Link
           to={creating ? '/signin' : '/register'}
-          className="text-lime inline-flex min-h-11 items-center font-semibold"
+          className="text-accent inline-flex min-h-11 items-center font-semibold"
         >
           {creating ? 'Sign in' : 'Create an account'}
         </Link>

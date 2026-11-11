@@ -30,7 +30,7 @@ export default function ReviewDetail() {
       <Notice />
       <Link
         to="/review"
-        className="text-lime mb-2 inline-flex min-h-11 items-center gap-2 font-semibold"
+        className="text-accent mb-2 inline-flex min-h-11 items-center gap-2 font-semibold"
       >
         <ArrowLeft className="size-5" aria-hidden />
         All sessions
@@ -44,7 +44,7 @@ export default function ReviewDetail() {
               <ExerciseLink id={exercise.id} name={exercise.name} />
               <p className="shrink-0 text-right">
                 <span className="text-muted block text-xs">Est. 1RM</span>
-                <span className="text-lime font-bold">
+                <span className="text-accent font-bold">
                   {exercise.estimated1rm === null
                     ? '–'
                     : `${formatNumber(exercise.estimated1rm)} kg`}

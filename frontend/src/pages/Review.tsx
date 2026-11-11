@@ -33,7 +33,7 @@ export default function Review() {
             <li key={session.id}>
               <Link
                 to={`/review/${session.id}`}
-                className="border-border bg-panel flex min-h-16 items-center gap-3 rounded-2xl border p-4"
+                className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
               >
                 <span className="min-w-0 flex-1">
                   <span className="text-muted block text-sm">{formatDay(session.day)}</span>

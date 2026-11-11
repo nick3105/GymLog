@@ -8,7 +8,7 @@ export default function Notice() {
   return (
     <p
       role="status"
-      className="border-lime/40 bg-lime/10 text-lime mb-4 rounded-xl border px-4 py-3 font-medium"
+      className="border-accent/40 bg-accent/10 text-accent mb-4 rounded-xl border px-4 py-3 font-medium"
     >
       {notice}
     </p>
