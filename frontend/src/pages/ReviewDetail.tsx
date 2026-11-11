@@ -59,10 +59,16 @@ export default function ReviewDetail() {
                 >
                   <span className="text-muted">Set {index + 1}</span>
                   <span className="font-medium">
-                    {formatNumber(set.weight)} kg × {set.reps}
+                    {set.skipped ? (
+                      'Skipped'
+                    ) : (
+                      <>
+                        {formatNumber(set.weight)} kg × {set.reps}
+                      </>
+                    )}
                   </span>
                   <span className="text-muted">
-                    RPE {set.rpe === null ? '–' : formatNumber(set.rpe)}
+                    {!set.skipped && <>RPE {set.rpe === null ? '–' : formatNumber(set.rpe)}</>}
                   </span>
                 </li>
               ))}

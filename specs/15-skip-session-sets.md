@@ -14,6 +14,7 @@ sets today without rewriting that plan or entering invented results.
 - Each planned set has a 44 px Skip set action below its inputs. Skipping displays
   "Skipped" and Restore set. Restore returns any values previously typed.
 - Only the active session changes; saved templates and past results stay unchanged.
+- At least one set in the whole workout must be performed. All sets of one exercise may be skipped if another exercise has at least one performed set. A fully skipped workout cannot be saved; restore a set or discard it.
 - A blank set still blocks Finish. Each row must be completed or explicitly skipped.
 - The skip flag survives refresh and app switching through existing draft storage.
 - Send skipped rows as `{skipped: true}`. Keep one row per planned set, in order.
@@ -41,3 +42,12 @@ the reusable template during a session.
 - Retrying a save returns the same session; another account cannot access it.
 - At 375 × 667 the inputs stay readable and Skip/Restore targets are at least 44 px.
 - Verify on a real phone before merge.
+
+## Local verification — 2026-11-11
+
+- 51 Python tests and 22 React tests passed. Ruff, frontend lint, formatting, TypeScript and build passed.
+- At 375 × 667, skipped rows and Restore controls fit the screen without horizontal overflow.
+- Browser: skipping every row disables Finish; refresh retains all skips. Restore recovers 40 kg and 5 reps entered before skipping.
+- Saved a session with all three bench sets skipped and one barbell-row set performed: review shows the three skips, the actual row and no bench estimate.
+- Retry/idempotency, privacy, malformed flags and previous-performance preservation covered by API tests.
+- A real-phone walkthrough and failed-save retry in the browser remain manual checks before merge.

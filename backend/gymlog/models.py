@@ -51,7 +51,11 @@ def estimated_1rm(weight, reps, rpe=None):
 
 
 def best_1rm(sets):
-    estimates = [estimated_1rm(s["weight"], s["reps"], s.get("rpe")) for s in sets]
+    estimates = [
+        estimated_1rm(s["weight"], s["reps"], s.get("rpe"))
+        for s in sets
+        if not s.get("skipped", False)
+    ]
     return max((value for value in estimates if value is not None), default=None)
 
 
@@ -64,7 +68,10 @@ def exercise_stats(sessions, exercise_id):
         for exercise in session["exercises"]:
             if exercise["id"] != exercise_id:
                 continue
-            last = {"day": session["day"], "sets": exercise["sets"]}
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            last = {"day": session["day"], "sets": performed}
             estimate = best_1rm(exercise["sets"])
             if estimate is not None:
                 points.append({"day": session["day"], "estimate": estimate})
@@ -157,6 +164,11 @@ def validate_session(body, template):
         for row in rows:
             if not isinstance(row, dict):
                 raise ValueError("Each set must contain weight and reps.")
+            if "skipped" in row and not isinstance(row["skipped"], bool):
+                raise ValueError("Skipped must be true or false.")
+            if row.get("skipped", False):
+                sets.append({"skipped": True})
+                continue
             rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
             if rpe is not None and (rpe * 2) % 1:
                 raise ValueError("Use RPE steps of 0.5 (for example 7 or 7.5).")
@@ -175,6 +187,8 @@ def validate_session(body, template):
                 "estimated1rm": best_1rm(sets),
             }
         )
+    if not any(not row.get("skipped", False) for exercise in completed for row in exercise["sets"]):
+        raise ValueError("Complete at least one set before saving, or discard this workout.")
     return {
         "clientId": client_id,
         "templateId": template["id"],

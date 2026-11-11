@@ -51,7 +51,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-06 | **Log Actual Reps** | Enter the actual whole-number rep count for each set. |
 | RUN-07 | **Log Actual RPE** | Optionally enter the RPE experienced for each set, independently of Target RPE. |
 | RUN-08 | **View Live Estimated 1RM** | Update the best eligible estimated 1RM for an exercise as actual set results are entered. |
-| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for every planned set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
+| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
 
 ## 4. Review and progress
@@ -66,7 +66,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-06 | **View Estimated 1RM Trend** | Plot eligible estimates over time in a line chart. Identify the exercise and units, and show an empty state when no estimates exist. |
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
 
-**Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation.
+**Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
 
 ## 5. Weight Tracker
 

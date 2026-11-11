@@ -1,4 +1,5 @@
 // Small display helpers shared by every page.
+import type { LoggedSet } from './types'
 
 export function formatNumber(value: number): string {
   return value.toLocaleString('en-GB', { maximumFractionDigits: 1 })
@@ -20,7 +21,8 @@ export function today(): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
-export function formatSet(set: { weight: number; reps: number; rpe: number | null }): string {
+export function formatSet(set: LoggedSet): string {
+  if (set.skipped) return 'Skipped'
   const effort = set.rpe === null ? '' : ` @ ${formatNumber(set.rpe)}`
   return `${formatNumber(set.weight)} × ${set.reps}${effort}`
 }
