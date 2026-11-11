@@ -16,7 +16,7 @@ People plan workouts in the order they intend to train. They should be able to m
 - Save the exercises in the displayed order through `POST /api/templates`. After reload, the saved template and the workout started from it use that same order. If saving fails, keep the draft order so the user can retry.
 - Related BRD IDs are PLN-02 and PLN-03 for adding exercises and PLN-10 for saving the template. Drag-and-drop is an added interaction for Task 4.
 
-## Interaction agreed with Gaia
+## Agreed interaction
 
 - Touch: hold the labelled grip for 300 ms, then move the card up or down. A short tap does not reorder. Moving before the hold activates cancels the gesture. Mouse: drag immediately from the grip.
 - Use existing React and Pointer Events, with no new dependency. The card highlights when picked up, a lime insertion line previews the drop position, and Escape, pointer cancellation or a drop outside the list cancels.
@@ -33,3 +33,11 @@ People plan workouts in the order they intend to train. They should be able to m
 - With a mouse, move a card downward. Start another drag and cancel it with Escape or by releasing outside the list. The previous order is preserved.
 - Using only the keyboard, move Bench press up one position. Focus stays on the card and its new position is announced. With just one exercise there is no enabled reorder action.
 - Save the workout, reload, and start it. The order matches the builder at Save, and all set targets match their original exercise. If a save attempt fails, the order and targets are still present for retry.
+
+## Local verification — 2026-11-11
+
+- Unit tests: moves in both directions, invalid boundaries, insertion slots and distinct targets staying with their exercise.
+- API acceptance test: reordered template survives reload and saving a completed session with the same exercise order and targets.
+- Browser: keyboard move keeps focus on the moved card and announces its position; mouse drag moves a card upward. Saved order survives reload and Start, with both bench targets intact.
+- Responsive check: 375 × 667, document width 375 px, 44 px controls, no horizontal overflow.
+- Physical-phone long press, scrolling during touch drag, Escape/outside-drop cancellation and retry after network failure still need a manual acceptance check before merge.
