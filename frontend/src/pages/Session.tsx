@@ -8,7 +8,7 @@ import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal, type ActiveWorkout } from '../journal'
 import { bestOneRepMax, type SetInput } from '../oneRepMax'
 import type { ExerciseStats, Session as SavedSession } from '../types'
-import { card, errorText, input, primaryButton } from '../ui'
+import { card, errorText, input, primaryButton, secondaryButton } from '../ui'
 
 const fields: { key: 'weight' | 'reps' | 'rpe'; label: string; mode: 'decimal' | 'numeric' }[] = [
   { key: 'weight', label: 'kg', mode: 'decimal' },
@@ -80,6 +80,24 @@ export default function Session() {
               ),
             },
       ),
+    })
+  }
+
+  function addSet(exerciseIndex: number) {
+    const exercise = workout.exercises[exerciseIndex]
+    if (saving || exercise.sets.length >= 20) return
+    setActive({
+      ...workout,
+      exercises: workout.exercises.map((item, index) =>
+        index === exerciseIndex
+          ? { ...item, sets: [...item.sets, { weight: '', reps: '', rpe: '' }] }
+          : item,
+      ),
+    })
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`actual-${exercise.id}-${exercise.sets.length}`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     })
   }
 
@@ -189,7 +207,10 @@ export default function Session() {
                       : formatNumber(target.rpe),
                 }
                 return (
-                  <div key={setIndex} className="mt-3">
+                  <div key={setIndex} id={`actual-${exercise.id}-${setIndex}`} className="mt-3">
+                    {setIndex >= exercise.targets.length && (
+                      <p className="text-muted mb-2 text-sm">Extra set · today only</p>
+                    )}
                     {set.skipped ? (
                       <div className="border-border text-muted flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3">
                         <span>Set {setIndex + 1} · Skipped</span>
@@ -248,6 +269,18 @@ export default function Session() {
                   </div>
                 )
               })}
+              <button
+                type="button"
+                onClick={() => addSet(exerciseIndex)}
+                disabled={saving || exercise.sets.length >= 20}
+                aria-label={`Add set to ${exercise.name}`}
+                className={`${secondaryButton} mt-3 w-full`}
+              >
+                + Add set
+              </button>
+              {exercise.sets.length >= 20 && (
+                <p className="text-muted mt-2 text-sm">Maximum 20 sets per exercise.</p>
+              )}
             </section>
           )
         })}

@@ -57,7 +57,12 @@ export default function ReviewDetail() {
                   key={index}
                   className="border-border grid grid-cols-[3.5rem_1fr_auto] gap-2 border-t pt-1"
                 >
-                  <span className="text-muted">Set {index + 1}</span>
+                  <span className="text-muted">
+                    Set {index + 1}
+                    {index >= (exercise.plannedSets ?? exercise.sets.length) && (
+                      <span className="block text-xs">Extra</span>
+                    )}
+                  </span>
                   <span className="font-medium">
                     {set.skipped ? (
                       'Skipped'

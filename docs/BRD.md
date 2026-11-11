@@ -51,7 +51,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-06 | **Log Actual Reps** | Enter the actual whole-number rep count for each set. |
 | RUN-07 | **Log Actual RPE** | Optionally enter the RPE experienced for each set, independently of Target RPE. |
 | RUN-08 | **View Live Estimated 1RM** | Update the best eligible estimated 1RM for an exercise as actual set results are entered. |
-| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
+| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. During an active session, users may append extra sets up to 20 total per exercise without changing the template. Extra sets are saved in that session only. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
 
 ## 4. Review and progress

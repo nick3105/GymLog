@@ -158,8 +158,10 @@ def validate_session(body, template):
         if not isinstance(actual, dict) or actual.get("id") != planned["id"]:
             raise ValueError("Session exercises must match the selected workout.")
         rows = actual.get("sets")
-        if not isinstance(rows, list) or len(rows) != planned["sets"]:
-            raise ValueError(f"Complete all {planned['sets']} sets for {planned['name']}.")
+        if not isinstance(rows, list) or not planned["sets"] <= len(rows) <= 20:
+            raise ValueError(
+                f"Keep all {planned['sets']} planned sets for {planned['name']}, with up to 20 total sets."
+            )
         sets = []
         for row in rows:
             if not isinstance(row, dict):

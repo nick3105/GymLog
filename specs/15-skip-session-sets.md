@@ -1,4 +1,4 @@
-# Task 15 — Skip a set during today's workout
+# Task 15 — Skip or add sets during today's workout
 
 Assignee: Gaia Bandini
 
@@ -27,9 +27,22 @@ sets today without rewriting that plan or entering invented results.
 - A failed save keeps the draft, including skips; retry uses the same client ID
   and cannot create duplicates. Journal isolation still applies.
 
+## Add set extension
+
+- Only in the active session, show + Add set below each exercise. It appends a blank
+  weight/reps/optional-RPE row, marked Extra set; the user records actual values.
+- Extra rows can be skipped and restored like planned rows. A new blank row blocks
+  Finish until completed or skipped. All rows survive refresh via draft storage.
+- Keep all planned rows, and accept additional rows up to the existing 20-set limit
+  per exercise. Disable Add at 20 and while saving. Python enforces the same limit.
+- Keep plannedSets and the original targets in the saved snapshot. Extra rows appear
+  in session details and contribute to progress when performed, never to the template.
+- Old sessions with exactly the planned count remain valid. Missing planned rows
+  and more than 20 total rows remain invalid. Retry stays idempotent.
+
 ## Out of scope
 
-Adding sets, adding/removing exercises, editing completed sessions, and changing
+Adding/removing exercises, editing completed sessions, and changing
 the reusable template during a session.
 
 ## Done when
@@ -51,3 +64,11 @@ the reusable template during a session.
 - Saved a session with all three bench sets skipped and one barbell-row set performed: review shows the three skips, the actual row and no bench estimate.
 - Retry/idempotency, privacy, malformed flags and previous-performance preservation covered by API tests.
 - A real-phone walkthrough and failed-save retry in the browser remain manual checks before merge.
+
+## Add set verification — 2026-11-11
+
+- 56 Python tests and 22 React tests passed; Ruff, frontend lint, formatting, TypeScript and build passed.
+- API checks cover extra actual/skipped rows, blank rows, retry without duplicates, unchanged templates and the 20-set boundary.
+- Browser at 375 × 667: Add set creates row 4 below three planned rows. A blank extra blocks Finish; reload retains the row and its 100 kg × 1 actuals.
+- Saving shows Set 4 / Extra in review and includes it in the 100 kg estimate.
+- Real-phone acceptance still required before merge.

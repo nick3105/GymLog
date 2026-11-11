@@ -144,3 +144,39 @@ def test_whole_exercise_can_be_skipped_when_another_has_one_completed_set(journa
     assert saved.json["exercises"][0]["estimated1rm"] is None
     assert saved.json["exercises"][0]["sets"] == [{"skipped": True}] * 3
     assert client.get("/api/exercises/bench-press/stats").json == previous
+
+
+def test_extra_actual_sets_are_saved_without_changing_template(journal):
+    """A fourth set belongs to today's result and can improve its estimate."""
+    app, client, headers, template, body = journal
+    body["exercises"][0]["sets"].append({"weight": 100, "reps": 1, "rpe": None})
+    result = client.post("/api/sessions", json=body, headers=headers)
+    assert result.status_code == 201
+    exercise = result.json["exercises"][0]
+    assert exercise["plannedSets"] == 3
+    assert len(exercise["sets"]) == 4
+    assert exercise["estimated1rm"] == 100
+    assert client.get("/api/state").json["templates"] == [template]
+    assert client.post("/api/sessions", json=body, headers=headers).json == result.json
+    stats = client.get("/api/exercises/bench-press/stats").json
+    assert stats["best"] == 100
+    assert len(stats["last"]["sets"]) == 3
+
+
+def test_extra_blank_rows_require_results_or_explicit_skip(journal):
+    """An accidental blank addition can be skipped without inventing actuals."""
+    app, client, headers, template, body = journal
+    body["exercises"][0]["sets"].append({})
+    assert client.post("/api/sessions", json=body, headers=headers).status_code == 400
+    body["exercises"][0]["sets"][-1] = {"skipped": True}
+    result = client.post("/api/sessions", json=body, headers=headers)
+    assert result.status_code == 201
+    assert result.json["exercises"][0]["sets"][-1] == {"skipped": True}
+
+
+@pytest.mark.parametrize("count, expected", [(2, 400), (20, 201), (21, 400)])
+def test_total_rows_keep_every_planned_set_and_stay_within_limit(journal, count, expected):
+    """Extras do not permit removing planned rows or exceeding twenty total rows."""
+    app, client, headers, template, body = journal
+    body["exercises"][0]["sets"] = [{"weight": 60, "reps": 8, "rpe": None}] * count
+    assert client.post("/api/sessions", json=body, headers=headers).status_code == expected
