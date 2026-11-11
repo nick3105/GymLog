@@ -1,9 +1,10 @@
-import { ChevronRight, ListChecks, Play, Plus, Scale, type LucideIcon } from 'lucide-react'
+import { ChevronRight, ListChecks, Play, Plus, Scale, X, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 
 import Notice from '../components/Notice'
-import { formatDay } from '../format'
+import { formatDay, today } from '../format'
 import { useJournal } from '../journal'
+import { shouldShowWeightReminder } from '../weightReminder'
 
 const choices: { to: string; title: string; text: string; icon: LucideIcon }[] = [
   {
@@ -34,14 +35,54 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
 
 // NAV-01: the four starting points, and a short summary of the journal.
 export default function Home() {
-  const { username, journal } = useJournal()
+  const { username, journal, weightReminderDismissed, dismissWeightReminder } = useJournal()
   const lastSession = [...journal.sessions].sort((a, b) => b.day.localeCompare(a.day))[0]
+  const showWeightReminder = shouldShowWeightReminder(
+    journal.weights,
+    today(),
+    weightReminderDismissed,
+  )
 
   return (
     <>
       <Notice />
       <h1 className="mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
+      {showWeightReminder && (
+        <section
+          aria-labelledby="weight-reminder-title"
+          className="border-lime/30 bg-panel mb-6 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <Scale className="text-lime mt-0.5 size-5 shrink-0" aria-hidden />
+            <div>
+              <h2 id="weight-reminder-title" className="font-semibold">
+                Weight check-in
+              </h2>
+              <p className="text-muted mt-1 text-sm">
+                You haven’t logged your weight today. A quick check-in keeps your progress up to
+                date.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+            <Link
+              to="/weight"
+              className="border-lime/40 text-lime flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold"
+            >
+              Log today’s weight
+            </Link>
+            <button
+              type="button"
+              onClick={dismissWeightReminder}
+              aria-label="Dismiss weight reminder"
+              className="text-muted flex size-11 shrink-0 items-center justify-center rounded-lg"
+            >
+              <X className="size-5" aria-hidden />
+            </button>
+          </div>
+        </section>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {choices.map(({ to, title, text, icon: Icon }, index) => (
           <Link

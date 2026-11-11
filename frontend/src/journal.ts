@@ -18,6 +18,8 @@ export type JournalContext = {
   username: string
   journal: JournalData
   setJournal: (update: (journal: JournalData) => JournalData) => void
+  weightReminderDismissed: boolean
+  dismissWeightReminder: () => void
   refresh: () => Promise<void>
   signIn: (path: 'login' | 'register', username: string, password: string) => Promise<void>
   signOut: () => Promise<void>

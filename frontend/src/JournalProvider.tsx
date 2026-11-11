@@ -25,12 +25,14 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<JournalContext['status']>('loading')
   const [username, setUsername] = useState('')
   const [journal, setJournalState] = useState<JournalData>(emptyJournal)
+  const [weightReminderDismissed, setWeightReminderDismissed] = useState(false)
   const [active, setActiveState] = useState<ActiveWorkout | null>(null)
   const [builderDirty, setBuilderDirty] = useState(false)
 
   const enter = useCallback(async (name: string) => {
     const data = await api<JournalData>('state')
     setJournalState(data)
+    setWeightReminderDismissed(false)
     setUsername(name)
     setActiveState(loadActive(name))
     setStatus('signed-in')
@@ -73,6 +75,8 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
       username,
       journal,
       setJournal: (update) => setJournalState(update),
+      weightReminderDismissed,
+      dismissWeightReminder: () => setWeightReminderDismissed(true),
       refresh: async () => setJournalState(await api<JournalData>('state')),
       signIn: async (path, name, password) => {
         await api<SessionStatus>('session')
@@ -86,6 +90,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
         setActive(null)
         setBuilderDirty(false)
         setJournalState(emptyJournal)
+        setWeightReminderDismissed(false)
         setUsername('')
         setStatus('signed-out')
       },
@@ -93,7 +98,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
       setActive,
       setBuilderDirty,
     }),
-    [status, username, journal, active, builderDirty, enter, setActive],
+    [status, username, journal, active, builderDirty, enter, setActive, weightReminderDismissed],
   )
 
   return <JournalStore value={value}>{children}</JournalStore>
