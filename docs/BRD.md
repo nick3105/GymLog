@@ -34,6 +34,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | PLN-09 | **Set Target RPE** | Enter an optional target RPE for each set. RPE accepts values from 1 to 10 in increments of 0.5. |
 | PLN-10 | **Save Workout Template** | Save the exercises and individual set targets so the workout can be selected and repeated later. Support up to 20 exercises per template and 20 sets per exercise. Existing templates with one target per exercise must remain usable. |
 | PLN-11 | **Cancel Workout Creation** | Leave the builder without saving. Ask before discarding entered information. |
+| PLN-13 | **Edit Saved Workout** | Edit a saved template’s name, exercises and set targets from Start workout. Save to the same template; completed sessions stay unchanged. Confirm before discarding edits and preserve inputs after a failed save. |
 | PLN-12 | **Maintain Exercise Catalogue** | Let maintainers add or update exercises in `exercises.json`. Stable exercise IDs connect past results; catalogue changes must not rewrite saved workouts. |
 
 **Example:** A user plans a bench press top set of **3 reps at 100 kg, RPE 9**, followed by a back-off set of **8 reps at 80 kg** with Target RPE left blank.
@@ -83,5 +84,5 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
 - **Cross-device access:** Saved records are available after signing in to the same account on another device.
 - **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
-- **Current boundaries:** Editing saved templates, correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
+- **Current boundaries:** Correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.

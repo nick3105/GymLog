@@ -203,6 +203,16 @@ def add_template(path, user_id, data):
     return document
 
 
+def update_template(path, user_id, document):
+    """Replace only the owner's saved template, leaving session snapshots alone."""
+    with connect(path) as db:
+        result = db.execute(
+            "UPDATE templates SET document=? WHERE id=? AND user_id=?",
+            (json.dumps(document), document["id"], user_id),
+        )
+    return document if result.rowcount else None
+
+
 def existing_session(path, user_id, client_id):
     with connect(path) as db:
         row = db.execute(

@@ -1,11 +1,12 @@
 import { Check, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useBlocker, useNavigate } from 'react-router'
+import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
 import { useJournal } from '../journal'
+import { targetsFor } from '../targets'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
 
@@ -22,10 +23,24 @@ const targetFields: { key: keyof TargetInput; label: string; mode: 'decimal' | '
 
 // PLN-01 to PLN-11: plan a workout once, with targets for every set.
 export default function Create() {
-  const { journal, setJournal, setBuilderDirty } = useJournal()
+  const { journal, setJournal, setBuilderDirty, active } = useJournal()
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [planned, setPlanned] = useState<Planned[]>([])
+  const { id } = useParams()
+  const original = journal.templates.find((template) => template.id === id)
+  const [name, setName] = useState(original?.name ?? '')
+  const [planned, setPlanned] = useState<Planned[]>(
+    () =>
+      original?.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        group: journal.exercises.find((item) => item.id === exercise.id)?.group ?? '',
+        targets: targetsFor(exercise).map((target) => ({
+          reps: String(target.reps),
+          weight: target.weight === null ? '' : String(target.weight),
+          rpe: target.rpe === null ? '' : String(target.rpe),
+        })),
+      })) ?? [],
+  )
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
@@ -85,7 +100,7 @@ export default function Create() {
     }
     setSaving(true)
     try {
-      const template = await api<Template>('templates', {
+      const template = await api<Template>(id ? `templates/${id}` : 'templates', {
         name,
         exercises: planned.map((item) => ({
           id: item.id,
@@ -96,7 +111,10 @@ export default function Create() {
           })),
         })),
       })
-      setJournal((current) => ({ ...current, templates: [template, ...current.templates] }))
+      setJournal((current) => ({
+        ...current,
+        templates: [template, ...current.templates.filter((item) => item.id !== template.id)],
+      }))
       saved.current = true
       navigate('/start', {
         state: { notice: `"${template.name}" saved. Start it whenever you are ready.` },
@@ -107,9 +125,29 @@ export default function Create() {
     }
   }
 
+  if (id && (!original || active)) {
+    return (
+      <div className={card}>
+        <p role="alert" className={errorText}>
+          {active
+            ? 'Finish or discard your active workout before editing a template.'
+            : 'That workout could not be found. Refresh your journal and try again.'}
+        </p>
+        <button type="button" onClick={() => navigate('/start')} className={secondaryButton}>
+          Back to workouts
+        </button>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={save} noValidate>
-      <h1 className="mb-4 text-3xl font-bold">Create workout</h1>
+      <h1 className="mb-4 text-3xl font-bold">{id ? 'Edit workout' : 'Create workout'}</h1>
+      {id && (
+        <p className="text-muted mb-4">
+          Changes apply to future workouts. Completed history stays unchanged.
+        </p>
+      )}
       <div className={`${card} mb-4 flex flex-col gap-4`}>
         <div>
           <label htmlFor="workout-name" className={label}>
@@ -234,7 +272,7 @@ export default function Create() {
           </button>
           <button type="submit" disabled={saving} className={primaryButton}>
             <Check className="size-5" aria-hidden />
-            {saving ? 'Saving…' : 'Save workout'}
+            {saving ? 'Saving…' : id ? 'Save changes' : 'Save workout'}
           </button>
         </div>
       </div>
