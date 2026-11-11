@@ -8,7 +8,7 @@ import { useJournal } from '../journal'
 import { newId } from '../newId'
 import { targetsFor } from '../targets'
 import type { Template } from '../types'
-import { card, textButton } from '../ui'
+import { card, secondaryButton, textButton } from '../ui'
 
 // RUN-01 and RUN-02: pick a saved workout and start it.
 export default function Start() {
@@ -74,6 +74,13 @@ export default function Start() {
                 <Play className="size-5" aria-hidden />
                 Start
               </button>
+              <Link
+                to={`/workouts/${template.id}/edit`}
+                className={`${secondaryButton} mt-2 w-full`}
+                aria-label={`Edit ${template.name}`}
+              >
+                Edit workout
+              </Link>
             </li>
           ))}
         </ul>
