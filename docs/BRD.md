@@ -78,6 +78,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | WGT-04 | **View Latest Body Weight** | Display the most recent measurement and its date. |
 | WGT-05 | **View Body Weight Trend** | Display saved measurements in a line chart ordered by date. |
 | WGT-06 | **View Measurement History** | Expand a list of saved dates and weights. |
+| WGT-07 | **Set a Weight-Loss Goal** | Let a signed-in user save one private goal weight in kg, show the latest weight and remaining kg to lose, and keep the goal available across devices. |
 
 ## 6. Data and scope requirements
 

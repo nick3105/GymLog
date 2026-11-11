@@ -20,6 +20,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 11 | A real exercise catalogue | `11-exercise-catalogue.md` | `feature/exercise-catalogue` | PLN-02, PLN-12 | — |
 | 12 | Move production to a real database | `12-real-database.md` | `feature/real-database` | — | 8 |
 | 16 | Edit a body-weight measurement | `16-edit-weight-measurement.md` | `feature/edit-weight-measurement` | WGT-03, WGT-06 | 6 |
+| 17 | Set a body-weight goal | `17-weight-goal.md` | `feature/weight-goal` | WGT-07 | 6 |
 
 ## Who can start when
 
