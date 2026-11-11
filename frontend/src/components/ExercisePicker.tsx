@@ -47,8 +47,8 @@ export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) 
             type="button"
             aria-pressed={group === name}
             onClick={() => setGroup(name)}
-            className={`min-h-11 rounded-full border px-3 text-sm font-medium ${
-              group === name ? 'border-lime text-lime' : 'border-border text-text'
+            className={`min-h-11 rounded-full border px-3 text-sm font-normal ${
+              group === name ? 'border-accent text-accent' : 'border-border text-text'
             }`}
           >
             {name || 'All'}
@@ -77,7 +77,7 @@ export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) 
                     <span className="min-w-0">{exercise.name}</span>
                     <span className="text-muted flex shrink-0 items-center gap-1 text-sm">
                       {plannedIds.includes(exercise.id) && (
-                        <Check className="text-lime size-4" aria-label="In this workout" />
+                        <Check className="text-accent size-4" aria-label="In this workout" />
                       )}
                       {exercise.group}
                     </span>

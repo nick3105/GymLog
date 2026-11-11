@@ -63,7 +63,7 @@ export default function Weight() {
 
   return (
     <>
-      <h1 className="mb-4 text-3xl font-bold">Weight Tracker</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">Weight Tracker</h1>
       <form onSubmit={save} noValidate className={`${card} mb-4 flex flex-col gap-3`}>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -100,7 +100,7 @@ export default function Weight() {
           </p>
         )}
         {message && (
-          <p role="status" className="text-lime text-sm font-medium">
+          <p role="status" className="text-accent text-sm font-normal">
             {message}
           </p>
         )}
@@ -113,7 +113,7 @@ export default function Weight() {
               type="button"
               disabled={saving}
               onClick={cancelEdit}
-              className="border-border text-text min-h-11 rounded-lg border px-4 font-semibold disabled:opacity-50"
+              className="border-border text-text min-h-11 rounded-lg border px-4 font-normal disabled:opacity-50"
             >
               Cancel
             </button>
@@ -124,7 +124,7 @@ export default function Weight() {
       <section className={`${card} flex flex-col gap-3`}>
         <div>
           <p className="text-muted text-sm">Latest</p>
-          <p className="text-3xl font-bold">
+          <p className="font-mono text-3xl">
             {latest ? `${formatNumber(latest.kg)} kg` : '–'}
             {latest && (
               <span className="text-muted ml-2 text-base font-normal">{formatDay(latest.day)}</span>
@@ -139,7 +139,7 @@ export default function Weight() {
         />
         {entries.length > 0 && (
           <details>
-            <summary className="text-lime flex min-h-11 cursor-pointer items-center font-semibold">
+            <summary className="text-accent flex min-h-11 cursor-pointer items-center font-normal">
               All measurements ({entries.length})
             </summary>
             <ul>
@@ -149,13 +149,13 @@ export default function Weight() {
                   className="border-border flex items-center justify-between gap-2 border-t py-1"
                 >
                   <span>{formatDay(entry.day)}</span>
-                  <span className="ml-auto font-medium">{formatNumber(entry.kg)} kg</span>
+                  <span className="ml-auto font-normal">{formatNumber(entry.kg)} kg</span>
                   <button
                     type="button"
                     aria-label={`Edit weight for ${formatDay(entry.day)}`}
                     disabled={saving}
                     onClick={() => edit(entry)}
-                    className="border-border text-lime inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border disabled:opacity-50"
+                    className="border-border text-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border disabled:opacity-50"
                   >
                     <Pencil aria-hidden="true" size={18} />
                   </button>
