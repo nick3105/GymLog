@@ -288,7 +288,7 @@ export default function Session() {
 
       <p className="text-muted mt-4 text-sm">
         Placeholders are your targets. Enter what you actually did; 0 kg is fine for bodyweight
-        sets. RPE is optional. Skip a set you did not perform; your saved routine stays unchanged.
+        sets. RPE is optional. Changes apply to this session only.
       </p>
 
       <div className="border-border bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-2xl border p-3 backdrop-blur md:bottom-4">
