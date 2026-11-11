@@ -21,6 +21,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 12 | Move production to a real database | `12-real-database.md` | `feature/real-database` | — | 8 |
 | 16 | Edit a body-weight measurement | `16-edit-weight-measurement.md` | `feature/edit-weight-measurement` | WGT-03, WGT-06 | 6 |
 | 17 | Set a body-weight goal | `17-weight-goal.md` | `feature/weight-goal` | WGT-07 | 6 |
+| 18 | Daily body-weight entry reminder | `18-weight-entry-reminder.md` | `feature/weight-entry-reminder` | WGT-08 | 6 |
 
 ## Who can start when
 

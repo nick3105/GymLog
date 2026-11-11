@@ -79,6 +79,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | WGT-05 | **View Body Weight Trend** | Display saved measurements in a line chart ordered by date. |
 | WGT-06 | **View Measurement History** | Expand a list of saved dates and weights. |
 | WGT-07 | **Set a Weight-Loss Goal** | Let a signed-in user save one private goal weight in kg, show the latest weight and remaining kg to lose, and keep the goal available across devices. |
+| WGT-08 | **Remind About Today's Weight Entry** | When a signed-in user opens GymLog and has not saved a body-weight measurement for their current local date, show a dismissible, non-blocking reminder with a direct link to the Weight Tracker. Do not show it if a measurement already exists for today. |
 
 ## 6. Data and scope requirements
 
