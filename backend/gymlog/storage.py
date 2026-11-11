@@ -213,6 +213,15 @@ def update_template(path, user_id, document):
     return document if result.rowcount else None
 
 
+def delete_template(path, user_id, template_id):
+    """Delete only this owner's routine; completed session snapshots stay stored."""
+    with connect(path) as db:
+        result = db.execute(
+            "DELETE FROM templates WHERE id=? AND user_id=?", (template_id, user_id)
+        )
+    return result.rowcount > 0
+
+
 def existing_session(path, user_id, client_id):
     with connect(path) as db:
         row = db.execute(

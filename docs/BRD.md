@@ -34,6 +34,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | PLN-09 | **Set Target RPE** | Enter an optional target RPE for each set. RPE accepts values from 1 to 10 in increments of 0.5. |
 | PLN-10 | **Save Workout Template** | Save the exercises and individual set targets so the workout can be selected and repeated later. Support up to 20 exercises per template and 20 sets per exercise. Existing templates with one target per exercise must remain usable. |
 | PLN-11 | **Cancel Workout Creation** | Leave the builder without saving. Ask before discarding entered information. |
+| PLN-14 | **Delete Saved Workout** | A trash icon on each Start workout card asks for confirmation before deleting the saved template. Cancel keeps it unchanged. Completed sessions and exercise progress remain available. |
 | PLN-13 | **Edit Saved Workout** | Edit a saved template’s name, exercises and set targets from Start workout. Save to the same template; completed sessions stay unchanged. Confirm before discarding edits and preserve inputs after a failed save. |
 | PLN-12 | **Maintain Exercise Catalogue** | Let maintainers add or update exercises in `exercises.json`. Stable exercise IDs connect past results; catalogue changes must not rewrite saved workouts. |
 

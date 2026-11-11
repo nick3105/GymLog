@@ -38,3 +38,11 @@ coordination of unsaved sessions.
 - A missing template returns a readable 404. Invalid requests never remove data.
 - At 375 × 667 the trash control stays at the top right, long names wrap, and the
   confirmation fits the screen without horizontal scrolling. Check on a real phone before merge.
+
+## Local verification — 2026-11-11
+
+- Python: 44 tests passed, including deletion isolation and unchanged completed sessions/progress.
+- React: 20 tests passed; lint, formatting, TypeScript and production build passed.
+- Browser: desktop trash placement checked; 375 × 667 confirmation opens with Cancel focused. Cancel and Escape keep the workout and return focus to the trash button.
+- Actual deletion is tested with disposable databases through the API; no existing demo workout was deleted during browser verification.
+- Real-phone confirmation check and screenshot still required before merge.
