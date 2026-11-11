@@ -41,6 +41,10 @@
     var(--color-title-coral) 39%,
     var(--color-title-green) 90%
   );
+  /* Always 40rem wide (the content column), so every title shows the same colours whatever
+     the size of its box. */
+  background-size: 40rem 100%;
+  background-repeat: no-repeat;
   background-clip: text;
   color: transparent;
 }
