@@ -176,7 +176,7 @@ export default function Create() {
         </p>
       )}
 
-      <ReorderList items={planned} enabled={!id && !saving} onChange={setPlanned}>
+      <ReorderList items={planned} enabled={!saving} onChange={setPlanned}>
         {(item, index) => (
           <section key={item.id} className={card}>
             <div className="flex items-start justify-between gap-2">
