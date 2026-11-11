@@ -18,8 +18,8 @@ People plan workouts in the order they intend to train. They should be able to m
 
 ## Agreed interaction
 
-- Touch: hold the labelled grip for 300 ms, then move the card up or down. A short tap does not reorder. Moving before the hold activates cancels the gesture. Mouse: drag immediately from the grip.
-- Use existing React and Pointer Events, with no new dependency. The card highlights when picked up, a lime insertion line previews the drop position, and Escape, pointer cancellation or a drop outside the list cancels.
+- Touch: hold the labelled grip for 300 ms, then move the card up or down. A short tap does not reorder. Sliding the grip deliberately also starts the drag, so moving a finger before the hold delay does not silently cancel it. Mouse: drag immediately from the grip.
+- Use existing React and Pointer Events, with no new dependency. The grip is inside the exercise card with no separate bordered strip. The card follows the pointer vertically and highlights when picked up, a lime insertion line previews the drop position, and Escape, pointer cancellation or a drop outside the list cancels.
 - Reordering is available when creating or editing a saved template, as requested by Gaia. Saving an edit preserves the template ID and completed session history. Active sessions stay outside this task.
 
 ## Out of scope

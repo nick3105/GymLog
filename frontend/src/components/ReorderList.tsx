@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react'
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 
 import { insertionIndex, moveItem } from '../reorder'
+import { card } from '../ui'
 
 type Item = { id: string; name: string }
 type Drag = { id: string; to: number | null }
@@ -13,6 +14,7 @@ type Gesture = {
   startX: number
   startY: number
   pickedUp: boolean
+  startScroll: number
 }
 type Props<T extends Item> = {
   items: T[]
@@ -32,6 +34,7 @@ export default function ReorderList<T extends Item>({
   const gesture = useRef<Gesture | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const frame = useRef<number | null>(null)
+  const motion = useRef<Animation | null>(null)
   const cards = useRef(new Map<string, HTMLDivElement>())
   const [drag, setDrag] = useState<Drag | null>(null)
   const [announcement, setAnnouncement] = useState('')
@@ -42,6 +45,8 @@ export default function ReorderList<T extends Item>({
     if (frame.current !== null) cancelAnimationFrame(frame.current)
     timer.current = null
     frame.current = null
+    motion.current?.cancel()
+    motion.current = null
     gesture.current = null
     setDrag(null)
   }
@@ -58,6 +63,7 @@ export default function ReorderList<T extends Item>({
       window.removeEventListener('keydown', escape)
       if (timer.current !== null) clearTimeout(timer.current)
       if (frame.current !== null) cancelAnimationFrame(frame.current)
+      motion.current?.cancel()
     }
   }, [])
 
@@ -91,22 +97,48 @@ export default function ReorderList<T extends Item>({
     if (current.y < edge) amount = -Math.min(14, (edge - current.y) / 5)
     else if (current.y > bottom) amount = Math.min(14, (current.y - bottom) / 5)
     if (amount !== 0) window.scrollBy(0, amount)
+    followPointer(current)
     const to = dropIndex(current)
     setDrag((previous) => (previous?.to === to ? previous : { id: current.id, to }))
     frame.current = requestAnimationFrame(scrollWhileDragging)
+  }
+
+  function followPointer(current: Gesture) {
+    const offset = current.y - current.startY + window.scrollY - current.startScroll
+    const transform = `translateY(${offset}px)`
+    // The browser animation moves the card without adding inline styles or new CSS.
+    const effect = motion.current?.effect
+    if (effect instanceof KeyframeEffect) effect.setKeyframes([{ transform }, { transform }])
   }
 
   function pickUp() {
     const current = gesture.current
     if (!current) return
     current.pickedUp = true
+    const node = cards.current.get(current.id)
+    motion.current =
+      node?.animate([{ transform: 'translateY(0px)' }, { transform: 'translateY(0px)' }], {
+        duration: 1,
+        fill: 'both',
+      }) ?? null
+    if (motion.current) {
+      motion.current.pause()
+      motion.current.currentTime = 1
+    }
+    followPointer(current)
     setDrag({ id: current.id, to: items.findIndex((item) => item.id === current.id) })
     setAnnouncement('Exercise picked up. Drag to a new position, release to place. Escape cancels.')
     frame.current = requestAnimationFrame(scrollWhileDragging)
   }
 
   function begin(event: PointerEvent<HTMLButtonElement>, item: T) {
-    if (!canReorder || !event.isPrimary || event.button !== 0 || gesture.current) return
+    if (
+      !canReorder ||
+      !event.isPrimary ||
+      (event.pointerType === 'mouse' && event.button !== 0) ||
+      gesture.current
+    )
+      return
     event.currentTarget.setPointerCapture(event.pointerId)
     gesture.current = {
       id: item.id,
@@ -116,6 +148,7 @@ export default function ReorderList<T extends Item>({
       startX: event.clientX,
       startY: event.clientY,
       pickedUp: false,
+      startScroll: window.scrollY,
     }
     if (event.pointerType === 'mouse') pickUp()
     else timer.current = setTimeout(pickUp, 300)
@@ -130,10 +163,14 @@ export default function ReorderList<T extends Item>({
       !current.pickedUp &&
       Math.hypot(current.x - current.startX, current.y - current.startY) > 8
     ) {
-      clearGesture()
-      return
+      if (timer.current !== null) clearTimeout(timer.current)
+      timer.current = null
+      pickUp()
     }
-    if (current.pickedUp) setDrag({ id: current.id, to: dropIndex(current) })
+    if (current.pickedUp) {
+      followPointer(current)
+      setDrag({ id: current.id, to: dropIndex(current) })
+    }
   }
 
   function announce(item: T, position: number) {
@@ -170,9 +207,7 @@ export default function ReorderList<T extends Item>({
   return (
     <div>
       {canReorder && (
-        <p className="text-muted mb-3 text-sm">
-          Hold the grip, then drag to reorder. Or use the arrows.
-        </p>
+        <p className="text-muted mb-3 text-sm">Drag the grip to reorder. Or use the arrows.</p>
       )}
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
@@ -188,15 +223,15 @@ export default function ReorderList<T extends Item>({
               }}
               tabIndex={-1}
               aria-label={`${item.name}, ${index + 1} of ${items.length}`}
-              className={`focus-visible:outline-lime rounded-2xl focus-visible:outline-2 ${drag?.id === item.id ? 'ring-lime opacity-60 ring-2' : ''}`}
+              className={`${card} focus-visible:outline-lime focus-visible:outline-2 ${drag?.id === item.id ? 'ring-lime pointer-events-none relative z-40 shadow-2xl ring-2' : ''}`}
             >
               {canReorder && (
-                <div className="border-border bg-panel flex items-center justify-between gap-2 rounded-t-2xl border px-3 py-1">
+                <div className="mb-2 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     aria-label={`Drag to reorder ${item.name}`}
                     aria-describedby="reorder-help"
-                    className="text-muted active:text-lime flex min-h-11 min-w-11 touch-none items-center gap-2 rounded-xl px-2 select-none"
+                    className="text-muted active:text-lime flex min-h-11 min-w-11 flex-1 touch-none items-center gap-2 rounded-xl px-2 select-none [-webkit-touch-callout:none]"
                     onPointerDown={(event) => begin(event, item)}
                     onPointerMove={move}
                     onPointerUp={finish}

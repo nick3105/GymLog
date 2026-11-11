@@ -178,7 +178,7 @@ export default function Create() {
 
       <ReorderList items={planned} enabled={!saving} onChange={setPlanned}>
         {(item, index) => (
-          <section key={item.id} className={card}>
+          <section key={item.id}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <ExerciseLink id={item.id} name={item.name} />
