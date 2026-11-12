@@ -238,6 +238,14 @@ def create_app(config=None):
         document = storage.update_template(database, g.user_id, {**template, **changes})
         return jsonify(document)
 
+    @app.post("/api/templates/<template_id>/delete")
+    @authenticated
+    def delete_template(template_id):
+        """Remove an owned template without changing completed workouts."""
+        if not storage.delete_template(database, g.user_id, template_id):
+            return jsonify(error="That workout template could not be found."), 404
+        return jsonify(ok=True)
+
     @app.post("/api/sessions")
     @authenticated
     def finish_session():
