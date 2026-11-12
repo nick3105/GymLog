@@ -93,7 +93,7 @@ export default function Start() {
         />
       )}
       <div className="mb-4 flex items-end justify-between gap-2">
-        <h1 className="text-3xl font-bold">Start workout</h1>
+        <h1 className="gradient-text text-3xl font-bold">Start workout</h1>
         <Link to="/create" className={textButton}>
           + New
         </Link>
@@ -110,9 +110,7 @@ export default function Start() {
           {journal.templates.map((template) => (
             <li key={template.id} className={card}>
               <div className="flex items-start justify-between gap-2">
-                <h2 className="min-w-0 flex-1 text-xl font-semibold break-words">
-                  {template.name}
-                </h2>
+                <h2 className="min-w-0 flex-1 text-xl font-normal break-words">{template.name}</h2>
                 <button
                   type="button"
                   aria-label={`Delete ${template.name}`}
@@ -127,7 +125,7 @@ export default function Start() {
                     setProblem('')
                     setDeleting(template)
                   }}
-                  className="text-muted hover:text-danger focus-visible:text-danger flex size-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-30"
+                  className="text-muted hover:text-danger focus-visible:text-danger flex size-11 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
                 >
                   <Trash2 className="size-5" aria-hidden />
                 </button>
@@ -152,7 +150,7 @@ export default function Start() {
               <button
                 type="button"
                 onClick={() => start(template)}
-                className="border-lime text-lime inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border font-semibold"
+                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-normal"
               >
                 <Play className="size-5" aria-hidden />
                 Start

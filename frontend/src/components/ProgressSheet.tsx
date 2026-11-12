@@ -54,33 +54,33 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
         <button
           type="button"
           onClick={close}
-          className="text-lime inline-flex min-h-11 w-fit items-center gap-2 font-semibold"
+          className="text-accent inline-flex min-h-11 w-fit items-center gap-2 font-normal"
         >
           <ArrowLeft className="size-5" aria-hidden />
           Back
         </button>
         <div>
-          <p className="text-muted text-xs font-semibold tracking-widest uppercase">
+          <p className="text-label text-xs font-normal tracking-widest uppercase">
             Exercise progress
           </p>
-          <h2 id="progress-title" className="text-2xl font-bold">
+          <h2 id="progress-title" className="text-2xl font-light">
             {name}
           </h2>
         </div>
-        {problem && <p className="text-danger text-sm font-medium">{problem}</p>}
+        {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
         {!stats && !problem && <p className="text-muted">Loading…</p>}
         {stats && (
           <>
             <div className="grid grid-cols-2 gap-3">
               <div className={card}>
                 <p className="text-muted text-sm">Best estimated 1RM</p>
-                <p className="text-2xl font-bold">
+                <p className="font-mono text-2xl">
                   {stats.best === null ? '–' : `${formatNumber(stats.best)} kg`}
                 </p>
               </div>
               <div className={card}>
                 <p className="text-muted text-sm">Latest estimated 1RM</p>
-                <p className="text-2xl font-bold">
+                <p className="font-mono text-2xl">
                   {stats.latest === null ? '–' : `${formatNumber(stats.latest)} kg`}
                 </p>
               </div>

@@ -142,7 +142,9 @@ export default function Create() {
 
   return (
     <form onSubmit={save} noValidate>
-      <h1 className="mb-4 text-3xl font-bold">{id ? 'Edit workout' : 'Create workout'}</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">
+        {id ? 'Edit workout' : 'Create workout'}
+      </h1>
       {id && (
         <p className="text-muted mb-4">
           Changes apply to future workouts. Completed history stays unchanged.
@@ -206,7 +208,7 @@ export default function Create() {
                 key={setIndex}
                 className="mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem] items-center gap-2"
               >
-                <span className="text-muted text-center font-semibold">{setIndex + 1}</span>
+                <span className="text-muted text-center font-normal">{setIndex + 1}</span>
                 {targetFields.map(({ key, label: fieldLabel, mode }) => (
                   <input
                     key={key}

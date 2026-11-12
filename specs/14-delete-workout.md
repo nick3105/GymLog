@@ -46,3 +46,11 @@ coordination of unsaved sessions.
 - Browser: desktop trash placement checked; 375 × 667 confirmation opens with Cancel focused. Cancel and Escape keep the workout and return focus to the trash button.
 - Actual deletion is tested with disposable databases through the API; no existing demo workout was deleted during browser verification.
 - Real-phone confirmation check and screenshot still required before merge.
+
+## Integration with main — 2026-11-12
+
+Merged the new interface from main into this feature branch. Kept the trash control
+and native confirmation; matched the new typography, panel corners and pill buttons.
+44 Python tests and 20 React tests passed, along with Ruff, lint, format, TypeScript
+and build. At 375 × 667, Escape closed the confirmation and restored trash-button
+focus, with no horizontal overflow. No demo records were deleted.

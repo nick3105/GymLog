@@ -31,9 +31,9 @@ export default function DeleteWorkoutDialog({ name, saving, problem, onCancel, o
         event.preventDefault()
         if (!saving) onCancel()
       }}
-      className="border-border bg-panel text-text fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-2xl border p-5 shadow-2xl backdrop:bg-black/70"
+      className="border-border bg-panel text-text fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-lg p-5 shadow-2xl backdrop:bg-black/70"
     >
-      <h2 id="delete-workout-title" className="text-xl font-semibold">
+      <h2 id="delete-workout-title" className="text-xl font-normal">
         Delete workout?
       </h2>
       <p id="delete-workout-description" className="mt-3 break-words">
@@ -58,7 +58,7 @@ export default function DeleteWorkoutDialog({ name, saving, problem, onCancel, o
           type="button"
           disabled={saving}
           onClick={onConfirm}
-          className="border-danger text-danger inline-flex min-h-12 items-center justify-center rounded-xl border px-4 font-semibold disabled:opacity-40"
+          className="border-danger text-danger inline-flex min-h-12 items-center justify-center rounded-full border px-4 font-normal disabled:opacity-40"
         >
           {saving ? 'Deleting…' : 'Delete workout'}
         </button>
