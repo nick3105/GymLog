@@ -1,5 +1,5 @@
 # Task 23 — Personal exercise catalogue
-Assignee:
+Assignee: nick3105
 
 ## Why
 
