@@ -61,6 +61,7 @@ class JournalTests(unittest.TestCase):
         exercises = self.client.get("/api/state").json["exercises"]
         names = {exercise["id"]: exercise["name"] for exercise in exercises}
         self.assertEqual(names["larsen-bench-press"], "Larsen Bench Press")
+        self.assertEqual(names["machine-fly"], "Machine fly")
         self.assertEqual(names["close-grip-front-lat-pulldown"], "Lat Pulldown Close Grip")
         self.assertEqual(names["lat-pulldown-wide-grip"], "Lat Pulldown Wide Grip")
         self.assertEqual(names["one-leg-hip-thrusts"], "One Leg Hip Thrusts")

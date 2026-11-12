@@ -9,6 +9,7 @@
   {"id":"chest-press-machine","name":"Chest press machine","group":"Chest"},
   {"id":"cable-fly","name":"Cable fly","group":"Chest"},
   {"id":"pec-deck","name":"Pec deck","group":"Chest"},
+  {"id":"machine-fly","name":"Machine fly","group":"Chest"},
   {"id":"dip","name":"Dip","group":"Chest"},
   {"id":"push-up","name":"Push-up","group":"Chest"},
   {"id":"alternating-floor-press","name":"Alternating Floor Press","group":"Chest"},
