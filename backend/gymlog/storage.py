@@ -308,3 +308,42 @@ def update_session(path, user_id, document):
             (json.dumps(document), document["id"], user_id),
         )
     return document if result.rowcount else None
+
+
+VOLUME_PREFERENCES_SCHEMA = """CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id), document TEXT NOT NULL,
+    updated_at TEXT NOT NULL)"""
+
+
+def initialize_volume_preferences(path):
+    """Create the preferences table for a local preview before migration integration."""
+    with connect(path) as db:
+        db.execute(VOLUME_PREFERENCES_SCHEMA)
+
+
+def volume_preferences(path, user_id):
+    """Return the owner's goals and evidence context, or empty defaults."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        return json.loads(row["document"]) if row else {"goals": {}, "profile": {}, "revision": 0}
+
+
+def save_volume_preferences(path, user_id, document, revision):
+    """Update only the owner's goals, rejecting concurrent changes."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        current = json.loads(row["document"]) if row else {"revision": 0}
+        if current.get("revision", 0) != revision:
+            return None
+        document = {**document, "revision": revision + 1}
+        db.execute(
+            "INSERT INTO user_preferences VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET "
+            "document=excluded.document, updated_at=excluded.updated_at",
+            (user_id, json.dumps(document), now()),
+        )
+        return document

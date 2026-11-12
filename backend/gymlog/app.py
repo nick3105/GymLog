@@ -22,6 +22,8 @@ from .models import (
     validate_session,
     validate_session_edit,
     validate_template,
+    validate_volume_preferences,
+    weekly_volume,
 )
 
 ROOT = Path(__file__).resolve().parent
@@ -53,6 +55,10 @@ def create_app(config=None):
         raise RuntimeError("Run `uv run python setup_secret.py` before starting GymLog.")
     database = app.config["DATABASE"]
     storage.initialize(database, app.config["OWNER_PASSWORD_HASH"])
+    storage.initialize_volume_preferences(database)
+    volume_registry = json.loads(
+        (ROOT.parents[1] / "docs" / "VOLUME_COEFFICIENTS_DRAFT.json").read_text(encoding="utf-8")
+    )
     catalogue = json.loads((ROOT / "exercises.json").read_text(encoding="utf-8"))
     if (
         not isinstance(catalogue, list)
@@ -290,6 +296,36 @@ def create_app(config=None):
                 ), 409
             return jsonify(existing)
         return jsonify(storage.add_session(database, g.user_id, document)), 201
+
+    @app.get("/api/volume")
+    @authenticated
+    def volume():
+        """Show only the signed-in user's saved weekly set exposure."""
+        preferences = storage.volume_preferences(database, g.user_id)
+        result = weekly_volume(
+            storage.documents(database, g.user_id, "sessions"),
+            request.args.get("week", date.today().isoformat()),
+            volume_registry,
+            preferences,
+            app.config.get("VOLUME_DRAFT_PREVIEW", False),
+        )
+        return jsonify(result)
+
+    @app.post("/api/volume/preferences")
+    @authenticated
+    def update_volume_preferences():
+        """Save the owner's editable goals with a revision check."""
+        body = request.get_json()
+        document = validate_volume_preferences(
+            body, {row["id"] for row in volume_registry["taxonomy"]}
+        )
+        revision = body.get("revision")
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ValueError("Reload weekly volume before saving your goals.")
+        saved = storage.save_volume_preferences(database, g.user_id, document, revision)
+        if saved is None:
+            return jsonify(error="Your goals changed on another device. Reload before saving."), 409
+        return jsonify(saved)
 
     @app.post("/api/weights")
     @authenticated

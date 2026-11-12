@@ -12,6 +12,7 @@ import ReviewDetail from './pages/ReviewDetail'
 import Session from './pages/Session'
 import Start from './pages/Start'
 import Weight from './pages/Weight'
+import WeeklyVolume from './pages/WeeklyVolume'
 
 // Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
 function SignedIn({ children }: { children: ReactNode }) {
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
       { path: 'review/:id', element: <ReviewDetail /> },
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
+      { path: 'review/volume', element: <WeeklyVolume /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

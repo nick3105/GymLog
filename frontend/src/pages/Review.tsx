@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import EmptyState from '../components/EmptyState'
 import { formatDay } from '../format'
 import { useJournal } from '../journal'
+import { secondaryButton } from '../ui'
 import type { Session } from '../types'
 
 // Newest training day first; two sessions on one day by the time they were saved.
@@ -20,6 +21,9 @@ export default function Review() {
   return (
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
+      <Link to="/review/volume" className={`${secondaryButton} mb-4`}>
+        Weekly volume
+      </Link>
       {journal.sessions.length === 0 ? (
         <EmptyState
           title="Your first session is waiting."

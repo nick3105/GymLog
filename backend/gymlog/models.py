@@ -277,3 +277,110 @@ def validate_session_edit(body, saved):
         else:
             exercise.pop("plannedSets", None)
     return {**saved, **corrected}
+
+
+def validate_volume_preferences(body, muscles):
+    """Validate editable goals and optional evidence context without prescribing volume."""
+    if not isinstance(body, dict) or not isinstance(body.get("goals", {}), dict):
+        raise ValueError("Enter muscle goals as an object.")
+    goals = {}
+    for muscle, value in body.get("goals", {}).items():
+        if muscle not in muscles:
+            raise ValueError("Choose a muscle from the volume list.")
+        goals[muscle] = number(value, "Weekly set goal", 0, 1000)
+    profile = body.get("profile", {})
+    if not isinstance(profile, dict):
+        raise ValueError("Enter your profile as an object.")
+    choices = {
+        "ageBand": ("", "under18", "18-39", "40-64", "65+"),
+        "experience": ("", "under1", "1-3", "3+"),
+        "gender": ("", "woman", "man", "nonbinary", "self-described", "prefer-not-to-say"),
+    }
+    result = {}
+    for field, options in choices.items():
+        value = profile.get(field, "")
+        if value not in options:
+            raise ValueError("Choose one of the listed profile options.")
+        result[field] = value
+    return {"goals": goals, "profile": result}
+
+
+def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
+    """Count reviewed or explicitly enabled local-preview set credits for one calendar week."""
+    try:
+        start = date.fromisoformat(week)
+    except (ValueError, TypeError):
+        raise ValueError("Choose a valid week date.") from None
+    start -= timedelta(days=start.weekday())
+    end = start + timedelta(days=6)
+    profiles = {row["exerciseId"]: row for row in registry["exercises"]}
+    muscles = {
+        muscle["id"]: {
+            "muscle": muscle["id"],
+            "direct": 0.0,
+            "indirect": 0.0,
+            "total": 0.0,
+            "goal": preferences.get("goals", {}).get(muscle["id"]),
+            "exercises": [],
+        }
+        for muscle in registry["taxonomy"]
+    }
+    excluded = {}
+    counted_sets = 0
+    for session in sessions:
+        day = date.fromisoformat(session["day"])
+        if not start <= day <= end:
+            continue
+        for exercise in session["exercises"]:
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            profile = profiles.get(exercise["id"])
+            reason = None
+            if exercise.get("source") == "personal" or exercise["id"].startswith("custom-"):
+                reason = "Personal exercise"
+            elif exercise.get("measurement") == "duration":
+                reason = "Timed holds"
+            elif profile is None:
+                reason = "No muscle mapping"
+            elif not profile.get("coefficients"):
+                reason = "Mapping needs review"
+            elif not profile.get("eligibleForProductionCounting", False) and not allow_draft:
+                reason = "Draft mapping disabled"
+            if reason is not None:
+                excluded[reason] = excluded.get(reason, 0) + len(performed)
+                continue
+            count = sum("durationSeconds" not in row for row in performed)
+            timed_count = len(performed) - count
+            if timed_count:
+                excluded["Timed holds"] = excluded.get("Timed holds", 0) + timed_count
+            counted_sets += count
+            for muscle, coefficient in profile["coefficients"].items():
+                if coefficient <= 0 or not count:
+                    continue
+                contribution = count * coefficient
+                kind = "direct" if muscle in profile["directMuscles"] else "indirect"
+                muscles[muscle][kind] += contribution
+                muscles[muscle]["total"] += contribution
+                muscles[muscle]["exercises"].append(
+                    {
+                        "id": exercise["id"],
+                        "name": exercise["name"],
+                        "day": session["day"],
+                        "sets": count,
+                        "coefficient": coefficient,
+                        "contribution": contribution,
+                    }
+                )
+    return {
+        "weekStart": start.isoformat(),
+        "weekEnd": end.isoformat(),
+        "muscles": list(muscles.values()),
+        "excluded": excluded,
+        "countedSets": counted_sets,
+        "draftPreview": allow_draft,
+        "mappingVersion": registry["dataset"]["revision"],
+        "profile": preferences.get("profile", {}),
+        "goals": preferences.get("goals", {}),
+        "revision": preferences.get("revision", 0),
+    }
