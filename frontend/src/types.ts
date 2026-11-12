@@ -58,6 +58,11 @@ export type Journal = {
 }
 
 export type ExerciseStats = {
+  averageWeight?: {
+    points: { day: string; weight: number }[]
+    best: number | null
+    latest: number | null
+  }
   last: { day: string; sets: LoggedSet[] } | null
   points: { day: string; estimate: number }[]
   best: number | null

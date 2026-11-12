@@ -71,7 +71,13 @@ export default function LineChart({ title, points, unit, emptyMessage }: Props) 
           className="stroke-accent"
         />
         {coordinates.map(([cx, cy], index) => (
-          <circle key={points[index].day} cx={cx} cy={cy} r={4} className="fill-accent">
+          <circle
+            key={`${points[index].day}-${index}`}
+            cx={cx}
+            cy={cy}
+            r={4}
+            className="fill-accent"
+          >
             <title>{`${formatDay(points[index].day)}: ${formatNumber(points[index].value)} ${unit}`}</title>
           </circle>
         ))}

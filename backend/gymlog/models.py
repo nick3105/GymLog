@@ -59,11 +59,12 @@ def best_1rm(sets):
     return max((value for value in estimates if value is not None), default=None)
 
 
-def exercise_stats(sessions, exercise_id):
+def exercise_stats(sessions, exercise_id, include_average_weight=False):
     """Last performance and the estimated 1RM trend of one exercise, from any template."""
     ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
     last = None
     points = []
+    weight_points = []
     for session in ordered:
         for exercise in session["exercises"]:
             if exercise["id"] != exercise_id:
@@ -72,16 +73,29 @@ def exercise_stats(sessions, exercise_id):
             if not performed:
                 continue
             last = {"day": session["day"], "sets": performed}
+            if include_average_weight:
+                weights = [row["weight"] for row in performed if "durationSeconds" not in row]
+                if weights:
+                    average = math.floor(sum(weights) / len(weights) * 10 + 0.5) / 10
+                    weight_points.append({"day": session["day"], "weight": average})
             estimate = best_1rm(exercise["sets"])
             if estimate is not None:
                 points.append({"day": session["day"], "estimate": estimate})
     estimates = [point["estimate"] for point in points]
-    return {
+    result = {
         "last": last,
         "points": points,
         "best": max(estimates, default=None),
         "latest": estimates[-1] if estimates else None,
     }
+    if include_average_weight:
+        averages = [point["weight"] for point in weight_points]
+        result["averageWeight"] = {
+            "points": weight_points,
+            "best": max(averages, default=None),
+            "latest": averages[-1] if averages else None,
+        }
+    return result
 
 
 def validate_template(body, catalogue):

@@ -220,7 +220,13 @@ def create_app(config=None):
         if exercise_id not in catalogue_by_id:
             return jsonify(error="That exercise is not in the catalogue."), 404
         sessions = storage.documents(database, g.user_id, "sessions")
-        return jsonify(exercise_stats(sessions, exercise_id))
+        return jsonify(
+            exercise_stats(
+                sessions,
+                exercise_id,
+                include_average_weight=request.args.get("include") == "average-weight",
+            )
+        )
 
     @app.post("/api/templates")
     @authenticated
