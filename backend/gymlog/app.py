@@ -208,7 +208,7 @@ def create_app(config=None):
     @authenticated
     def state():
         return jsonify(
-            exercises=catalogue,
+            exercises=[exercise for exercise in catalogue if not exercise.get("retired")],
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),

@@ -56,6 +56,30 @@ class JournalTests(unittest.TestCase):
     def post(self, path, body):
         return self.client.post(path, json=body, headers={"X-CSRF-Token": self.token})
 
+    def test_retired_exercises_keep_existing_workouts_usable(self):
+        """Hide retired choices while preserving their saved-workout compatibility."""
+        exercises = self.client.get("/api/state").json["exercises"]
+        names = {exercise["id"]: exercise["name"] for exercise in exercises}
+        self.assertEqual(names["larsen-bench-press"], "Larsen Bench Press")
+        self.assertEqual(names["close-grip-front-lat-pulldown"], "Lat Pulldown Close Grip")
+        self.assertEqual(names["lat-pulldown-wide-grip"], "Lat Pulldown Wide Grip")
+        self.assertEqual(names["one-leg-hip-thrusts"], "One Leg Hip Thrusts")
+        self.assertIn("bench-press", names)
+        self.assertNotIn("bench-press-powerlifting", names)
+        response = self.post(
+            "/api/templates",
+            {
+                "name": "Existing powerlifting workout",
+                "exercises": [{"id": "bench-press-powerlifting", "sets": 1, "targetReps": 5}],
+            },
+        )
+        self.assertEqual(response.status_code, 201, response.json)
+        self.assertEqual(response.json["exercises"][0]["id"], "bench-press-powerlifting")
+        self.assertEqual(
+            self.client.get("/api/exercises/bench-press-powerlifting/stats").status_code,
+            200,
+        )
+
     def template(self):
         response = self.post(
             "/api/templates",
