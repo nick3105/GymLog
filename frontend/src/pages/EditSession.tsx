@@ -3,18 +3,13 @@ import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api } from '../api'
 import EmptyState from '../components/EmptyState'
+import { durationFields, repFields, setPayload } from '../setInput'
 import { today } from '../format'
 import { useJournal } from '../journal'
 import type { Session } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton } from '../ui'
 
-type Row = { skipped: boolean; weight: string; reps: string; rpe: string }
-const fields = [
-  { key: 'weight', label: 'kg', mode: 'decimal' },
-  { key: 'reps', label: 'Reps', mode: 'numeric' },
-  { key: 'rpe', label: 'RPE', mode: 'decimal' },
-] as const
-
+type Row = { skipped: boolean; weight: string; reps: string; rpe: string; durationSeconds?: string }
 export default function EditSession() {
   const { id } = useParams()
   const { journal, setJournal, setBuilderDirty } = useJournal()
@@ -30,8 +25,11 @@ export default function EditSession() {
             ? { skipped: true, weight: '', reps: '', rpe: '' }
             : {
                 skipped: false,
-                weight: String(set.weight),
-                reps: String(set.reps),
+                ...(set.durationSeconds === undefined
+                  ? {}
+                  : { durationSeconds: String(set.durationSeconds) }),
+                weight: set.weight === undefined ? '' : String(set.weight),
+                reps: set.reps === undefined ? '' : String(set.reps),
                 rpe: set.rpe === null ? '' : String(set.rpe),
               },
         ),
@@ -80,7 +78,7 @@ export default function EditSession() {
   function update(
     exerciseIndex: number,
     setIndex: number,
-    key: 'weight' | 'reps' | 'rpe',
+    key: 'weight' | 'reps' | 'rpe' | 'durationSeconds',
     value: string,
   ) {
     setRows(
@@ -105,15 +103,7 @@ export default function EditSession() {
         timezoneOffset: new Date().getTimezoneOffset(),
         exercises: session.exercises.map((exercise, index) => ({
           id: exercise.id,
-          sets: rows[index].map((row) =>
-            row.skipped
-              ? { skipped: true }
-              : {
-                  weight: row.weight === '' ? null : Number(row.weight),
-                  reps: row.reps === '' ? null : Number(row.reps),
-                  rpe: row.rpe === '' ? null : Number(row.rpe),
-                },
-          ),
+          sets: rows[index].map(setPayload),
         })),
       })
       setJournal((current) => ({
@@ -156,23 +146,27 @@ export default function EditSession() {
                   {row.skipped ? ' · Skipped' : ''}
                 </p>
                 {!row.skipped && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {fields.map(({ key, label: fieldLabel, mode }) => (
-                      <label key={key} className="min-w-0">
-                        <span className="text-muted mb-1 block">{fieldLabel}</span>
-                        <input
-                          type="text"
-                          inputMode={mode}
-                          value={row[key]}
-                          disabled={saving}
-                          aria-label={`${exercise.name}, set ${setIndex + 1}, ${fieldLabel}`}
-                          onChange={(event) =>
-                            update(exerciseIndex, setIndex, key, event.target.value)
-                          }
-                          className={`${input} px-2 text-center`}
-                        />
-                      </label>
-                    ))}
+                  <div
+                    className={`grid ${exercise.measurement === 'duration' ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}
+                  >
+                    {(exercise.measurement === 'duration' ? durationFields : repFields).map(
+                      ({ key, label: fieldLabel, mode }) => (
+                        <label key={key} className="min-w-0">
+                          <span className="text-muted mb-1 block">{fieldLabel}</span>
+                          <input
+                            type="text"
+                            inputMode={mode}
+                            value={row[key] ?? ''}
+                            disabled={saving}
+                            aria-label={`${exercise.name}, set ${setIndex + 1}, ${fieldLabel}`}
+                            onChange={(event) =>
+                              update(exerciseIndex, setIndex, key, event.target.value)
+                            }
+                            className={`${input} px-2 text-center`}
+                          />
+                        </label>
+                      ),
+                    )}
                   </div>
                 )}
               </div>

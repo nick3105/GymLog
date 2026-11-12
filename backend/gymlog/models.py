@@ -54,7 +54,7 @@ def best_1rm(sets):
     estimates = [
         estimated_1rm(s["weight"], s["reps"], s.get("rpe"))
         for s in sets
-        if not s.get("skipped", False)
+        if not s.get("skipped", False) and "durationSeconds" not in s
     ]
     return max((value for value in estimates if value is not None), default=None)
 
@@ -106,6 +106,11 @@ def validate_template(body, catalogue):
             raise ValueError("Each exercise may appear only once in a workout.")
         seen.add(exercise_id)
         item = {"id": exercise_id, "name": catalogue[exercise_id]["name"]}
+        timed = catalogue[exercise_id].get("measurement") == "duration"
+        if timed:
+            item["measurement"] = "duration"
+            if "targets" not in entry:
+                raise ValueError("Enter a duration target for every timed set.")
         if "targets" in entry:
             rows = entry["targets"]
             if not isinstance(rows, list) or not 1 <= len(rows) <= 20:
@@ -117,6 +122,16 @@ def validate_template(body, catalogue):
                 rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
                 if rpe is not None and (rpe * 2) % 1:
                     raise ValueError("Use target RPE steps of 0.5.")
+                if timed:
+                    targets.append(
+                        {
+                            "durationSeconds": number(
+                                row.get("durationSeconds"), "Target seconds", 1, 86400, integer=True
+                            ),
+                            "rpe": rpe,
+                        }
+                    )
+                    continue
                 targets.append(
                     {
                         "reps": number(row.get("reps"), "Target reps", 1, 100, integer=True),
@@ -174,6 +189,16 @@ def validate_session(body, template):
             rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
             if rpe is not None and (rpe * 2) % 1:
                 raise ValueError("Use RPE steps of 0.5 (for example 7 or 7.5).")
+            if planned.get("measurement") == "duration":
+                sets.append(
+                    {
+                        "durationSeconds": number(
+                            row.get("durationSeconds"), "Seconds", 1, 86400, integer=True
+                        ),
+                        "rpe": rpe,
+                    }
+                )
+                continue
             sets.append(
                 {
                     "weight": number(row.get("weight"), "Weight", 0, 1000),

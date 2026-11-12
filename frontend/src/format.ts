@@ -24,5 +24,6 @@ export function today(): string {
 export function formatSet(set: LoggedSet): string {
   if (set.skipped) return 'Skipped'
   const effort = set.rpe === null ? '' : ` @ ${formatNumber(set.rpe)}`
+  if (set.durationSeconds !== undefined) return `${set.durationSeconds} s${effort}`
   return `${formatNumber(set.weight)} × ${set.reps}${effort}`
 }

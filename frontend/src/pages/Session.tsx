@@ -7,14 +7,9 @@ import ExerciseLink from '../components/ExerciseLink'
 import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal, type ActiveWorkout } from '../journal'
 import { bestOneRepMax, type SetInput } from '../oneRepMax'
+import { durationFields, repFields, isSetComplete, setPayload } from '../setInput'
 import type { ExerciseStats, Session as SavedSession } from '../types'
 import { card, errorText, input, primaryButton, secondaryButton } from '../ui'
-
-const fields: { key: 'weight' | 'reps' | 'rpe'; label: string; mode: 'decimal' | 'numeric' }[] = [
-  { key: 'weight', label: 'kg', mode: 'decimal' },
-  { key: 'reps', label: 'Reps', mode: 'numeric' },
-  { key: 'rpe', label: 'RPE', mode: 'decimal' },
-]
 
 // RUN-02 to RUN-10: log the actual sets of the workout in progress, then save it.
 export default function Session() {
@@ -48,19 +43,19 @@ export default function Session() {
   const workout: ActiveWorkout = active
 
   const hasPerformedSet = workout.exercises.some((exercise) =>
-    exercise.sets.some((set) => !set.skipped && set.weight !== '' && set.reps !== ''),
+    exercise.sets.some((set) => isSetComplete(set)),
   )
   const complete =
     hasPerformedSet &&
     workout.exercises.every((exercise) =>
-      exercise.sets.every((set) => set.skipped || (set.weight !== '' && set.reps !== '')),
+      exercise.sets.every((set) => set.skipped || isSetComplete(set)),
     )
   // The first set without weight or reps is the one you are on.
   const current = workout.exercises
     .flatMap((exercise, exerciseIndex) =>
       exercise.sets.map((set, setIndex) => ({ exerciseIndex, setIndex, set })),
     )
-    .find(({ set }) => !set.skipped && (set.weight === '' || set.reps === ''))
+    .find(({ set }) => !set.skipped && !isSetComplete(set))
 
   function update(
     exerciseIndex: number,
@@ -90,7 +85,18 @@ export default function Session() {
       ...workout,
       exercises: workout.exercises.map((item, index) =>
         index === exerciseIndex
-          ? { ...item, sets: [...item.sets, { weight: '', reps: '', rpe: '' }] }
+          ? {
+              ...item,
+              sets: [
+                ...item.sets,
+                {
+                  weight: '',
+                  reps: '',
+                  rpe: '',
+                  ...(item.measurement === 'duration' ? { durationSeconds: '' } : {}),
+                },
+              ],
+            }
           : item,
       ),
     })
@@ -119,15 +125,7 @@ export default function Session() {
         day: workout.day,
         exercises: workout.exercises.map((exercise) => ({
           id: exercise.id,
-          sets: exercise.sets.map((set) =>
-            set.skipped
-              ? { skipped: true }
-              : {
-                  weight: Number(set.weight),
-                  reps: Number(set.reps),
-                  rpe: set.rpe === '' ? null : Number(set.rpe),
-                },
-          ),
+          sets: exercise.sets.map(setPayload),
         })),
       })
       setJournal((journal) => ({
@@ -168,12 +166,14 @@ export default function Session() {
             <section key={exercise.id} className={card}>
               <div className="flex items-start justify-between gap-3">
                 <ExerciseLink id={exercise.id} name={exercise.name} />
-                <p className="shrink-0 text-right">
-                  <span className="text-muted block text-xs">Est. 1RM</span>
-                  <span className="text-accent font-light">
-                    {estimate === null ? '–' : `${formatNumber(estimate)} kg`}
-                  </span>
-                </p>
+                {exercise.measurement !== 'duration' && (
+                  <p className="shrink-0 text-right">
+                    <span className="text-muted block text-xs">Est. 1RM</span>
+                    <span className="text-accent font-light">
+                      {estimate === null ? '–' : `${formatNumber(estimate)} kg`}
+                    </span>
+                  </p>
+                )}
               </div>
               <p className="text-muted mb-3 text-sm">
                 {last === undefined
@@ -183,13 +183,13 @@ export default function Session() {
                     : `Last time · ${formatDay(last.day)}: ${last.sets.map(formatSet).join(', ')}`}
               </p>
               <div
-                className="text-muted grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 text-xs"
+                className={`text-muted grid ${exercise.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr]' : 'grid-cols-[1.75rem_1fr_1fr_1fr]'} gap-2 text-xs`}
                 aria-hidden
               >
                 <span>Set</span>
-                <span>kg</span>
-                <span>Reps</span>
-                <span>RPE</span>
+                {(exercise.measurement === 'duration' ? durationFields : repFields).map((field) => (
+                  <span key={field.key}>{field.label}</span>
+                ))}
               </div>
               {exercise.sets.map((set, setIndex) => {
                 const target = exercise.targets[setIndex]
@@ -201,6 +201,10 @@ export default function Session() {
                       ? 'kg'
                       : formatNumber(target.weight),
                   reps: target ? String(target.reps) : 'reps',
+                  durationSeconds:
+                    target?.durationSeconds === undefined
+                      ? 'seconds'
+                      : String(target.durationSeconds),
                   rpe:
                     target?.rpe === null || target?.rpe === undefined
                       ? '–'
@@ -227,29 +231,31 @@ export default function Session() {
                     ) : (
                       <>
                         <div
-                          className={`mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
+                          className={`mt-2 grid ${exercise.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr]' : 'grid-cols-[1.75rem_1fr_1fr_1fr]'} items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
                         >
                           <span className="text-muted text-center font-normal">{setIndex + 1}</span>
-                          {fields.map(({ key, label, mode }) => (
-                            <input
-                              key={key}
-                              type="text"
-                              disabled={saving}
-                              inputMode={mode}
-                              aria-label={`${exercise.name}, set ${setIndex + 1}, ${label}`}
-                              placeholder={placeholders[key]}
-                              value={set[key]}
-                              onChange={(event) =>
-                                update(
-                                  exerciseIndex,
-                                  setIndex,
-                                  key,
-                                  event.target.value.replace(',', '.'),
-                                )
-                              }
-                              className={`${input} text-center`}
-                            />
-                          ))}
+                          {(exercise.measurement === 'duration' ? durationFields : repFields).map(
+                            ({ key, label, mode }) => (
+                              <input
+                                key={key}
+                                type="text"
+                                disabled={saving}
+                                inputMode={mode}
+                                aria-label={`${exercise.name}, set ${setIndex + 1}, ${label}`}
+                                placeholder={placeholders[key]}
+                                value={set[key] ?? ''}
+                                onChange={(event) =>
+                                  update(
+                                    exerciseIndex,
+                                    setIndex,
+                                    key,
+                                    event.target.value.replace(',', '.'),
+                                  )
+                                }
+                                className={`${input} text-center`}
+                              />
+                            ),
+                          )}
                         </div>
                         <div className="flex justify-end">
                           <button
@@ -285,7 +291,7 @@ export default function Session() {
       </div>
 
       <p className="text-muted mt-4 text-sm">
-        Placeholders are your targets. Enter what you actually did; 0 kg is fine for bodyweight
+        Placeholders are your targets. Enter seconds for timed holds; 0 kg is fine for bodyweight
         sets. RPE is optional. Changes apply to this session only.
       </p>
 
