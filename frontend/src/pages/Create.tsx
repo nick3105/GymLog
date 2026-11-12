@@ -5,6 +5,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router'
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
+import ReorderList from '../components/ReorderList'
 import { useJournal } from '../journal'
 import { targetsFor } from '../targets'
 import type { Exercise, Template } from '../types'
@@ -177,9 +178,9 @@ export default function Create() {
         </p>
       )}
 
-      <div className="flex flex-col gap-4">
-        {planned.map((item, index) => (
-          <section key={item.id} className={card}>
+      <ReorderList items={planned} enabled={!saving} onChange={setPlanned}>
+        {(item, index) => (
+          <section key={item.id}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <ExerciseLink id={item.id} name={item.name} />
@@ -255,8 +256,8 @@ export default function Create() {
               + Add set
             </button>
           </section>
-        ))}
-      </div>
+        )}
+      </ReorderList>
 
       <p className="text-muted mt-4 text-sm">
         Reps are required. Weight and RPE (1–10, steps of 0.5) are optional.

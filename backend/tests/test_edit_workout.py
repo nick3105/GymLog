@@ -60,6 +60,37 @@ def test_update_preserves_history_and_identity(client):
     assert state["sessions"] == [saved.json]
 
 
+def test_reorder_saved_template_keeps_targets_and_completed_history(client):
+    """An edited order affects the same routine, never completed session snapshots."""
+    app, browser, headers = client
+    body = workout()
+    body["exercises"].append(
+        {"id": "barbell-row", "targets": [{"reps": 5, "weight": 40, "rpe": 8}]}
+    )
+    template = browser.post("/api/templates", json=body, headers=headers).json
+    completed = browser.post(
+        "/api/sessions",
+        json={
+            "clientId": "12345678-1234-4234-8234-123456789013",
+            "templateId": template["id"],
+            "day": "2026-11-11",
+            "exercises": [
+                {"id": item["id"], "sets": item["targets"]} for item in body["exercises"]
+            ],
+        },
+        headers=headers,
+    )
+    assert completed.status_code == 201
+    body["exercises"].reverse()
+    updated = browser.post(f"/api/templates/{template['id']}", json=body, headers=headers)
+    assert updated.status_code == 200
+    reloaded = browser.get("/api/state").json
+    assert len(reloaded["templates"]) == 1
+    assert reloaded["templates"][0]["id"] == template["id"]
+    assert reloaded["templates"][0]["exercises"] == list(reversed(template["exercises"]))
+    assert reloaded["sessions"] == [completed.json]
+
+
 def test_update_refuses_invalid_foreign_and_unprotected_requests(client):
     """An update cannot overwrite another journal or bypass validation and CSRF."""
     app, browser, headers = client
