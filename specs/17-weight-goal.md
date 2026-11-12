@@ -1,0 +1,52 @@
+# Task 17 — Set a body-weight goal
+
+Assignee: annalisa2912
+
+## Why
+
+The Weight Tracker shows measurements and their trend, but users who are trying to lose weight
+cannot see their target or how many kilograms remain. A simple, user-chosen goal makes that
+progress visible without estimating how quickly it will happen.
+
+## What
+
+- Let a signed-in user set, change, or clear one optional goal weight in kg from the Weight
+  Tracker.
+- Save the goal privately for that user through the existing API architecture. It must remain
+  available after sign-out, reload, and sign-in on another device.
+- When a goal and a latest weight exist, show the goal and the remaining kilograms to lose:
+  `max(latest weight − goal weight, 0)`. Show **Goal reached** when the latest weight is at or
+  below the goal; never show a negative amount to lose.
+- When a goal exists but there is no weight measurement yet, show the goal and explain that a
+  measurement is needed to calculate what remains. When no goal exists, keep the existing Weight
+  Tracker flow clear and offer a way to set one.
+- Use the same valid kg range and decimal precision as body-weight measurements. Show a clear
+  sentence on validation or save errors and keep the entered goal available for retry.
+- Keep goal data isolated between users. Saving or changing one user's goal must not affect any
+  other user's journal.
+
+## Out of scope
+
+- Weight-gain or maintenance goals, BMI, health advice, target-date predictions, or recommended
+  goal weights.
+- A progress percentage or starting-weight snapshot; this task reports the current remaining kg.
+- Changes to measurement history, chart scaling, or measurement editing.
+
+## Done when
+
+- On a 375 × 667 screen, set a goal of 75 kg with a latest measurement of 80.2 kg. The Weight
+  Tracker shows the goal and **5.2 kg to lose**, with no horizontal scrolling.
+- Save a new latest measurement of 79.8 kg. The remaining amount updates to **4.8 kg to lose**.
+- With a latest measurement of 75 kg or less, show **Goal reached** and no negative remaining
+  amount.
+- With no measurements, setting a goal succeeds and the page explains that a measurement is
+  needed to calculate the remaining amount.
+- Change the goal, then clear it. Reloading the page reflects the saved or cleared state.
+- Sign in as a second user and verify that user's goal is separate; sign back in as the first user
+  and verify their goal is unchanged.
+- If saving fails, show the server's error sentence and retain the entered goal for retry.
+- Goal controls are at least 44 × 44 px and the flow works at 375 × 667 without horizontal
+  scrolling.
+- Check the flow in a browser at 375 × 667 and on a real phone before merging.
+
+Commit as `Feature: set a body-weight goal`.

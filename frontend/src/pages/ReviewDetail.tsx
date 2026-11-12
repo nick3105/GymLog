@@ -30,12 +30,12 @@ export default function ReviewDetail() {
       <Notice />
       <Link
         to="/review"
-        className="text-lime mb-2 inline-flex min-h-11 items-center gap-2 font-semibold"
+        className="text-accent mb-2 inline-flex min-h-11 items-center gap-2 font-normal"
       >
         <ArrowLeft className="size-5" aria-hidden />
         All sessions
       </Link>
-      <h1 className="text-3xl font-bold">{session.name}</h1>
+      <h1 className="gradient-text text-3xl font-bold">{session.name}</h1>
       <p className="text-muted mb-4">{formatDay(session.day)}</p>
       <div className="flex flex-col gap-4">
         {session.exercises.map((exercise) => (
@@ -44,7 +44,7 @@ export default function ReviewDetail() {
               <ExerciseLink id={exercise.id} name={exercise.name} />
               <p className="shrink-0 text-right">
                 <span className="text-muted block text-xs">Est. 1RM</span>
-                <span className="text-lime font-bold">
+                <span className="text-accent font-light">
                   {exercise.estimated1rm === null
                     ? '–'
                     : `${formatNumber(exercise.estimated1rm)} kg`}
@@ -63,7 +63,7 @@ export default function ReviewDetail() {
                       <span className="block text-xs">Extra</span>
                     )}
                   </span>
-                  <span className="font-medium">
+                  <span className="font-normal">
                     {set.skipped ? (
                       'Skipped'
                     ) : (

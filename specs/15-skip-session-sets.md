@@ -72,3 +72,11 @@ the reusable template during a session.
 - Browser at 375 × 667: Add set creates row 4 below three planned rows. A blank extra blocks Finish; reload retains the row and its 100 kg × 1 actuals.
 - Saving shows Set 4 / Extra in review and includes it in the 100 kg estimate.
 - Real-phone acceptance still required before merge.
+
+## Integration with main — 2026-11-12
+
+Integrated the new interface without dropping skip/restore, extra-set handling or
+review counts. 56 Python tests and 22 React tests, Ruff, frontend lint, formatting,
+TypeScript and build passed. At 375 × 667, restored 60 kg × 8, skipped two sets,
+added 100 kg × 1, reloaded the draft and saved. Review retained skips and the Extra
+label, with a 100 kg estimate. Real-phone visual confirmation remains before merge.

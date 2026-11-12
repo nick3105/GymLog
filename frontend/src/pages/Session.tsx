@@ -148,13 +148,13 @@ export default function Session() {
     <form onSubmit={finish} noValidate>
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="truncate text-3xl font-bold">{workout.name}</h1>
+          <h1 className="gradient-text truncate text-3xl font-bold">{workout.name}</h1>
           <p className="text-muted">{formatDay(workout.day)} · not saved until you finish</p>
         </div>
         <button
           type="button"
           onClick={discard}
-          className="text-danger min-h-11 shrink-0 px-1 font-semibold"
+          className="text-danger min-h-11 shrink-0 px-1 font-normal"
         >
           Discard
         </button>
@@ -170,7 +170,7 @@ export default function Session() {
                 <ExerciseLink id={exercise.id} name={exercise.name} />
                 <p className="shrink-0 text-right">
                   <span className="text-muted block text-xs">Est. 1RM</span>
-                  <span className="text-lime font-bold">
+                  <span className="text-accent font-light">
                     {estimate === null ? '–' : `${formatNumber(estimate)} kg`}
                   </span>
                 </p>
@@ -212,14 +212,14 @@ export default function Session() {
                       <p className="text-muted mb-2 text-sm">Extra set · today only</p>
                     )}
                     {set.skipped ? (
-                      <div className="border-border text-muted flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3">
+                      <div className="border-border text-muted flex min-h-12 items-center justify-between gap-2 rounded-full border px-3">
                         <span>Set {setIndex + 1} · Skipped</span>
                         <button
                           type="button"
                           disabled={saving}
                           onClick={() => update(exerciseIndex, setIndex, 'skipped', false)}
                           aria-label={`Restore ${exercise.name} set ${setIndex + 1}`}
-                          className="text-lime min-h-11 px-2 font-semibold"
+                          className="text-accent min-h-11 px-2 font-normal"
                         >
                           Restore set
                         </button>
@@ -227,11 +227,9 @@ export default function Session() {
                     ) : (
                       <>
                         <div
-                          className={`mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2 ${isCurrent ? 'outline-lime/60 rounded-xl outline-2 outline-offset-4' : ''}`}
+                          className={`mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr] items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
                         >
-                          <span className="text-muted text-center font-semibold">
-                            {setIndex + 1}
-                          </span>
+                          <span className="text-muted text-center font-normal">{setIndex + 1}</span>
                           {fields.map(({ key, label, mode }) => (
                             <input
                               key={key}
@@ -259,7 +257,7 @@ export default function Session() {
                             disabled={saving}
                             onClick={() => update(exerciseIndex, setIndex, 'skipped', true)}
                             aria-label={`Skip ${exercise.name} set ${setIndex + 1}`}
-                            className="text-muted min-h-11 px-2 font-medium"
+                            className="text-muted min-h-11 px-2 font-normal"
                           >
                             Skip set
                           </button>
