@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Pencil } from 'lucide-react'
 
 import { api } from '../api'
 import LineChart from '../components/LineChart'
@@ -12,6 +13,7 @@ export default function Weight() {
   const { journal, setJournal } = useJournal()
   const [day, setDay] = useState(today())
   const [kg, setKg] = useState('')
+  const [editingDay, setEditingDay] = useState<string | null>(null)
   const [problem, setProblem] = useState('')
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
@@ -24,7 +26,7 @@ export default function Weight() {
     setProblem('')
     setMessage('')
     // WGT-03: the API keeps one weight per date, so an existing date is replaced.
-    const replacing = entries.some((entry) => entry.day === day)
+    const replacing = editingDay !== null || entries.some((entry) => entry.day === day)
     try {
       const saved = await api<WeightEntry>('weights', { day, kg: kg === '' ? null : Number(kg) })
       setJournal((current) => ({
@@ -34,6 +36,7 @@ export default function Weight() {
         ),
       }))
       setMessage(replacing ? 'Updated.' : 'Saved.')
+      setEditingDay(null)
       setKg('')
     } catch (error) {
       setProblem((error as Error).message)
@@ -42,9 +45,25 @@ export default function Weight() {
     }
   }
 
+  function edit(entry: WeightEntry) {
+    setDay(entry.day)
+    setKg(formatNumber(entry.kg))
+    setEditingDay(entry.day)
+    setProblem('')
+    setMessage('')
+  }
+
+  function cancelEdit() {
+    setDay(today())
+    setKg('')
+    setEditingDay(null)
+    setProblem('')
+    setMessage('')
+  }
+
   return (
     <>
-      <h1 className="mb-4 text-3xl font-bold">Weight Tracker</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">Weight Tracker</h1>
       <form onSubmit={save} noValidate className={`${card} mb-4 flex flex-col gap-3`}>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -56,6 +75,7 @@ export default function Weight() {
               type="date"
               className={input}
               value={day}
+              disabled={editingDay !== null}
               onChange={(event) => setDay(event.target.value)}
             />
           </div>
@@ -80,19 +100,31 @@ export default function Weight() {
           </p>
         )}
         {message && (
-          <p role="status" className="text-lime text-sm font-medium">
+          <p role="status" className="text-accent text-sm font-normal">
             {message}
           </p>
         )}
-        <button type="submit" disabled={saving} className={primaryButton}>
-          Save weight
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="submit" disabled={saving} className={primaryButton}>
+            {editingDay ? 'Update weight' : 'Save weight'}
+          </button>
+          {editingDay && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={cancelEdit}
+              className="border-border text-text min-h-11 rounded-lg border px-4 font-normal disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       <section className={`${card} flex flex-col gap-3`}>
         <div>
           <p className="text-muted text-sm">Latest</p>
-          <p className="text-3xl font-bold">
+          <p className="font-mono text-3xl">
             {latest ? `${formatNumber(latest.kg)} kg` : '–'}
             {latest && (
               <span className="text-muted ml-2 text-base font-normal">{formatDay(latest.day)}</span>
@@ -107,14 +139,26 @@ export default function Weight() {
         />
         {entries.length > 0 && (
           <details>
-            <summary className="text-lime flex min-h-11 cursor-pointer items-center font-semibold">
+            <summary className="text-accent flex min-h-11 cursor-pointer items-center font-normal">
               All measurements ({entries.length})
             </summary>
             <ul>
               {[...entries].reverse().map((entry) => (
-                <li key={entry.day} className="border-border flex justify-between border-t py-2">
+                <li
+                  key={entry.day}
+                  className="border-border flex items-center justify-between gap-2 border-t py-1"
+                >
                   <span>{formatDay(entry.day)}</span>
-                  <span className="font-medium">{formatNumber(entry.kg)} kg</span>
+                  <span className="ml-auto font-normal">{formatNumber(entry.kg)} kg</span>
+                  <button
+                    type="button"
+                    aria-label={`Edit weight for ${formatDay(entry.day)}`}
+                    disabled={saving}
+                    onClick={() => edit(entry)}
+                    className="border-border text-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border disabled:opacity-50"
+                  >
+                    <Pencil aria-hidden="true" size={18} />
+                  </button>
                 </li>
               ))}
             </ul>

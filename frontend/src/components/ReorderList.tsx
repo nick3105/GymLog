@@ -202,7 +202,7 @@ export default function ReorderList<T extends Item>({
 
   const remaining = items.filter((item) => item.id !== drag?.id)
   const beforeId = drag?.to !== null && drag?.to !== undefined ? remaining[drag.to]?.id : undefined
-  const marker = <div aria-hidden className="bg-lime h-1 rounded-full" />
+  const marker = <div aria-hidden className="bg-accent h-1 rounded-full" />
 
   return (
     <div>
@@ -223,7 +223,7 @@ export default function ReorderList<T extends Item>({
               }}
               tabIndex={-1}
               aria-label={`${item.name}, ${index + 1} of ${items.length}`}
-              className={`${card} focus-visible:outline-lime focus-visible:outline-2 ${drag?.id === item.id ? 'ring-lime pointer-events-none relative z-40 shadow-2xl ring-2' : ''}`}
+              className={`${card} focus-visible:outline-accent focus-visible:outline-2 ${drag?.id === item.id ? 'ring-accent pointer-events-none relative z-40 shadow-2xl ring-2' : ''}`}
             >
               {canReorder && (
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -231,7 +231,7 @@ export default function ReorderList<T extends Item>({
                     type="button"
                     aria-label={`Drag to reorder ${item.name}`}
                     aria-describedby="reorder-help"
-                    className="text-muted active:text-lime flex min-h-11 min-w-11 flex-1 touch-none items-center gap-2 rounded-xl px-2 select-none [-webkit-touch-callout:none]"
+                    className="text-muted active:text-accent flex min-h-11 min-w-11 flex-1 touch-none items-center gap-2 rounded-full px-2 select-none [-webkit-touch-callout:none]"
                     onPointerDown={(event) => begin(event, item)}
                     onPointerMove={move}
                     onPointerUp={finish}
@@ -255,7 +255,7 @@ export default function ReorderList<T extends Item>({
                       disabled={index === 0 || drag !== null}
                       aria-label={`Move ${item.name} up`}
                       onClick={() => moveWithButton(index, -1)}
-                      className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                      className="text-muted flex size-11 items-center justify-center rounded-full disabled:opacity-30"
                     >
                       <ArrowUp className="size-5" aria-hidden />
                     </button>
@@ -264,7 +264,7 @@ export default function ReorderList<T extends Item>({
                       disabled={index === items.length - 1 || drag !== null}
                       aria-label={`Move ${item.name} down`}
                       onClick={() => moveWithButton(index, 1)}
-                      className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                      className="text-muted flex size-11 items-center justify-center rounded-full disabled:opacity-30"
                     >
                       <ArrowDown className="size-5" aria-hidden />
                     </button>

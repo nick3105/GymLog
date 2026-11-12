@@ -19,7 +19,7 @@ export default function Review() {
 
   return (
     <>
-      <h1 className="mb-4 text-3xl font-bold">Review workouts</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
       {journal.sessions.length === 0 ? (
         <EmptyState
           title="Your first session is waiting."
@@ -33,11 +33,11 @@ export default function Review() {
             <li key={session.id}>
               <Link
                 to={`/review/${session.id}`}
-                className="border-border bg-panel flex min-h-16 items-center gap-3 rounded-2xl border p-4"
+                className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
               >
                 <span className="min-w-0 flex-1">
                   <span className="text-muted block text-sm">{formatDay(session.day)}</span>
-                  <span className="block truncate text-lg font-semibold">{session.name}</span>
+                  <span className="block truncate text-lg font-normal">{session.name}</span>
                   <span className="text-muted block text-sm">
                     {session.exercises.length} exercises ·{' '}
                     {session.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}{' '}

@@ -19,7 +19,7 @@ People plan workouts in the order they intend to train. They should be able to m
 ## Agreed interaction
 
 - Touch: hold the labelled grip for 300 ms, then move the card up or down. A short tap does not reorder. Sliding the grip deliberately also starts the drag, so moving a finger before the hold delay does not silently cancel it. Mouse: drag immediately from the grip.
-- Use existing React and Pointer Events, with no new dependency. The grip is inside the exercise card with no separate bordered strip. The card follows the pointer vertically and highlights when picked up, a lime insertion line previews the drop position, and Escape, pointer cancellation or a drop outside the list cancels.
+- Use existing React and Pointer Events, with no new dependency. The grip is inside the exercise card with no separate bordered strip. The card follows the pointer vertically and highlights when picked up, an accent-coloured insertion line previews the drop position, and Escape, pointer cancellation or a drop outside the list cancels.
 - Reordering is available when creating or editing a saved template, as requested by Gaia. Saving an edit preserves the template ID and completed session history. Active sessions stay outside this task.
 
 ## Out of scope
@@ -43,3 +43,12 @@ People plan workouts in the order they intend to train. They should be able to m
 - Browser: keyboard move keeps focus on the moved card and announces its position; mouse drag moves a card upward. Saved order survives reload and Start, with both bench targets intact.
 - Responsive check: 375 × 667, document width 375 px, 44 px controls, no horizontal overflow.
 - Physical-phone long press, scrolling during touch drag, Escape/outside-drop cancellation and retry after network failure still need a manual acceptance check before merge.
+
+## Integration with main — 2026-11-12
+
+Integrated the new interface into this feature branch and replaced old lime drag
+colours with the new accent. The shared card now follows the current visual theme.
+44 Python tests, 23 React tests, Ruff, frontend lint, formatting, TypeScript and
+build passed. Create and Edit expose drag grips and move arrows in the new UI.
+Gaia tried the updated previews and reported that all three features work.
+The full edge-scroll/cancel/network-retry acceptance checks remain for review.
