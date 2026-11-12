@@ -68,8 +68,14 @@ export default function Start() {
       exercises: template.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        measurement: exercise.measurement,
         targets: targetsFor(exercise),
-        sets: Array.from({ length: exercise.sets }, () => ({ weight: '', reps: '', rpe: '' })),
+        sets: Array.from({ length: exercise.sets }, () => ({
+          weight: '',
+          reps: '',
+          rpe: '',
+          ...(exercise.measurement === 'duration' ? { durationSeconds: '' } : {}),
+        })),
       })),
     })
     navigate('/session')

@@ -17,7 +17,9 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
   const [, setSearchParams] = useSearchParams()
   const [stats, setStats] = useState<ExerciseStats | null>(null)
   const [problem, setProblem] = useState('')
-  const name = journal.exercises.find((exercise) => exercise.id === exerciseId)?.name ?? 'Exercise'
+  const exercise = journal.exercises.find((item) => item.id === exerciseId)
+  const name = exercise?.name ?? 'Exercise'
+  const timed = exercise?.measurement === 'duration'
 
   useEffect(() => {
     let current = true
@@ -71,37 +73,48 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
         {!stats && !problem && <p className="text-muted">Loading…</p>}
         {stats && (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className={card}>
-                <p className="text-muted text-sm">Best estimated 1RM</p>
-                <p className="font-mono text-2xl">
-                  {stats.best === null ? '–' : `${formatNumber(stats.best)} kg`}
-                </p>
-              </div>
-              <div className={card}>
-                <p className="text-muted text-sm">Latest estimated 1RM</p>
-                <p className="font-mono text-2xl">
-                  {stats.latest === null ? '–' : `${formatNumber(stats.latest)} kg`}
-                </p>
-              </div>
-            </div>
-            <div className={card}>
-              <LineChart
-                title={`${name}: estimated 1RM`}
-                points={stats.points.map((point) => ({ day: point.day, value: point.estimate }))}
-                unit="kg"
-                emptyMessage="No estimates yet."
-              />
-            </div>
+            {!timed && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={card}>
+                    <p className="text-muted text-sm">Best estimated 1RM</p>
+                    <p className="font-mono text-2xl">
+                      {stats.best === null ? '–' : `${formatNumber(stats.best)} kg`}
+                    </p>
+                  </div>
+                  <div className={card}>
+                    <p className="text-muted text-sm">Latest estimated 1RM</p>
+                    <p className="font-mono text-2xl">
+                      {stats.latest === null ? '–' : `${formatNumber(stats.latest)} kg`}
+                    </p>
+                  </div>
+                </div>
+                <div className={card}>
+                  <LineChart
+                    title={`${name}: estimated 1RM`}
+                    points={stats.points.map((point) => ({
+                      day: point.day,
+                      value: point.estimate,
+                    }))}
+                    unit="kg"
+                    emptyMessage="No estimates yet."
+                  />
+                </div>
+              </>
+            )}
             {stats.last && (
               <p className="text-muted text-sm">
                 Last time · {formatDay(stats.last.day)}: {stats.last.sets.map(formatSet).join(', ')}
               </p>
             )}
-            <p className="text-muted text-sm">
-              Estimates use sets of 1–10 reps with weight. With RPE, the reps you had left (10 −
-              RPE) are added, up to 10. It is an estimate, not a tested maximum.
-            </p>
+            {timed ? (
+              <p className="text-muted text-sm">Holds are recorded in seconds.</p>
+            ) : (
+              <p className="text-muted text-sm">
+                Estimates use sets of 1–10 reps with weight. With RPE, the reps you had left (10 −
+                RPE) are added, up to 10. It is an estimate, not a tested maximum.
+              </p>
+            )}
           </>
         )}
       </div>

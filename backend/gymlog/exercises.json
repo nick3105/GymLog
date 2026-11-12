@@ -576,6 +576,7 @@
   {"id":"smith-machine-reverse-calf-raises","name":"Smith Machine Reverse Calf Raises","group":"Calves"},
   {"id":"standing-barbell-calf-raise","name":"Standing Barbell Calf Raise","group":"Calves"},
   {"id":"standing-dumbbell-calf-raise","name":"Standing Dumbbell Calf Raise","group":"Calves"},
+  {"id":"plank","name":"Plank","group":"Core","measurement":"duration"},
   {"id":"hanging-leg-raise","name":"Hanging leg raise","group":"Core"},
   {"id":"cable-crunch","name":"Cable crunch","group":"Core"},
   {"id":"ab-wheel-rollout","name":"Ab wheel rollout","group":"Core"},

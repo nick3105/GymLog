@@ -45,14 +45,16 @@ export default function ReviewDetail() {
           <section key={exercise.id} className={card}>
             <div className="flex items-start justify-between gap-3">
               <ExerciseLink id={exercise.id} name={exercise.name} />
-              <p className="shrink-0 text-right">
-                <span className="text-muted block text-xs">Est. 1RM</span>
-                <span className="text-accent font-light">
-                  {exercise.estimated1rm === null
-                    ? '–'
-                    : `${formatNumber(exercise.estimated1rm)} kg`}
-                </span>
-              </p>
+              {exercise.measurement !== 'duration' && (
+                <p className="shrink-0 text-right">
+                  <span className="text-muted block text-xs">Est. 1RM</span>
+                  <span className="text-accent font-light">
+                    {exercise.estimated1rm === null
+                      ? '–'
+                      : `${formatNumber(exercise.estimated1rm)} kg`}
+                  </span>
+                </p>
+              )}
             </div>
             <ol className="mt-2 flex flex-col gap-1">
               {exercise.sets.map((set, index) => (
@@ -71,7 +73,9 @@ export default function ReviewDetail() {
                       'Skipped'
                     ) : (
                       <>
-                        {formatNumber(set.weight)} kg × {set.reps}
+                        {set.durationSeconds !== undefined
+                          ? `${set.durationSeconds} s`
+                          : `${formatNumber(set.weight)} kg × ${set.reps}`}
                       </>
                     )}
                   </span>
