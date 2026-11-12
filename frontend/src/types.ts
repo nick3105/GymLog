@@ -21,7 +21,8 @@ export type Template = {
   exercises: TemplateExercise[]
 }
 
-export type LoggedSet = { weight: number; reps: number; rpe: number | null }
+export type LoggedSet =
+  { weight: number; reps: number; rpe: number | null; skipped?: false } | { skipped: true }
 
 export type Session = {
   id: string
@@ -29,7 +30,13 @@ export type Session = {
   name: string
   day: string
   completedAt: string
-  exercises: { id: string; name: string; sets: LoggedSet[]; estimated1rm: number | null }[]
+  exercises: {
+    id: string
+    name: string
+    sets: LoggedSet[]
+    plannedSets?: number
+    estimated1rm: number | null
+  }[]
 }
 
 export type Weight = { day: string; kg: number }

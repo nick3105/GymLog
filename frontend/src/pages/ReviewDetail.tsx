@@ -57,12 +57,23 @@ export default function ReviewDetail() {
                   key={index}
                   className="border-border grid grid-cols-[3.5rem_1fr_auto] gap-2 border-t pt-1"
                 >
-                  <span className="text-muted">Set {index + 1}</span>
+                  <span className="text-muted">
+                    Set {index + 1}
+                    {index >= (exercise.plannedSets ?? exercise.sets.length) && (
+                      <span className="block text-xs">Extra</span>
+                    )}
+                  </span>
                   <span className="font-normal">
-                    {formatNumber(set.weight)} kg × {set.reps}
+                    {set.skipped ? (
+                      'Skipped'
+                    ) : (
+                      <>
+                        {formatNumber(set.weight)} kg × {set.reps}
+                      </>
+                    )}
                   </span>
                   <span className="text-muted">
-                    RPE {set.rpe === null ? '–' : formatNumber(set.rpe)}
+                    {!set.skipped && <>RPE {set.rpe === null ? '–' : formatNumber(set.rpe)}</>}
                   </span>
                 </li>
               ))}

@@ -2,7 +2,7 @@
 // It copies estimated_1rm in backend/gymlog/models.py; oneRepMax.test.ts uses the same
 // examples as test_estimate_rules in backend/tests/test_api.py so the two cannot drift.
 
-export type SetInput = { weight: string; reps: string; rpe: string }
+export type SetInput = { weight: string; reps: string; rpe: string; skipped?: boolean }
 
 export function estimatedOneRepMax(
   weight: number,
@@ -19,6 +19,7 @@ export function estimatedOneRepMax(
 export function bestOneRepMax(sets: SetInput[]): number | null {
   let best: number | null = null
   for (const set of sets) {
+    if (set.skipped) continue
     if (set.weight === '' || set.reps === '') continue
     const rpe = set.rpe === '' ? null : Number(set.rpe)
     if (rpe !== null && !(rpe >= 1 && rpe <= 10)) continue

@@ -29,25 +29,30 @@ export default function Review() {
         />
       ) : (
         <ul className="flex flex-col gap-3">
-          {newestFirst(journal.sessions).map((session) => (
-            <li key={session.id}>
-              <Link
-                to={`/review/${session.id}`}
-                className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="text-muted block text-sm">{formatDay(session.day)}</span>
-                  <span className="block truncate text-lg font-normal">{session.name}</span>
-                  <span className="text-muted block text-sm">
-                    {session.exercises.length} exercises ·{' '}
-                    {session.exercises.reduce((total, exercise) => total + exercise.sets.length, 0)}{' '}
-                    sets
+          {newestFirst(journal.sessions).map((session) => {
+            const sets = session.exercises.flatMap((exercise) => exercise.sets)
+            const completedCount = sets.filter((set) => !set.skipped).length
+            const skippedCount = sets.length - completedCount
+            return (
+              <li key={session.id}>
+                <Link
+                  to={`/review/${session.id}`}
+                  className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="text-muted block text-sm">{formatDay(session.day)}</span>
+                    <span className="block truncate text-lg font-normal">{session.name}</span>
+                    <span className="text-muted block text-sm">
+                      {session.exercises.length} exercises · {completedCount} completed{' '}
+                      {completedCount === 1 ? 'set' : 'sets'}
+                      {skippedCount > 0 && <> · {skippedCount} skipped</>}
+                    </span>
                   </span>
-                </span>
-                <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
-              </Link>
-            </li>
-          ))}
+                  <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </>
