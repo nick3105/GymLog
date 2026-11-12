@@ -2,7 +2,7 @@
 
 import math
 import re
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 
@@ -198,3 +198,43 @@ def validate_session(body, template):
         "day": day,
         "exercises": completed,
     }
+
+
+def validate_session_edit(body, saved):
+    """Validate corrections against the saved snapshot, never the current template."""
+    if not isinstance(body, dict):
+        raise ValueError("A session object is required.")
+    offset = number(body.get("timezoneOffset"), "Timezone offset", -840, 840, integer=True)
+    local_today = (datetime.now(UTC) - timedelta(minutes=offset)).date()
+    try:
+        day = date.fromisoformat(body.get("day", ""))
+    except (ValueError, TypeError):
+        raise ValueError("A valid session date is required.") from None
+    if day > local_today:
+        raise ValueError("The workout date must be today or in the past.")
+    entries = body.get("exercises")
+    if not isinstance(entries, list) or len(entries) != len(saved["exercises"]):
+        raise ValueError("Keep the original exercises and sets.")
+    planned = []
+    for actual, original in zip(entries, saved["exercises"], strict=True):
+        if not isinstance(actual, dict) or actual.get("id") != original["id"]:
+            raise ValueError("Keep the original exercises and sets.")
+        rows = actual.get("sets")
+        if not isinstance(rows, list) or len(rows) != len(original["sets"]):
+            raise ValueError("Keep the original exercises and sets.")
+        for row, previous in zip(rows, original["sets"], strict=True):
+            if not isinstance(row, dict) or row.get("skipped", False) != previous.get(
+                "skipped", False
+            ):
+                raise ValueError("Keep skipped sets unchanged when correcting a workout.")
+        planned.append({**original, "sets": len(original["sets"])})
+    corrected = validate_session(
+        {**body, "clientId": saved["clientId"]},
+        {"id": saved["templateId"], "name": saved["name"], "exercises": planned},
+    )
+    for exercise, original in zip(corrected["exercises"], saved["exercises"], strict=True):
+        if "plannedSets" in original:
+            exercise["plannedSets"] = original["plannedSets"]
+        else:
+            exercise.pop("plannedSets", None)
+    return {**saved, **corrected}

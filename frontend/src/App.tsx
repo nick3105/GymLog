@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import { useJournal } from './journal'
 import Create from './pages/Create'
 import Home from './pages/Home'
+import EditSession from './pages/EditSession'
 import Review from './pages/Review'
 import ReviewDetail from './pages/ReviewDetail'
 import Session from './pages/Session'
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
       { path: 'workouts/:id/edit', element: <Create key="edit" /> },
       { path: 'review', element: <Review /> },
       { path: 'review/:id', element: <ReviewDetail /> },
+      { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

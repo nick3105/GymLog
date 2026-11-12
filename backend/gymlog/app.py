@@ -20,6 +20,7 @@ from .models import (
     number,
     validate_registration,
     validate_session,
+    validate_session_edit,
     validate_template,
 )
 
@@ -245,6 +246,19 @@ def create_app(config=None):
         if not storage.delete_template(database, g.user_id, template_id):
             return jsonify(error="That workout template could not be found."), 404
         return jsonify(ok=True)
+
+    @app.post("/api/sessions/<session_id>")
+    @authenticated
+    def edit_session(session_id):
+        """Correct an owned completed workout independently of its routine."""
+        saved = storage.get_session(database, g.user_id, session_id)
+        if saved is None:
+            return jsonify(error="That completed workout could not be found."), 404
+        document = validate_session_edit(request.get_json(), saved)
+        updated = storage.update_session(database, g.user_id, document)
+        if updated is None:
+            return jsonify(error="That completed workout could not be found."), 404
+        return jsonify(updated)
 
     @app.post("/api/sessions")
     @authenticated

@@ -2,7 +2,7 @@
 Assignee: Gaia Bandini
 
 ## Why
-Correct a mistyped result or record the actual training day after logging late (REV-01–06).
+Correct a mistyped result or record the actual training day after logging late (REV-01–06, REV-08).
 This extends the baseline, which previously excluded completed-session corrections.
 
 ## What
@@ -25,3 +25,14 @@ changing the saved routine, offline sync. This task stays local until publicatio
 - At 375 × 667, fields have readable labels and 44 px targets, no horizontal overflow,
   a bottom Save changes action, and Cancel returns to unchanged details.
 - Check on a real phone before merging and attach a phone screenshot to the PR.
+
+## Local verification — 2026-11-12
+- User confirmed the local demo works and explicitly kept Skip/Restore out of this editor.
+- Browser checked at 375 × 667: numeric correction saved, native date control saved a past
+  date, invalid weight retained inputs, Cancel could stay or discard, no horizontal overflow.
+- API tests cover privacy, CSRF, authentication, invalid/future dates, invalid numbers,
+  fixed exercise/set structure, unchanged skipped rows, retry without duplicates, and corrections
+  after deleting the routine. Progress recalculates from corrected actual results.
+- Final checks: 69 Python tests and 25 frontend tests passed; Ruff, oxlint, Prettier,
+  TypeScript and Vite build passed. Real-phone verification remains before merging.
+- Local branch: `feature/edit-completed-workout`. Nothing published or merged.

@@ -65,6 +65,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-04 | **View Best Estimated 1RM** | Show the highest eligible estimated 1RM for the exercise across completed sessions. |
 | REV-05 | **View Latest Estimated 1RM** | Show the latest eligible estimate for the exercise. |
 | REV-06 | **View Estimated 1RM Trend** | Plot eligible estimates over time in a line chart. Identify the exercise and units, and show an empty state when no estimates exist. |
+| REV-08 | **Correct Completed Workout** | From Review, correct the date (today or past) and existing performed sets’ weight, reps and optional RPE. Preserve skipped rows, exercise snapshots and the saved routine; update history and progress. |
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
 
 **Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
@@ -86,5 +87,5 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
 - **Cross-device access:** Saved records are available after signing in to the same account on another device.
 - **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
-- **Current boundaries:** Correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
+- **Current boundaries:** Deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.

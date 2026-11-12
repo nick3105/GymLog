@@ -6,7 +6,7 @@ import ExerciseLink from '../components/ExerciseLink'
 import Notice from '../components/Notice'
 import { formatDay, formatNumber } from '../format'
 import { useJournal } from '../journal'
-import { card } from '../ui'
+import { card, secondaryButton } from '../ui'
 
 // REV-02: what was actually lifted in one session.
 export default function ReviewDetail() {
@@ -37,6 +37,9 @@ export default function ReviewDetail() {
       </Link>
       <h1 className="gradient-text text-3xl font-bold">{session.name}</h1>
       <p className="text-muted mb-4">{formatDay(session.day)}</p>
+      <Link to={`/review/${session.id}/edit`} className={`${secondaryButton} mb-4`}>
+        Edit workout
+      </Link>
       <div className="flex flex-col gap-4">
         {session.exercises.map((exercise) => (
           <section key={exercise.id} className={card}>

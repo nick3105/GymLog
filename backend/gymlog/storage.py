@@ -289,3 +289,22 @@ def save_weight(path, user_id, day, kg):
             (user_id, day, kg),
         )
     return {"day": day, "kg": kg}
+
+
+def get_session(path, user_id, session_id):
+    """Read only this user's completed workout."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM sessions WHERE id=? AND user_id=?", (session_id, user_id)
+        ).fetchone()
+        return json.loads(row["document"]) if row else None
+
+
+def update_session(path, user_id, document):
+    """Replace the owner's result while preserving its identity and timestamp."""
+    with connect(path) as db:
+        result = db.execute(
+            "UPDATE sessions SET document=? WHERE id=? AND user_id=?",
+            (json.dumps(document), document["id"], user_id),
+        )
+    return document if result.rowcount else None
