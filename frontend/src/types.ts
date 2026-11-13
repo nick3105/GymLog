@@ -49,12 +49,14 @@ export type Session = {
 }
 
 export type Weight = { day: string; kg: number }
+export type WeightGoal = { kg: number; mode: 'lose' | 'gain' }
 
 export type Journal = {
   exercises: Exercise[]
   templates: Template[]
   sessions: Session[]
   weights: Weight[]
+  weightGoal: WeightGoal | null
 }
 
 export type ExerciseStats = {

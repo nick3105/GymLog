@@ -22,6 +22,22 @@ def number(value, label, minimum, maximum, integer=False, optional=False):
     return int(result) if integer else result
 
 
+def validate_weight_goal(body, latest_weight):
+    """Validate one optional goal and its direction against the latest measurement."""
+    if not isinstance(body, dict) or "kg" not in body:
+        raise ValueError("Enter a goal weight.")
+    mode = body.get("mode")
+    if not isinstance(mode, str) or mode not in {"lose", "gain"}:
+        raise ValueError("Choose whether you want to lose or gain weight.")
+    kg = number(body["kg"], "Goal weight", 1, 700, optional=True)
+    if kg is not None and latest_weight is not None:
+        if mode == "lose" and kg >= latest_weight:
+            raise ValueError("A weight-loss goal must be below your latest weight.")
+        if mode == "gain" and kg <= latest_weight:
+            raise ValueError("A weight-gain goal must be above your latest weight.")
+    return {"kg": kg, "mode": mode}
+
+
 USERNAME = re.compile(r"[a-z0-9_-]{3,30}")
 
 
