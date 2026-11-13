@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -25,6 +25,9 @@ SCHEMA = [
     """CREATE TABLE body_weights (
         user_id INTEGER NOT NULL REFERENCES users(id), day TEXT NOT NULL, kg REAL NOT NULL,
         PRIMARY KEY (user_id, day))""",
+    """CREATE TABLE body_weight_goals (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id), kg REAL NOT NULL,
+        mode TEXT NOT NULL CHECK (mode IN ('lose', 'gain')))""",
     """CREATE TABLE IF NOT EXISTS login_attempts (
         address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL)""",
 ]
@@ -53,6 +56,9 @@ def initialize(path, owner_password_hash=None):
     try:
         if db.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
             return
+        if db.execute("PRAGMA user_version").fetchone()[0] == 1:
+            _upgrade_v1_to_v2(db)
+            return
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "templates" in tables:
             _upgrade_profiles(db, Path(path), tables, owner_password_hash)
@@ -66,6 +72,25 @@ def initialize(path, owner_password_hash=None):
             db.execute("COMMIT")
     finally:
         db.close()
+
+
+def _upgrade_v1_to_v2(db):
+    """Add private weight-goal storage without changing existing journal data."""
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        if _already_upgraded(db):
+            return
+        db.execute(
+            """CREATE TABLE body_weight_goals (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id), kg REAL NOT NULL,
+                mode TEXT NOT NULL CHECK (mode IN ('lose', 'gain')))"""
+        )
+        db.execute("PRAGMA user_version = 2")
+        db.execute("COMMIT")
+    except BaseException:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        raise
 
 
 def _already_upgraded(db):
@@ -289,6 +314,29 @@ def save_weight(path, user_id, day, kg):
             (user_id, day, kg),
         )
     return {"day": day, "kg": kg}
+
+
+def weight_goal(path, user_id):
+    """Return the signed-in user's private goal, if they have set one."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT kg, mode FROM body_weight_goals WHERE user_id=?", (user_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def save_weight_goal(path, user_id, goal):
+    """Save or clear only this user's weight goal."""
+    with connect(path) as db:
+        if goal["kg"] is None:
+            db.execute("DELETE FROM body_weight_goals WHERE user_id=?", (user_id,))
+            return None
+        db.execute(
+            """INSERT INTO body_weight_goals VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET kg=excluded.kg, mode=excluded.mode""",
+            (user_id, goal["kg"], goal["mode"]),
+        )
+    return {"kg": goal["kg"], "mode": goal["mode"]}
 
 
 def get_session(path, user_id, session_id):

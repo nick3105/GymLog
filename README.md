@@ -1,6 +1,7 @@
 # GymLog
 
-Plan strength workouts, log every set, follow your estimated 1RM and body weight — from a phone
+Plan strength workouts, log every set, follow your estimated 1RM and body weight, and set a
+personal weight-loss or weight-gain goal — from a phone
 or a computer. Requirements: [docs/BRD.md](docs/BRD.md).
 
 **Live journal:** https://nickkkk3105.pythonanywhere.com/ (the old GitHub Pages address redirects

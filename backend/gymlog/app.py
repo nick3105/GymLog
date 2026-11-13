@@ -22,6 +22,7 @@ from .models import (
     validate_session,
     validate_session_edit,
     validate_template,
+    validate_weight_goal,
 )
 
 ROOT = Path(__file__).resolve().parent
@@ -212,6 +213,7 @@ def create_app(config=None):
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
+            weightGoal=storage.weight_goal(database, g.user_id),
         )
 
     @app.get("/api/exercises/<exercise_id>/stats")
@@ -297,5 +299,14 @@ def create_app(config=None):
             raise ValueError("Choose a valid date.") from None
         kg = number(body.get("kg"), "Body weight", 1, 700)
         return jsonify(storage.save_weight(database, g.user_id, day, kg))
+
+    @app.post("/api/weight-goal")
+    @authenticated
+    def set_weight_goal():
+        body = request.get_json()
+        entries = storage.weights(database, g.user_id)
+        latest_weight = entries[-1]["kg"] if entries else None
+        goal = validate_weight_goal(body, latest_weight)
+        return jsonify(weightGoal=storage.save_weight_goal(database, g.user_id, goal))
 
     return app

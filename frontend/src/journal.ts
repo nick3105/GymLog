@@ -35,7 +35,13 @@ export type JournalContext = {
   setBuilderDirty: (dirty: boolean) => void
 }
 
-export const emptyJournal: JournalData = { exercises: [], templates: [], sessions: [], weights: [] }
+export const emptyJournal: JournalData = {
+  exercises: [],
+  templates: [],
+  sessions: [],
+  weights: [],
+  weightGoal: null,
+}
 
 export const JournalStore = createContext<JournalContext | null>(null)
 

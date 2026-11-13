@@ -93,7 +93,7 @@ def test_upgrade_runs_once(legacy):
     client, _ = sign_in(create_app(config), "nick", "nick-old-password")
     assert len(client.get("/api/state").json["templates"]) == 1
     with sqlite3.connect(config["DATABASE"]) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         assert db.execute("SELECT count(*) FROM users").fetchone()[0] == 2
 
 
