@@ -10,7 +10,13 @@ export type ActiveWorkout = {
   templateId: string
   name: string
   day: string
-  exercises: { id: string; name: string; targets: Target[]; sets: SetInput[] }[]
+  exercises: {
+    id: string
+    name: string
+    measurement?: 'duration'
+    targets: Target[]
+    sets: SetInput[]
+  }[]
 }
 
 export type JournalContext = {

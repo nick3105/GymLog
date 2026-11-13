@@ -34,6 +34,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | PLN-09 | **Set Target RPE** | Enter an optional target RPE for each set. RPE accepts values from 1 to 10 in increments of 0.5. |
 | PLN-10 | **Save Workout Template** | Save the exercises and individual set targets so the workout can be selected and repeated later. Support up to 20 exercises per template and 20 sets per exercise. Existing templates with one target per exercise must remain usable. |
 | PLN-11 | **Cancel Workout Creation** | Leave the builder without saving. Ask before discarding entered information. |
+| PLN-14 | **Delete Saved Workout** | A trash icon on each Start workout card asks for confirmation before deleting the saved template. Cancel keeps it unchanged. Completed sessions and exercise progress remain available. |
 | PLN-13 | **Edit Saved Workout** | Edit a saved template’s name, exercises and set targets from Start workout. Save to the same template; completed sessions stay unchanged. Confirm before discarding edits and preserve inputs after a failed save. |
 | PLN-12 | **Maintain Exercise Catalogue** | Let maintainers add or update exercises in `exercises.json`. Stable exercise IDs connect past results; catalogue changes must not rewrite saved workouts. |
 
@@ -51,7 +52,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-06 | **Log Actual Reps** | Enter the actual whole-number rep count for each set. |
 | RUN-07 | **Log Actual RPE** | Optionally enter the RPE experienced for each set, independently of Target RPE. |
 | RUN-08 | **View Live Estimated 1RM** | Update the best eligible estimated 1RM for an exercise as actual set results are entered. |
-| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for every planned set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
+| RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. During an active session, users may append extra sets up to 20 total per exercise without changing the template. Extra sets are saved in that session only. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
 
 ## 4. Review and progress
@@ -64,9 +65,10 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-04 | **View Best Estimated 1RM** | Show the highest eligible estimated 1RM for the exercise across completed sessions. |
 | REV-05 | **View Latest Estimated 1RM** | Show the latest eligible estimate for the exercise. |
 | REV-06 | **View Estimated 1RM Trend** | Plot eligible estimates over time in a line chart. Identify the exercise and units, and show an empty state when no estimates exist. |
+| REV-08 | **Correct Completed Workout** | From Review, correct the date (today or past) and existing performed sets’ weight, reps and optional RPE. Preserve skipped rows, exercise snapshots and the saved routine; update history and progress. |
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
 
-**Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation.
+**Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
 
 ## 5. Weight Tracker
 
@@ -86,5 +88,5 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
 - **Cross-device access:** Saved records are available after signing in to the same account on another device.
 - **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
-- **Current boundaries:** Correcting or deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
+- **Current boundaries:** Deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.

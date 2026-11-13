@@ -5,19 +5,25 @@ import { useBlocker, useNavigate, useParams } from 'react-router'
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
+import ReorderList from '../components/ReorderList'
 import { useJournal } from '../journal'
 import { targetsFor } from '../targets'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
 
-type TargetInput = { reps: string; weight: string; rpe: string }
+type TargetInput = { reps: string; weight: string; rpe: string; durationSeconds: string }
 type Planned = Exercise & { targets: TargetInput[] }
 
-const newTarget = (): TargetInput => ({ reps: '8', weight: '', rpe: '' })
+const newTarget = (): TargetInput => ({ reps: '8', weight: '', rpe: '', durationSeconds: '60' })
 
 const targetFields: { key: keyof TargetInput; label: string; mode: 'decimal' | 'numeric' }[] = [
   { key: 'reps', label: 'Reps', mode: 'numeric' },
   { key: 'weight', label: 'kg', mode: 'decimal' },
+  { key: 'rpe', label: 'RPE', mode: 'decimal' },
+]
+
+const durationTargetFields: typeof targetFields = [
+  { key: 'durationSeconds', label: 'Seconds', mode: 'numeric' },
   { key: 'rpe', label: 'RPE', mode: 'decimal' },
 ]
 
@@ -33,10 +39,14 @@ export default function Create() {
       original?.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        measurement: exercise.measurement,
         group: journal.exercises.find((item) => item.id === exercise.id)?.group ?? '',
         targets: targetsFor(exercise).map((target) => ({
-          reps: String(target.reps),
-          weight: target.weight === null ? '' : String(target.weight),
+          reps: target.reps === undefined ? '' : String(target.reps),
+          durationSeconds:
+            target.durationSeconds === undefined ? '60' : String(target.durationSeconds),
+          weight:
+            target.weight === null || target.weight === undefined ? '' : String(target.weight),
           rpe: target.rpe === null ? '' : String(target.rpe),
         })),
       })) ?? [],
@@ -104,11 +114,19 @@ export default function Create() {
         name,
         exercises: planned.map((item) => ({
           id: item.id,
-          targets: item.targets.map((target) => ({
-            reps: target.reps === '' ? null : Number(target.reps),
-            weight: target.weight === '' ? null : Number(target.weight),
-            rpe: target.rpe === '' ? null : Number(target.rpe),
-          })),
+          targets: item.targets.map((target) =>
+            item.measurement === 'duration'
+              ? {
+                  durationSeconds:
+                    target.durationSeconds === '' ? null : Number(target.durationSeconds),
+                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                }
+              : {
+                  reps: target.reps === '' ? null : Number(target.reps),
+                  weight: target.weight === '' ? null : Number(target.weight),
+                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                },
+          ),
         })),
       })
       setJournal((current) => ({
@@ -142,7 +160,9 @@ export default function Create() {
 
   return (
     <form onSubmit={save} noValidate>
-      <h1 className="mb-4 text-3xl font-bold">{id ? 'Edit workout' : 'Create workout'}</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">
+        {id ? 'Edit workout' : 'Create workout'}
+      </h1>
       {id && (
         <p className="text-muted mb-4">
           Changes apply to future workouts. Completed history stays unchanged.
@@ -175,9 +195,9 @@ export default function Create() {
         </p>
       )}
 
-      <div className="flex flex-col gap-4">
-        {planned.map((item, index) => (
-          <section key={item.id} className={card}>
+      <ReorderList items={planned} enabled={!saving} onChange={setPlanned}>
+        {(item, index) => (
+          <section key={item.id}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <ExerciseLink id={item.id} name={item.name} />
@@ -193,41 +213,47 @@ export default function Create() {
               </button>
             </div>
             <div
-              className="text-muted mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem] gap-2 text-xs"
+              className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
               aria-hidden
             >
               <span>Set</span>
-              <span>Reps</span>
-              <span>kg</span>
-              <span>RPE</span>
+              {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                (field) => (
+                  <span key={field.key}>{field.label}</span>
+                ),
+              )}
             </div>
             {item.targets.map((target, setIndex) => (
               <div
                 key={setIndex}
-                className="mt-2 grid grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem] items-center gap-2"
+                className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
               >
-                <span className="text-muted text-center font-semibold">{setIndex + 1}</span>
-                {targetFields.map(({ key, label: fieldLabel, mode }) => (
-                  <input
-                    key={key}
-                    type="text"
-                    inputMode={mode}
-                    aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
-                    placeholder={key === 'reps' ? 'reps' : 'opt.'}
-                    value={target[key]}
-                    onChange={(event) =>
-                      changeTargets(
-                        index,
-                        item.targets.map((row, j) =>
-                          j === setIndex
-                            ? { ...row, [key]: event.target.value.replace(',', '.') }
-                            : row,
-                        ),
-                      )
-                    }
-                    className={`${input} text-center`}
-                  />
-                ))}
+                <span className="text-muted text-center font-normal">{setIndex + 1}</span>
+                {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                  ({ key, label: fieldLabel, mode }) => (
+                    <input
+                      key={key}
+                      type="text"
+                      inputMode={mode}
+                      aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
+                      placeholder={
+                        key === 'durationSeconds' ? 'seconds' : key === 'reps' ? 'reps' : 'opt.'
+                      }
+                      value={target[key]}
+                      onChange={(event) =>
+                        changeTargets(
+                          index,
+                          item.targets.map((row, j) =>
+                            j === setIndex
+                              ? { ...row, [key]: event.target.value.replace(',', '.') }
+                              : row,
+                          ),
+                        )
+                      }
+                      className={`${input} text-center`}
+                    />
+                  ),
+                )}
                 <button
                   type="button"
                   disabled={item.targets.length === 1}
@@ -253,11 +279,12 @@ export default function Create() {
               + Add set
             </button>
           </section>
-        ))}
-      </div>
+        )}
+      </ReorderList>
 
       <p className="text-muted mt-4 text-sm">
-        Reps are required. Weight and RPE (1–10, steps of 0.5) are optional.
+        Reps or seconds are required. Weight (for repetition exercises) and RPE (1–10, steps of 0.5)
+        are optional.
       </p>
 
       <div className="border-border bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-2xl border p-3 backdrop-blur md:bottom-4">

@@ -2,7 +2,7 @@
 
 import math
 import re
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 
@@ -51,7 +51,11 @@ def estimated_1rm(weight, reps, rpe=None):
 
 
 def best_1rm(sets):
-    estimates = [estimated_1rm(s["weight"], s["reps"], s.get("rpe")) for s in sets]
+    estimates = [
+        estimated_1rm(s["weight"], s["reps"], s.get("rpe"))
+        for s in sets
+        if not s.get("skipped", False) and "durationSeconds" not in s
+    ]
     return max((value for value in estimates if value is not None), default=None)
 
 
@@ -64,7 +68,10 @@ def exercise_stats(sessions, exercise_id):
         for exercise in session["exercises"]:
             if exercise["id"] != exercise_id:
                 continue
-            last = {"day": session["day"], "sets": exercise["sets"]}
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            last = {"day": session["day"], "sets": performed}
             estimate = best_1rm(exercise["sets"])
             if estimate is not None:
                 points.append({"day": session["day"], "estimate": estimate})
@@ -99,6 +106,11 @@ def validate_template(body, catalogue):
             raise ValueError("Each exercise may appear only once in a workout.")
         seen.add(exercise_id)
         item = {"id": exercise_id, "name": catalogue[exercise_id]["name"]}
+        timed = catalogue[exercise_id].get("measurement") == "duration"
+        if timed:
+            item["measurement"] = "duration"
+            if "targets" not in entry:
+                raise ValueError("Enter a duration target for every timed set.")
         if "targets" in entry:
             rows = entry["targets"]
             if not isinstance(rows, list) or not 1 <= len(rows) <= 20:
@@ -110,6 +122,16 @@ def validate_template(body, catalogue):
                 rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
                 if rpe is not None and (rpe * 2) % 1:
                     raise ValueError("Use target RPE steps of 0.5.")
+                if timed:
+                    targets.append(
+                        {
+                            "durationSeconds": number(
+                                row.get("durationSeconds"), "Target seconds", 1, 86400, integer=True
+                            ),
+                            "rpe": rpe,
+                        }
+                    )
+                    continue
                 targets.append(
                     {
                         "reps": number(row.get("reps"), "Target reps", 1, 100, integer=True),
@@ -151,15 +173,32 @@ def validate_session(body, template):
         if not isinstance(actual, dict) or actual.get("id") != planned["id"]:
             raise ValueError("Session exercises must match the selected workout.")
         rows = actual.get("sets")
-        if not isinstance(rows, list) or len(rows) != planned["sets"]:
-            raise ValueError(f"Complete all {planned['sets']} sets for {planned['name']}.")
+        if not isinstance(rows, list) or not planned["sets"] <= len(rows) <= 20:
+            raise ValueError(
+                f"Keep all {planned['sets']} planned sets for {planned['name']}, with up to 20 total sets."
+            )
         sets = []
         for row in rows:
             if not isinstance(row, dict):
                 raise ValueError("Each set must contain weight and reps.")
+            if "skipped" in row and not isinstance(row["skipped"], bool):
+                raise ValueError("Skipped must be true or false.")
+            if row.get("skipped", False):
+                sets.append({"skipped": True})
+                continue
             rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
             if rpe is not None and (rpe * 2) % 1:
                 raise ValueError("Use RPE steps of 0.5 (for example 7 or 7.5).")
+            if planned.get("measurement") == "duration":
+                sets.append(
+                    {
+                        "durationSeconds": number(
+                            row.get("durationSeconds"), "Seconds", 1, 86400, integer=True
+                        ),
+                        "rpe": rpe,
+                    }
+                )
+                continue
             sets.append(
                 {
                     "weight": number(row.get("weight"), "Weight", 0, 1000),
@@ -175,6 +214,8 @@ def validate_session(body, template):
                 "estimated1rm": best_1rm(sets),
             }
         )
+    if not any(not row.get("skipped", False) for exercise in completed for row in exercise["sets"]):
+        raise ValueError("Complete at least one set before saving, or discard this workout.")
     return {
         "clientId": client_id,
         "templateId": template["id"],
@@ -182,3 +223,43 @@ def validate_session(body, template):
         "day": day,
         "exercises": completed,
     }
+
+
+def validate_session_edit(body, saved):
+    """Validate corrections against the saved snapshot, never the current template."""
+    if not isinstance(body, dict):
+        raise ValueError("A session object is required.")
+    offset = number(body.get("timezoneOffset"), "Timezone offset", -840, 840, integer=True)
+    local_today = (datetime.now(UTC) - timedelta(minutes=offset)).date()
+    try:
+        day = date.fromisoformat(body.get("day", ""))
+    except (ValueError, TypeError):
+        raise ValueError("A valid session date is required.") from None
+    if day > local_today:
+        raise ValueError("The workout date must be today or in the past.")
+    entries = body.get("exercises")
+    if not isinstance(entries, list) or len(entries) != len(saved["exercises"]):
+        raise ValueError("Keep the original exercises and sets.")
+    planned = []
+    for actual, original in zip(entries, saved["exercises"], strict=True):
+        if not isinstance(actual, dict) or actual.get("id") != original["id"]:
+            raise ValueError("Keep the original exercises and sets.")
+        rows = actual.get("sets")
+        if not isinstance(rows, list) or len(rows) != len(original["sets"]):
+            raise ValueError("Keep the original exercises and sets.")
+        for row, previous in zip(rows, original["sets"], strict=True):
+            if not isinstance(row, dict) or row.get("skipped", False) != previous.get(
+                "skipped", False
+            ):
+                raise ValueError("Keep skipped sets unchanged when correcting a workout.")
+        planned.append({**original, "sets": len(original["sets"])})
+    corrected = validate_session(
+        {**body, "clientId": saved["clientId"]},
+        {"id": saved["templateId"], "name": saved["name"], "exercises": planned},
+    )
+    for exercise, original in zip(corrected["exercises"], saved["exercises"], strict=True):
+        if "plannedSets" in original:
+            exercise["plannedSets"] = original["plannedSets"]
+        else:
+            exercise.pop("plannedSets", None)
+    return {**saved, **corrected}

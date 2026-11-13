@@ -39,7 +39,7 @@ to this table in the same pull request. "It is a small library" is not an except
 
 | Part | Language | Libraries and tools |
 | --- | --- | --- |
-| UI (`frontend/`) | TypeScript, React 19 | Vite, Tailwind CSS v4, `react-router` (pages), `lucide-react` (icons) |
+| UI (`frontend/`) | TypeScript, React 19 | Vite, Tailwind CSS v4, `react-router` (pages), `lucide-react` (icons), `@fontsource-variable/inter` + `roboto-mono` (fonts) |
 | API (`backend/`) | Python 3.12 | Flask 3 |
 | Data | SQL | SQLite, through Python's built-in `sqlite3` in `storage.py` — no ORM |
 | Checks | | `pytest`, `ruff` (Python); `vitest`, `oxlint`, `prettier` + Tailwind plugin, `tsc` (TypeScript) |
@@ -140,19 +140,30 @@ The grader and the team read this code. Plain beats clever.
 
 ## How it looks
 
-Dark charcoal, light text, one lime accent doing all the work an accent does.
+Copied from https://ultrasound.money/: slate navy, white text, a cyan-to-indigo gradient for the
+main action and a red and blue glow behind the top of the page (spec 19).
 
 | Colour | Tailwind | Hex | Used for |
 | --- | --- | --- | --- |
-| Ink | `bg-ink` | `#10120f` | the page |
-| Panel | `bg-panel` | `#191c17` | cards, bars, inputs |
-| Border | `border-border` | `#2b3027` | dividers |
-| Text | `text-text` | `#f1f3ec` | all text |
-| Muted | `text-muted` | `#979f90` | labels, secondary text |
-| Lime | `text-lime` / `bg-lime` | `#c5f467` | the primary action, progress, the selected thing |
+| Ink | `bg-ink` | `#131827` | the page |
+| Panel | `bg-panel` | `#1b2236` | cards, bars, inputs |
+| Border | `border-border` | `#2d344a` | dividers |
+| Text | `text-text` | `#ffffff` | all text |
+| Muted | `text-muted` | `#8991ad` | secondary text |
+| Label | `text-label` | `#b5bddb` | uppercase labels |
+| Accent | `text-accent` / `bg-accent` | `#5dadec` | links, progress, the selected thing |
+| Gradient | `from-gradient-start to-gradient-end` | `#22d3ee` → `#4f46e5` | the primary action |
+| Glow | `glow-red`, `glow-blue` | `#dd273b`, `#0037fa` | the page glow in `index.css` only |
+| Title | `gradient-text` | `#ff01e6` → `#ff5f51` → `#00ffa3` | the page `<h1>`, `font-bold` |
 | Danger | `text-danger` | `#ff9b8a` | error sentences and Discard |
 
-- Lime means "do this" or "you did this". One lime button per screen.
+- The gradient means "do this". One gradient button per screen (`primaryButton` in `ui.ts`);
+  secondary buttons are pills with a gradient outline (`gradient-border`).
+- Cards are `rounded-lg` panels without a border; buttons and inputs are `rounded-full`.
+- Text is Inter (`font-sans`, the default); big numbers are Roboto Mono (`font-mono`). Labels are
+  uppercase with `tracking-widest`.
+- Weights are light: `font-light` is the default (set on `body`) and for headings and big
+  numbers; `font-normal` for titles, buttons and labels. Only page titles (`<h1>`) are `font-bold`.
 - Errors are a sentence next to the field that caused them, not a colour alone and not a pop-up.
 - Gym lighting is harsh and phones are held at arm's length: keep contrast high and text at
   least 16 px for anything you need to read mid-workout.

@@ -1,16 +1,67 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/roboto-mono';
 
-/* GymLog palette: dark charcoal, light text, one lime accent. See "How it looks" in AGENTS.md. */
+/* GymLog palette, copied from ultrasound.money: slate navy, white text, a cyan-to-indigo
+   gradient for the main action. See "How it looks" in AGENTS.md. */
 @theme {
-  --color-ink: #10120f;
-  --color-panel: #191c17;
-  --color-border: #2b3027;
-  --color-text: #f1f3ec;
-  --color-muted: #979f90;
-  --color-lime: #c5f467;
+  --color-ink: #131827;
+  --color-panel: #1b2236;
+  --color-border: #2d344a;
+  --color-text: #ffffff;
+  --color-muted: #8991ad;
+  --color-label: #b5bddb;
+  --color-accent: #5dadec;
+  --color-gradient-start: #22d3ee;
+  --color-gradient-end: #4f46e5;
+  --color-glow-red: #dd273b;
+  --color-glow-blue: #0037fa;
   --color-danger: #ff9b8a;
+  --color-title-pink: #ff01e6;
+  --color-title-coral: #ff5f51;
+  --color-title-green: #00ffa3;
+
+  --font-sans: 'Inter Variable', sans-serif;
+  --font-mono: 'Roboto Mono Variable', monospace;
+}
+
+/* A gradient outline: the panel colour fills the inside, the gradient shows only in the border. */
+@utility gradient-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-panel), var(--color-panel)) padding-box,
+    linear-gradient(to top right, var(--color-gradient-start), var(--color-gradient-end)) border-box;
+}
+
+/* Page titles: pink to coral to green text, like ultrasound.money's "ultra sound money". */
+@utility gradient-text {
+  background-image: linear-gradient(
+    45deg,
+    var(--color-title-pink),
+    var(--color-title-coral) 39%,
+    var(--color-title-green) 90%
+  );
+  /* Always 40rem wide (the content column), so every title shows the same colours whatever
+     the size of its box. */
+  background-size: 40rem 100%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  color: transparent;
 }
 
 body {
-  @apply bg-ink text-text antialiased;
+  @apply bg-ink text-text font-light antialiased;
+  /* The red and blue glow behind the top of the page, like ultrasound.money's header. */
+  background-image:
+    radial-gradient(
+      ellipse 45% 320px at 30% 0,
+      color-mix(in srgb, var(--color-glow-red) 30%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      ellipse 45% 320px at 70% 0,
+      color-mix(in srgb, var(--color-glow-blue) 35%, transparent),
+      transparent
+    );
+  background-repeat: no-repeat;
 }
