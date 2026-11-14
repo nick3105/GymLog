@@ -533,7 +533,17 @@ def coachee_journal(path, coach_id, coachee_id):
         owner = _accepted_coachee(db, coach_id, coachee_id)
         if owner is None:
             return None
-        result = {"owner": dict(owner)}
+        result = {"owner": dict(owner), "personalExercises": []}
+        if db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personal_exercises'"
+        ).fetchone():
+            result["personalExercises"] = [
+                json.loads(row["document"])
+                for row in db.execute(
+                    "SELECT document FROM personal_exercises WHERE user_id=? ORDER BY created_at, id",
+                    (coachee_id,),
+                )
+            ]
         for table in ("templates", "sessions"):
             result[table] = [
                 json.loads(row["document"])

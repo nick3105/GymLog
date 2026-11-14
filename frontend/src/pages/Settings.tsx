@@ -140,6 +140,13 @@ export default function Settings() {
               {relationship.coachee} ·{' '}
               {relationship.state === 'pending' ? 'Requests your coaching' : 'Accepted coachee'}
             </p>
+            {relationship.state === 'pending' && (
+              <p className="text-muted mb-3">
+                Accepting lets you read {relationship.coachee}'s existing and future saved workout
+                plans, training history, exercise progress and notes, and create plans for them. You
+                can edit the plans you create. Either of you can end access in Settings.
+              </p>
+            )}
             {relationship.state === 'pending' ? (
               <div className="grid grid-cols-2 gap-2">
                 <button

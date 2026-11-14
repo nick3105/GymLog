@@ -25,6 +25,14 @@ export default function CoacheeBuilder() {
       current = false
     }
   }, [coacheeId, id])
+  useEffect(() => {
+    function unavailable() {
+      setJournal(null)
+      setProblem('This coachee is no longer available. Check your relationships.')
+    }
+    window.addEventListener('gymlog-coachee-unavailable', unavailable)
+    return () => window.removeEventListener('gymlog-coachee-unavailable', unavailable)
+  }, [])
   if (problem)
     return (
       <div className="flex flex-col gap-4">

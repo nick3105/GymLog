@@ -257,3 +257,51 @@ def test_upgrade_populated_version_one_and_repeat_initialize(tmp_path):
         assert db.execute("SELECT document FROM templates").fetchone()[0] == '{"id":"plan"}'
         assert db.execute("SELECT kg FROM body_weights").fetchone()[0] == 75
         assert db.execute("SELECT count(*) FROM coaching_relationships").fetchone()[0] == 0
+
+
+def test_shared_personal_catalogue_comes_from_authorized_snapshot(accounts):
+    """Read only the accepted owner's personal exercises in the journal transaction."""
+    import json
+
+    _, path, users = accounts
+    relationship = request_and_accept(accounts)
+    bob, bob_headers = users["bob"]
+    alice, alice_headers = users["alice"]
+    owner = relationship["coachee_id"]
+    eve_id = users["eve"][0].get("/api/coaching").json["userId"]
+    with sqlite3.connect(path) as db:
+        db.execute(
+            """CREATE TABLE IF NOT EXISTS personal_exercises (
+                id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, request_id TEXT NOT NULL,
+                document TEXT NOT NULL, created_at TEXT NOT NULL)"""
+        )
+        for person, exercise_id in ((owner, "custom-alice"), (eve_id, "custom-eve")):
+            document = {
+                "id": exercise_id,
+                "name": exercise_id,
+                "group": "Core",
+                "source": "personal",
+                "volumeEligible": False,
+            }
+            db.execute(
+                "INSERT INTO personal_exercises VALUES (?, ?, ?, ?, ?)",
+                (exercise_id, person, str(uuid4()), json.dumps(document), "2026-01-01"),
+            )
+    snapshot = storage.coachee_journal(path, relationship["coach_id"], owner)
+    assert [item["id"] for item in snapshot["personalExercises"]] == ["custom-alice"]
+    response = bob.get(f"/api/coachees/{owner}")
+    assert response.status_code == 200
+    assert "personalExercises" not in response.json
+    exercise_ids = {item["id"] for item in response.json["exercises"]}
+    assert "custom-alice" in exercise_ids
+    assert "custom-eve" not in exercise_ids
+    assert bob.get(f"/api/coachees/{owner}/exercises/custom-alice/stats").status_code == 200
+    assert bob.get(f"/api/coachees/{owner}/exercises/custom-eve/stats").status_code == 404
+    assert (
+        alice.post(
+            f"/api/coaching/{relationship['id']}/revoke", json={}, headers=alice_headers
+        ).status_code
+        == 200
+    )
+    assert bob.get(f"/api/coachees/{owner}").status_code == 404
+    assert bob.get(f"/api/coachees/{owner}/exercises/custom-alice/stats").status_code == 404

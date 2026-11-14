@@ -256,7 +256,10 @@ def create_app(config=None):
             ), 404
         result["exercises"] = [
             exercise
-            for exercise in catalogue_for(coachee_id).values()
+            for exercise in {
+                **catalogue_by_id,
+                **{item["id"]: item for item in result.pop("personalExercises")},
+            }.values()
             if not exercise.get("retired")
         ]
         return jsonify(result)
@@ -266,7 +269,13 @@ def create_app(config=None):
     def coachee_stats(coachee_id, exercise_id):
         """Read exercise progress only inside an accepted coaching workspace."""
         journal = storage.coachee_journal(database, g.user_id, coachee_id)
-        if journal is None or exercise_id not in catalogue_for(coachee_id):
+        if journal is None:
+            return jsonify(error="That coachee exercise could not be found."), 404
+        shared_catalogue = {
+            **catalogue_by_id,
+            **{item["id"]: item for item in journal["personalExercises"]},
+        }
+        if exercise_id not in shared_catalogue:
             return jsonify(error="That coachee exercise could not be found."), 404
         return jsonify(
             exercise_stats(
