@@ -37,6 +37,54 @@ def validate_registration(body):
     return username.strip().lower(), password
 
 
+PERSONAL_GROUPS = {
+    "Chest",
+    "Shoulders",
+    "Triceps",
+    "Back",
+    "Biceps",
+    "Forearms",
+    "Quads",
+    "Hamstrings & glutes",
+    "Calves",
+    "Core",
+}
+
+
+def validate_personal_exercise(body):
+    """Validate an owner-private exercise without accepting visibility or muscle metadata."""
+    if not isinstance(body, dict):
+        raise ValueError("Enter a personal exercise.")
+    if set(body) - {"requestId", "name", "group", "measurement"}:
+        raise ValueError("Personal exercises accept only a name, group and measurement.")
+    name = body.get("name")
+    if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80:
+        raise ValueError("Exercise name must contain 1–80 characters.")
+    group = body.get("group")
+    if not isinstance(group, str) or group not in PERSONAL_GROUPS:
+        raise ValueError("Choose a muscle group from the exercise catalogue.")
+    measurement = body.get("measurement", "repetitions")
+    if measurement not in ("repetitions", "duration"):
+        raise ValueError("Choose repetitions or seconds.")
+    try:
+        request_id = str(UUID(str(body.get("requestId"))))
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("A valid creation request ID is required.") from None
+    return {
+        "requestId": request_id,
+        "name": name.strip(),
+        "group": group,
+        "measurement": measurement,
+    }
+
+
+def note(value, maximum, label):
+    """Validate optional plain-text notes using Unicode code-point limits."""
+    if not isinstance(value, str) or len(value) > maximum:
+        raise ValueError(f"{label} must be text with at most {maximum} characters.")
+    return value
+
+
 def estimated_1rm(weight, reps, rpe=None):
     """Epley estimate; one completed rep is the actual lifted load.
 
@@ -120,6 +168,10 @@ def validate_template(body, catalogue):
             raise ValueError("Each exercise may appear only once in a workout.")
         seen.add(exercise_id)
         item = {"id": exercise_id, "name": catalogue[exercise_id]["name"]}
+        if "note" in entry:
+            item["note"] = note(entry["note"], 500, "Exercise note")
+        if catalogue[exercise_id].get("source") == "personal":
+            item.update(source="personal", volumeEligible=False)
         timed = catalogue[exercise_id].get("measurement") == "duration"
         if timed:
             item["measurement"] = "duration"
@@ -165,7 +217,10 @@ def validate_template(body, catalogue):
                 ),
             )
         result.append(item)
-    return {"name": name.strip(), "exercises": result}
+    document = {"name": name.strip(), "exercises": result}
+    if "note" in body:
+        document["note"] = note(body["note"], 1000, "Workout note")
+    return document
 
 
 def validate_session(body, template):
@@ -220,9 +275,14 @@ def validate_session(body, template):
                     "rpe": rpe,
                 }
             )
+        snapshot = dict(planned)
+        if "note" in actual or "note" in planned:
+            snapshot["note"] = note(
+                actual.get("note", planned.get("note", "")), 500, "Exercise note"
+            )
         completed.append(
             {
-                **planned,
+                **snapshot,
                 "plannedSets": planned["sets"],
                 "sets": sets,
                 "estimated1rm": best_1rm(sets),
@@ -230,13 +290,16 @@ def validate_session(body, template):
         )
     if not any(not row.get("skipped", False) for exercise in completed for row in exercise["sets"]):
         raise ValueError("Complete at least one set before saving, or discard this workout.")
-    return {
+    document = {
         "clientId": client_id,
         "templateId": template["id"],
         "name": template["name"],
         "day": day,
         "exercises": completed,
     }
+    if "note" in body or "note" in template:
+        document["note"] = note(body.get("note", template.get("note", "")), 1000, "Workout note")
+    return document
 
 
 def validate_session_edit(body, saved):
@@ -269,7 +332,7 @@ def validate_session_edit(body, saved):
         planned.append({**original, "sets": len(original["sets"])})
     corrected = validate_session(
         {**body, "clientId": saved["clientId"]},
-        {"id": saved["templateId"], "name": saved["name"], "exercises": planned},
+        {**saved, "id": saved["templateId"], "exercises": planned},
     )
     for exercise, original in zip(corrected["exercises"], saved["exercises"], strict=True):
         if "plannedSets" in original:

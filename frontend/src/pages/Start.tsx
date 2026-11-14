@@ -64,10 +64,14 @@ export default function Start() {
       clientId: newId(),
       templateId: template.id,
       name: template.name,
+      note: template.note ?? '',
       day: today(),
       exercises: template.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        note: exercise.note ?? '',
+        source: exercise.source,
+        volumeEligible: exercise.volumeEligible,
         measurement: exercise.measurement,
         targets: targetsFor(exercise),
         sets: Array.from({ length: exercise.sets }, () => ({
