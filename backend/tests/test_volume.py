@@ -129,3 +129,19 @@ def test_out_of_range_week_is_a_readable_error(volume_client):
     _, client, _ = volume_client
     response = client.get("/api/volume?week=9999-12-31")
     assert response.status_code == 400
+
+
+def test_preview_supplies_starting_goals_for_every_group():
+    """Fill missing goals while preserving user choices, including an explicit zero."""
+    result = weekly_volume([], "2026-11-09", REGISTRY, {"goals": {"chest": 12, "triceps": 0}}, True)
+    assert len(result["muscles"]) == len(REGISTRY["taxonomy"])
+    for muscle in result["muscles"]:
+        expected = {"chest": 12, "triceps": 0}.get(muscle["muscle"], 10)
+        assert muscle["goal"] == expected
+        assert muscle["goalSource"] == (
+            "saved" if muscle["muscle"] in ("chest", "triceps") else "starter"
+        )
+    adult = weekly_volume([], "2026-11-09", REGISTRY, {}, False)
+    younger = weekly_volume([], "2026-11-09", REGISTRY, {"profile": {"ageBand": "under18"}}, True)
+    assert all(muscle["goal"] is None for muscle in adult["muscles"])
+    assert all(muscle["goal"] is None for muscle in younger["muscles"])
