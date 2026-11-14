@@ -113,3 +113,19 @@ def test_invalid_goal_does_not_persist(volume_client, goals):
     )
     assert response.status_code == 400
     assert client.get("/api/volume").json["goals"] == {}
+
+
+def test_mapping_version_identifies_coefficients_not_only_anatomy_source():
+    """Changing a coefficient changes the visible calculation version."""
+    changed = deepcopy(REGISTRY)
+    changed["exercises"][0]["coefficients"]["chest"] = 0.5
+    original = weekly_volume([], "2026-11-09", REGISTRY, {}, True)
+    updated = weekly_volume([], "2026-11-09", changed, {}, True)
+    assert original["mappingVersion"] != updated["mappingVersion"]
+
+
+def test_out_of_range_week_is_a_readable_error(volume_client):
+    """Reject a final incomplete year-9999 calendar week instead of overflowing."""
+    _, client, _ = volume_client
+    response = client.get("/api/volume?week=9999-12-31")
+    assert response.status_code == 400

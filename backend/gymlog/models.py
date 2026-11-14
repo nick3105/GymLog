@@ -1,5 +1,7 @@
 """Validation and calculations, independent of Flask and SQLite."""
 
+import hashlib
+import json
 import math
 import re
 from datetime import UTC, date, datetime, timedelta
@@ -375,7 +377,10 @@ def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
     except (ValueError, TypeError):
         raise ValueError("Choose a valid week date.") from None
     start -= timedelta(days=start.weekday())
-    end = start + timedelta(days=6)
+    try:
+        end = start + timedelta(days=6)
+    except OverflowError:
+        raise ValueError("Choose a week within the supported date range.") from None
     profiles = {row["exerciseId"]: row for row in registry["exercises"]}
     muscles = {
         muscle["id"]: {
@@ -442,7 +447,9 @@ def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
         "excluded": excluded,
         "countedSets": counted_sets,
         "draftPreview": allow_draft,
-        "mappingVersion": registry["dataset"]["revision"],
+        "mappingVersion": hashlib.sha256(
+            json.dumps(registry, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
         "profile": preferences.get("profile", {}),
         "goals": preferences.get("goals", {}),
         "revision": preferences.get("revision", 0),

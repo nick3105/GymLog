@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useBlocker } from 'react-router'
 
+import { useJournal } from '../journal'
 import { api } from '../api'
 import { formatDay, formatNumber } from '../format'
 import { card, errorText, input, label, primaryButton, secondaryButton } from '../ui'
@@ -50,6 +51,8 @@ function muscleName(muscle: string): string {
 }
 
 export default function WeeklyVolume() {
+  const { setBuilderDirty } = useJournal()
+  const [baseline, setBaseline] = useState('')
   const [week, setWeek] = useState(() => weekDate(0))
   const [volume, setVolume] = useState<Volume | null>(null)
   const [goals, setGoals] = useState<Record<string, string>>({})
@@ -59,6 +62,19 @@ export default function WeeklyVolume() {
   const [problem, setProblem] = useState('')
   const [notice, setNotice] = useState('')
   const initialized = useRef(false)
+
+  const currentPreferences = JSON.stringify({ goals, profile })
+  const dirty = initialized.current && currentPreferences !== baseline
+  useEffect(() => {
+    setBuilderDirty(dirty)
+    return () => setBuilderDirty(false)
+  }, [dirty, setBuilderDirty])
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (window.confirm('Leave without saving your volume goals?')) blocker.proceed()
+    else blocker.reset()
+  }, [blocker])
 
   useEffect(() => {
     let current = true
@@ -74,6 +90,10 @@ export default function WeeklyVolume() {
           )
           setProfile(result.profile)
           setRevision(result.revision)
+          setBaseline(JSON.stringify({
+            goals: Object.fromEntries(Object.entries(result.goals).map(([key, value]) => [key, String(value)])),
+            profile: result.profile,
+          }))
           initialized.current = true
         }
       })
@@ -100,6 +120,7 @@ export default function WeeklyVolume() {
         revision: number
       }>('volume/preferences', { goals: values, profile, revision })
       setRevision(saved.revision)
+      setBaseline(currentPreferences)
       setVolume(
         (current) =>
           current && {
@@ -132,7 +153,7 @@ export default function WeeklyVolume() {
       <div className="mb-4 grid grid-cols-[auto_1fr_auto] items-center gap-2">
         <button
           type="button"
-          aria-label="Previous week"
+          aria-label="Previous week" disabled={saving}
           onClick={() => { setVolume(null); setWeek(weekDate(-1, week)) }}
           className={secondaryButton}
         >
@@ -145,7 +166,7 @@ export default function WeeklyVolume() {
         </span>
         <button
           type="button"
-          aria-label="Next week"
+          aria-label="Next week" disabled={saving}
           onClick={() => { setVolume(null); setWeek(weekDate(1, week)) }}
           className={secondaryButton}
         >
