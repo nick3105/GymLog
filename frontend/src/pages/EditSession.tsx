@@ -3,6 +3,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api } from '../api'
 import NoteInput from '../components/NoteInput'
+import WorkoutReminder from '../components/WorkoutReminder'
 import EmptyState from '../components/EmptyState'
 import { durationFields, repFields, setPayload } from '../setInput'
 import { today } from '../format'
@@ -21,6 +22,8 @@ export default function EditSession() {
   const [exerciseNotes, setExerciseNotes] = useState(
     () => original?.exercises.map((exercise) => exercise.note ?? '') ?? [],
   )
+  const [warmupDone, setWarmupDone] = useState(original?.warmupDone ?? false)
+  const [cooldownDone, setCooldownDone] = useState(original?.cooldownDone ?? false)
   const [day, setDay] = useState(original?.day ?? '')
   const [rows, setRows] = useState<Row[][]>(
     () =>
@@ -48,7 +51,9 @@ export default function EditSession() {
     day !== original?.day ||
     JSON.stringify(rows) !== initialRows ||
     note !== (original?.note ?? '') ||
-    exerciseNotes.some((value, index) => value !== (original?.exercises[index].note ?? ''))
+    exerciseNotes.some((value, index) => value !== (original?.exercises[index].note ?? '')) ||
+    warmupDone !== (original?.warmupDone ?? false) ||
+    cooldownDone !== (original?.cooldownDone ?? false)
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -111,6 +116,8 @@ export default function EditSession() {
         day,
         note,
         revision: session.revision ?? 0,
+        warmupDone,
+        cooldownDone,
         timezoneOffset: new Date().getTimezoneOffset(),
         exercises: session.exercises.map((exercise, index) => ({
           id: exercise.id,
@@ -153,7 +160,16 @@ export default function EditSession() {
         onChange={setNote}
         disabled={saving}
       />
-      <div className="mt-4 flex flex-col gap-4">
+      <div className="mb-4">
+        <WorkoutReminder
+          title="Warmup"
+          text={session.warmup}
+          done={warmupDone}
+          disabled={saving}
+          onChange={setWarmupDone}
+        />
+      </div>
+      <div className="flex flex-col gap-4">
         {session.exercises.map((exercise, exerciseIndex) => (
           <section key={exercise.id} className={card}>
             <h2 className="mb-3 text-lg font-normal">{exercise.name}</h2>
@@ -203,6 +219,15 @@ export default function EditSession() {
             ))}
           </section>
         ))}
+      </div>
+      <div className="mt-4">
+        <WorkoutReminder
+          title="Cooldown"
+          text={session.cooldown}
+          done={cooldownDone}
+          disabled={saving}
+          onChange={setCooldownDone}
+        />
       </div>
       <div className="bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-lg p-3 backdrop-blur md:bottom-4">
         {problem && (

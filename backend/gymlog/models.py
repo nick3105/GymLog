@@ -148,6 +148,41 @@ def exercise_stats(sessions, exercise_id, include_average_weight=False):
     return result
 
 
+def validate_instructions(body, source=None, completed=False):
+    """Normalize reminder text and optional completion flags without creating set records."""
+    source = source or {}
+    result = {}
+    for field in ("warmup", "cooldown"):
+        value = body.get(field, source.get(field, ""))
+        if not isinstance(value, str) or len(value) > 100:
+            raise ValueError(f"{field.capitalize()} must contain at most 100 characters.")
+        value = value.strip()
+        if value or (not completed and field in body):
+            result[field] = value
+        if completed:
+            done = body.get(f"{field}Done", source.get(f"{field}Done", False))
+            if not isinstance(done, bool):
+                raise ValueError(f"{field.capitalize()} Done must be true or false.")
+            if value:
+                result[f"{field}Done"] = done
+    return result
+
+
+def validate_supersets(exercises):
+    """Require each superset to contain exactly two adjacent exercises."""
+    groups = {}
+    for position, exercise in enumerate(exercises):
+        group = exercise.get("supersetId")
+        if group is None or group == "":
+            continue
+        if not isinstance(group, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,60}", group):
+            raise ValueError("A superset ID must contain 1–60 letters, numbers, - or _.")
+        groups.setdefault(group, []).append(position)
+    for positions in groups.values():
+        if len(positions) != 2 or positions[1] != positions[0] + 1:
+            raise ValueError("A superset must contain exactly two adjacent exercises.")
+
+
 def validate_template(body, catalogue):
     if not isinstance(body, dict):
         raise ValueError("A workout object is required.")
@@ -174,6 +209,9 @@ def validate_template(body, catalogue):
             item["note"] = note(entry["note"], 500, "Exercise note")
         if catalogue[exercise_id].get("source") == "personal":
             item.update(source="personal", volumeEligible=False)
+        if entry.get("supersetId") is not None and entry.get("supersetId") != "":
+            item["supersetId"] = entry["supersetId"]
+
         timed = catalogue[exercise_id].get("measurement") == "duration"
         if timed:
             item["measurement"] = "duration"
@@ -222,6 +260,8 @@ def validate_template(body, catalogue):
     document = {"name": name.strip(), "exercises": result}
     if "note" in body:
         document["note"] = note(body["note"], 1000, "Workout note")
+    validate_supersets(result)
+    document.update(validate_instructions(body))
     return document
 
 
@@ -243,6 +283,8 @@ def validate_session(body, template):
     for actual, planned in zip(entries, template["exercises"], strict=True):
         if not isinstance(actual, dict) or actual.get("id") != planned["id"]:
             raise ValueError("Session exercises must match the selected workout.")
+        if "supersetId" in actual and actual["supersetId"] != planned.get("supersetId"):
+            raise ValueError("Session superset groups must match the selected workout.")
         rows = actual.get("sets")
         if not isinstance(rows, list) or not planned["sets"] <= len(rows) <= 20:
             raise ValueError(
@@ -298,6 +340,7 @@ def validate_session(body, template):
         "name": template["name"],
         "day": day,
         "exercises": completed,
+        **validate_instructions(body, template, completed=True),
     }
     if "note" in body or "note" in template:
         document["note"] = note(body.get("note", template.get("note", "")), 1000, "Workout note")
@@ -333,7 +376,14 @@ def validate_session_edit(body, saved):
                 raise ValueError("Keep skipped sets unchanged when correcting a workout.")
         planned.append({**original, "sets": len(original["sets"])})
     corrected = validate_session(
-        {**body, "clientId": saved["clientId"]},
+        {
+            **body,
+            "clientId": saved["clientId"],
+            "warmup": saved.get("warmup", ""),
+            "cooldown": saved.get("cooldown", ""),
+            "warmupDone": body.get("warmupDone", saved.get("warmupDone", False)),
+            "cooldownDone": body.get("cooldownDone", saved.get("cooldownDone", False)),
+        },
         {**saved, "id": saved["templateId"], "exercises": planned},
     )
     for exercise, original in zip(corrected["exercises"], saved["exercises"], strict=True):

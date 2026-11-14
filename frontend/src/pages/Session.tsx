@@ -1,16 +1,18 @@
-import { Check } from 'lucide-react'
+import { Check, Link2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 
 import { api } from '../api'
 import NoteInput from '../components/NoteInput'
+import WorkoutReminder from '../components/WorkoutReminder'
+import { trainingSequence, supersetLabel } from '../supersets'
 import ExerciseLink from '../components/ExerciseLink'
 import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal, type ActiveWorkout } from '../journal'
 import { bestOneRepMax, type SetInput } from '../oneRepMax'
 import { durationFields, repFields, isSetComplete, setPayload } from '../setInput'
 import type { ExerciseStats, Session as SavedSession } from '../types'
-import { card, errorText, input, primaryButton, secondaryButton } from '../ui'
+import { card, errorText, input, primaryButton, secondaryButton, textButton } from '../ui'
 
 // RUN-02 to RUN-10: log the actual sets of the workout in progress, then save it.
 export default function Session() {
@@ -51,12 +53,17 @@ export default function Session() {
     workout.exercises.every((exercise) =>
       exercise.sets.every((set) => set.skipped || isSetComplete(set)),
     )
-  // The first set without weight or reps is the one you are on.
-  const current = workout.exercises
-    .flatMap((exercise, exerciseIndex) =>
-      exercise.sets.map((set, setIndex) => ({ exerciseIndex, setIndex, set })),
-    )
-    .find(({ set }) => !set.skipped && !isSetComplete(set))
+  const sequence = trainingSequence(workout.exercises)
+  const current = sequence.find(({ exerciseIndex, setIndex }) => {
+    const set = workout.exercises[exerciseIndex].sets[setIndex]
+    return !set.skipped && !isSetComplete(set)
+  })
+
+  function showSet(exerciseIndex: number, setIndex: number) {
+    document
+      .getElementById(`actual-${workout.exercises[exerciseIndex].id}-${setIndex}`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }
 
   function update(
     exerciseIndex: number,
@@ -125,9 +132,14 @@ export default function Session() {
         templateId: workout.templateId,
         day: workout.day,
         note: workout.note ?? '',
+        warmup: workout.warmup ?? '',
+        cooldown: workout.cooldown ?? '',
+        warmupDone: workout.warmupDone ?? false,
+        cooldownDone: workout.cooldownDone ?? false,
         exercises: workout.exercises.map((exercise) => ({
           id: exercise.id,
           note: exercise.note ?? '',
+          supersetId: exercise.supersetId,
           sets: exercise.sets.map(setPayload),
         })),
       })
@@ -168,12 +180,60 @@ export default function Session() {
         disabled={saving}
         onChange={(value) => setActive({ ...workout, note: value })}
       />
-      <div className="mt-4 flex flex-col gap-4">
+      <div className="mb-4">
+        <WorkoutReminder
+          title="Warmup"
+          text={workout.warmup}
+          done={workout.warmupDone}
+          disabled={saving}
+          onChange={(done) => setActive({ ...workout, warmupDone: done })}
+        />
+      </div>
+      {current && (
+        <button
+          type="button"
+          className={`${secondaryButton} mb-4 w-full`}
+          onClick={() => showSet(current.exerciseIndex, current.setIndex)}
+        >
+          Next · {workout.exercises[current.exerciseIndex].name} · Set {current.setIndex + 1}
+        </button>
+      )}
+      {workout.exercises.some((exercise) => exercise.supersetId) && (
+        <details className={`${card} mb-4`}>
+          <summary className="min-h-11 cursor-pointer font-normal">Superset sequence</summary>
+          <ol className="grid gap-2">
+            {sequence
+              .filter(({ exerciseIndex }) => workout.exercises[exerciseIndex].supersetId)
+              .map(({ exerciseIndex, setIndex }) => (
+                <li key={`${exerciseIndex}-${setIndex}`}>
+                  <button
+                    type="button"
+                    className={`${textButton} text-left`}
+                    onClick={() => showSet(exerciseIndex, setIndex)}
+                  >
+                    {supersetLabel(workout.exercises, exerciseIndex)} ·{' '}
+                    {workout.exercises[exerciseIndex].name} · Set {setIndex + 1}
+                  </button>
+                </li>
+              ))}
+          </ol>
+        </details>
+      )}
+      <div className="flex flex-col gap-4">
         {workout.exercises.map((exercise, exerciseIndex) => {
           const estimate = bestOneRepMax(exercise.sets)
           const last = lastTime[exercise.id]
           return (
-            <section key={exercise.id} className={card}>
+            <section
+              key={exercise.id}
+              className={`${card} ${exercise.supersetId ? 'border-accent border-l-2' : ''} ${exercise.supersetId && workout.exercises[exerciseIndex - 1]?.supersetId === exercise.supersetId ? '-mt-4 rounded-t-none border-t' : ''}`}
+            >
+              {exercise.supersetId && (
+                <p className="text-accent mb-2 flex items-center gap-2">
+                  <Link2 className="size-5" aria-hidden />
+                  {supersetLabel(workout.exercises, exerciseIndex)}
+                </p>
+              )}
               <div className="flex items-start justify-between gap-3">
                 <ExerciseLink id={exercise.id} name={exercise.name} />
                 {exercise.measurement !== 'duration' && (
@@ -319,6 +379,15 @@ export default function Session() {
         })}
       </div>
 
+      <div className="mt-4">
+        <WorkoutReminder
+          title="Cooldown"
+          text={workout.cooldown}
+          done={workout.cooldownDone}
+          disabled={saving}
+          onChange={(done) => setActive({ ...workout, cooldownDone: done })}
+        />
+      </div>
       <p className="text-muted mt-4 text-sm">
         Placeholders are your targets. Enter seconds for timed holds; 0 kg is fine for bodyweight
         sets. RPE is optional. Changes apply to this session only.

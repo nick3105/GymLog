@@ -11,6 +11,10 @@ export type ActiveWorkout = {
   templateId: string
   name: string
   day: string
+  warmup?: string
+  cooldown?: string
+  warmupDone?: boolean
+  cooldownDone?: boolean
   exercises: {
     id: string
     name: string
@@ -18,6 +22,7 @@ export type ActiveWorkout = {
     source?: 'personal'
     volumeEligible?: false
     measurement?: 'duration'
+    supersetId?: string
     targets: Target[]
     sets: SetInput[]
   }[]

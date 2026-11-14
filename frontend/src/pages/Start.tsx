@@ -66,6 +66,10 @@ export default function Start() {
       name: template.name,
       note: template.note ?? '',
       day: today(),
+      warmup: template.warmup ?? '',
+      cooldown: template.cooldown ?? '',
+      warmupDone: false,
+      cooldownDone: false,
       exercises: template.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
@@ -73,6 +77,7 @@ export default function Start() {
         source: exercise.source,
         volumeEligible: exercise.volumeEligible,
         measurement: exercise.measurement,
+        supersetId: exercise.supersetId,
         targets: targetsFor(exercise),
         sets: Array.from({ length: exercise.sets }, () => ({
           weight: '',

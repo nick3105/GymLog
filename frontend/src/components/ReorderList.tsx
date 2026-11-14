@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 import { insertionIndex, moveItem } from '../reorder'
 import { card } from '../ui'
 
-type Item = { id: string; name: string }
-type Drag = { id: string; to: number | null }
+type Item = { id: string; name: string; pairable?: boolean }
+type Drag = { id: string; to: number | null; pairId: string | null }
 type Gesture = {
   id: string
   pointerId: number
@@ -20,6 +20,7 @@ type Props<T extends Item> = {
   items: T[]
   enabled: boolean
   onChange: (items: T[]) => void
+  onPair?: (draggedId: string, targetId: string) => void
   children: (item: T, index: number) => ReactNode
 }
 
@@ -28,6 +29,7 @@ export default function ReorderList<T extends Item>({
   items,
   enabled,
   onChange,
+  onPair,
   children,
 }: Props<T>) {
   const list = useRef<HTMLDivElement>(null)
@@ -88,6 +90,17 @@ export default function ReorderList<T extends Item>({
     return insertionIndex(current.y, midpoints)
   }
 
+  function pairTarget(current: Gesture) {
+    if (!onPair || items.find((item) => item.id === current.id)?.pairable === false) return null
+    const targetId =
+      document
+        .elementFromPoint(current.x, current.y)
+        ?.closest('[data-pair-target]')
+        ?.getAttribute('data-pair-target') ?? null
+    const target = items.find((item) => item.id === targetId)
+    return target && target.id !== current.id && target.pairable !== false ? target.id : null
+  }
+
   function scrollWhileDragging() {
     const current = gesture.current
     if (!current?.pickedUp) return
@@ -99,7 +112,12 @@ export default function ReorderList<T extends Item>({
     if (amount !== 0) window.scrollBy(0, amount)
     followPointer(current)
     const to = dropIndex(current)
-    setDrag((previous) => (previous?.to === to ? previous : { id: current.id, to }))
+    const pairId = pairTarget(current)
+    setDrag((previous) =>
+      previous?.to === to && previous?.pairId === pairId
+        ? previous
+        : { id: current.id, to, pairId },
+    )
     frame.current = requestAnimationFrame(scrollWhileDragging)
   }
 
@@ -126,7 +144,7 @@ export default function ReorderList<T extends Item>({
       motion.current.currentTime = 1
     }
     followPointer(current)
-    setDrag({ id: current.id, to: items.findIndex((item) => item.id === current.id) })
+    setDrag({ id: current.id, to: items.findIndex((item) => item.id === current.id), pairId: null })
     setAnnouncement('Exercise picked up. Drag to a new position, release to place. Escape cancels.')
     frame.current = requestAnimationFrame(scrollWhileDragging)
   }
@@ -169,7 +187,7 @@ export default function ReorderList<T extends Item>({
     }
     if (current.pickedUp) {
       followPointer(current)
-      setDrag({ id: current.id, to: dropIndex(current) })
+      setDrag({ id: current.id, to: dropIndex(current), pairId: pairTarget(current) })
     }
   }
 
@@ -183,7 +201,12 @@ export default function ReorderList<T extends Item>({
     current.x = event.clientX
     current.y = event.clientY
     const to = current.pickedUp ? dropIndex(current) : null
-    if (to !== null) {
+    const pairId = current.pickedUp ? pairTarget(current) : null
+    if (pairId && onPair) {
+      onPair(current.id, pairId)
+      setAnnouncement('Superset linked. The two exercises will alternate.')
+      requestAnimationFrame(() => cards.current.get(pairId)?.focus({ preventScroll: true }))
+    } else if (to !== null) {
       const from = items.findIndex((item) => item.id === current.id)
       onChange(moveItem(items, from, to))
       announce(items[from], to)
@@ -201,7 +224,10 @@ export default function ReorderList<T extends Item>({
   }
 
   const remaining = items.filter((item) => item.id !== drag?.id)
-  const beforeId = drag?.to !== null && drag?.to !== undefined ? remaining[drag.to]?.id : undefined
+  const beforeId =
+    !drag?.pairId && drag?.to !== null && drag?.to !== undefined
+      ? remaining[drag.to]?.id
+      : undefined
   const marker = <div aria-hidden className="bg-accent h-1 rounded-full" />
 
   return (
@@ -272,10 +298,22 @@ export default function ReorderList<T extends Item>({
                 </div>
               )}
               {children(item, index)}
+              {onPair &&
+                drag &&
+                drag.id !== item.id &&
+                item.pairable !== false &&
+                items.find((entry) => entry.id === drag.id)?.pairable !== false && (
+                  <div
+                    data-pair-target={item.id}
+                    className={`mt-3 flex min-h-16 items-center justify-center rounded-lg border-2 border-dashed p-3 text-center text-base ${drag.pairId === item.id ? 'border-accent bg-accent/10 text-text' : 'border-border text-muted'}`}
+                  >
+                    Pair {items.find((entry) => entry.id === drag.id)?.name} with {item.name}
+                  </div>
+                )}
             </div>
           </div>
         ))}
-        {drag?.to === remaining.length && marker}
+        {!drag?.pairId && drag?.to === remaining.length && marker}
       </div>
       <span id="reorder-help" className="sr-only">
         On a phone, hold briefly before dragging. Release outside the list or press Escape to
