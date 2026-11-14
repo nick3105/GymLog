@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api } from '../api'
+import NoteInput from '../components/NoteInput'
 import EmptyState from '../components/EmptyState'
 import { durationFields, repFields, setPayload } from '../setInput'
 import { today } from '../format'
@@ -16,6 +17,10 @@ export default function EditSession() {
   const navigate = useNavigate()
   // Hold the snapshot while typing, including when the journal refreshes.
   const [original] = useState(() => journal.sessions.find((session) => session.id === id))
+  const [note, setNote] = useState(original?.note ?? '')
+  const [exerciseNotes, setExerciseNotes] = useState(
+    () => original?.exercises.map((exercise) => exercise.note ?? '') ?? [],
+  )
   const [day, setDay] = useState(original?.day ?? '')
   const [rows, setRows] = useState<Row[][]>(
     () =>
@@ -39,7 +44,11 @@ export default function EditSession() {
   const saved = useRef(false)
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState('')
-  const dirty = day !== original?.day || JSON.stringify(rows) !== initialRows
+  const dirty =
+    day !== original?.day ||
+    JSON.stringify(rows) !== initialRows ||
+    note !== (original?.note ?? '') ||
+    exerciseNotes.some((value, index) => value !== (original?.exercises[index].note ?? ''))
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -100,9 +109,12 @@ export default function EditSession() {
     try {
       const corrected = await api<Session>(`sessions/${session.id}`, {
         day,
+        note,
+        revision: session.revision ?? 0,
         timezoneOffset: new Date().getTimezoneOffset(),
         exercises: session.exercises.map((exercise, index) => ({
           id: exercise.id,
+          note: exerciseNotes[index],
           sets: rows[index].map(setPayload),
         })),
       })
@@ -134,10 +146,28 @@ export default function EditSession() {
         onChange={(event) => setDay(event.target.value)}
         className={`${input} mb-4`}
       />
-      <div className="flex flex-col gap-4">
+      <NoteInput
+        label="Workout note"
+        maximum={1000}
+        value={note}
+        onChange={setNote}
+        disabled={saving}
+      />
+      <div className="mt-4 flex flex-col gap-4">
         {session.exercises.map((exercise, exerciseIndex) => (
           <section key={exercise.id} className={card}>
             <h2 className="mb-3 text-lg font-normal">{exercise.name}</h2>
+            <NoteInput
+              label={`${exercise.name} exercise note`}
+              maximum={500}
+              value={exerciseNotes[exerciseIndex]}
+              disabled={saving}
+              onChange={(value) =>
+                setExerciseNotes(
+                  exerciseNotes.map((item, index) => (index === exerciseIndex ? value : item)),
+                )
+              }
+            />
             {rows[exerciseIndex].map((row, setIndex) => (
               <div key={setIndex} className="border-border border-t py-3">
                 <p className="mb-2">

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -28,6 +28,29 @@ SCHEMA = [
     """CREATE TABLE IF NOT EXISTS login_attempts (
         address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL)""",
 ]
+
+
+PERSONAL_EXERCISE_SCHEMA = [
+    """CREATE TABLE personal_exercises (
+        id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+        request_id TEXT NOT NULL, name_key TEXT NOT NULL, document TEXT NOT NULL,
+        created_at TEXT NOT NULL, UNIQUE(user_id, request_id), UNIQUE(user_id, name_key))"""
+]
+
+
+def _upgrade_personal_exercises(db):
+    """Install the owner-scoped personal catalogue in one serialized migration."""
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        if db.execute("PRAGMA user_version").fetchone()[0] < 3:
+            for statement in PERSONAL_EXERCISE_SCHEMA:
+                db.execute(statement)
+            db.execute("PRAGMA user_version = 3")
+        db.execute("COMMIT")
+    except BaseException:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        raise
 
 
 @contextmanager
@@ -53,6 +76,9 @@ def initialize(path, owner_password_hash=None):
     try:
         if db.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
             return
+        if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+            _upgrade_personal_exercises(db)
+            return
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "templates" in tables:
             _upgrade_profiles(db, Path(path), tables, owner_password_hash)
@@ -62,8 +88,9 @@ def initialize(path, owner_password_hash=None):
                 return
             for statement in SCHEMA:
                 db.execute(statement)
-            db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            db.execute("PRAGMA user_version = 1")
             db.execute("COMMIT")
+        _upgrade_personal_exercises(db)
     finally:
         db.close()
 
@@ -132,7 +159,7 @@ def _upgrade_profiles(db, path, tables, owner_password_hash):
         for table in ("templates", "sessions", "body_weights"):
             db.execute(f"DROP TABLE old_{table}")
         db.execute("DROP TABLE IF EXISTS accounts")
-        db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        db.execute("PRAGMA user_version = 1")
         db.execute("COMMIT")
     except BaseException:
         if db.in_transaction:
@@ -300,14 +327,79 @@ def get_session(path, user_id, session_id):
         return json.loads(row["document"]) if row else None
 
 
-def update_session(path, user_id, document):
-    """Replace the owner's result while preserving its identity and timestamp."""
+def update_session(path, user_id, document, expected_revision=None):
+    """Replace an owned result atomically, rejecting a stale concurrent correction."""
     with connect(path) as db:
-        result = db.execute(
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT document FROM sessions WHERE id=? AND user_id=?",
+            (document["id"], user_id),
+        ).fetchone()
+        if row is None:
+            return None
+        current = json.loads(row["document"])
+        previous_content = {key: value for key, value in current.items() if key != "revision"}
+        next_content = {key: value for key, value in document.items() if key != "revision"}
+        if previous_content == next_content:
+            return current
+        revision = current.get("revision", 0)
+        if expected_revision is not None and expected_revision != revision:
+            raise ValueError("This workout changed on another device. Reload it before saving.")
+        updated = {**document, "revision": revision + 1}
+        db.execute(
             "UPDATE sessions SET document=? WHERE id=? AND user_id=?",
-            (json.dumps(document), document["id"], user_id),
+            (json.dumps(updated), document["id"], user_id),
         )
-    return document if result.rowcount else None
+    return updated
+
+
+def personal_exercises(path, user_id):
+    """Read only the selected owner's personal exercise catalogue."""
+    with connect(path) as db:
+        return [
+            json.loads(row["document"])
+            for row in db.execute(
+                "SELECT document FROM personal_exercises WHERE user_id=? ORDER BY created_at, id",
+                (user_id,),
+            )
+        ]
+
+
+def add_personal_exercise(path, user_id, data):
+    """Create a private exercise once per owner request, preserving retry identity."""
+    request_id = data["requestId"]
+    fields = {key: data[key] for key in ("name", "group", "measurement")}
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        existing = db.execute(
+            "SELECT document FROM personal_exercises WHERE user_id=? AND request_id=?",
+            (user_id, request_id),
+        ).fetchone()
+        if existing:
+            document = json.loads(existing["document"])
+            if any(document.get(key, "repetitions") != value for key, value in fields.items()):
+                raise ValueError("This creation request was already used. Start a new exercise.")
+            return document
+        name_key = data["name"].casefold()
+        duplicate = db.execute(
+            "SELECT 1 FROM personal_exercises WHERE user_id=? AND name_key=?",
+            (user_id, name_key),
+        ).fetchone()
+        if duplicate:
+            raise ValueError("You already have a personal exercise with that name.")
+        document = {
+            "id": f"custom-{uuid4()}",
+            **fields,
+            "source": "personal",
+            "volumeEligible": False,
+        }
+        db.execute(
+            "INSERT INTO personal_exercises VALUES (?, ?, ?, ?, ?, ?)",
+            (document["id"], user_id, request_id, name_key, json.dumps(document), now()),
+        )
+    return document
+
+
 
 
 VOLUME_PREFERENCES_SCHEMA = """CREATE TABLE IF NOT EXISTS user_preferences (
@@ -347,3 +439,4 @@ def save_volume_preferences(path, user_id, document, revision):
             (user_id, json.dumps(document), now()),
         )
         return document
+

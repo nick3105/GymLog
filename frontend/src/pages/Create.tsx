@@ -5,6 +5,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router'
 import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
+import NoteInput from '../components/NoteInput'
 import ReorderList from '../components/ReorderList'
 import { useJournal } from '../journal'
 import { targetsFor } from '../targets'
@@ -12,7 +13,7 @@ import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
 
 type TargetInput = { reps: string; weight: string; rpe: string; durationSeconds: string }
-type Planned = Exercise & { targets: TargetInput[] }
+type Planned = Exercise & { note?: string; targets: TargetInput[] }
 
 const newTarget = (): TargetInput => ({ reps: '8', weight: '', rpe: '', durationSeconds: '60' })
 
@@ -33,12 +34,16 @@ export default function Create() {
   const navigate = useNavigate()
   const { id } = useParams()
   const original = journal.templates.find((template) => template.id === id)
+  const [note, setNote] = useState(original?.note ?? '')
   const [name, setName] = useState(original?.name ?? '')
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        note: exercise.note ?? '',
+        source: exercise.source,
+        volumeEligible: exercise.volumeEligible,
         measurement: exercise.measurement,
         group: journal.exercises.find((item) => item.id === exercise.id)?.group ?? '',
         targets: targetsFor(exercise).map((target) => ({
@@ -54,7 +59,7 @@ export default function Create() {
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
-  const dirty = name.trim() !== '' || planned.length > 0
+  const dirty = name.trim() !== '' || planned.length > 0 || note !== ''
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -112,8 +117,10 @@ export default function Create() {
     try {
       const template = await api<Template>(id ? `templates/${id}` : 'templates', {
         name,
+        note,
         exercises: planned.map((item) => ({
           id: item.id,
+          note: item.note ?? '',
           targets: item.targets.map((target) =>
             item.measurement === 'duration'
               ? {
@@ -182,10 +189,21 @@ export default function Create() {
             onChange={(event) => setName(event.target.value)}
           />
         </div>
+        <NoteInput
+          label="Workout note"
+          maximum={1000}
+          value={note}
+          onChange={setNote}
+          disabled={saving}
+        />
         <ExercisePicker
           exercises={journal.exercises}
           plannedIds={planned.map((item) => item.id)}
           onAdd={add}
+          onCreate={(exercise) => {
+            setJournal((current) => ({ ...current, exercises: [...current.exercises, exercise] }))
+            add(exercise)
+          }}
         />
       </div>
 
@@ -212,6 +230,24 @@ export default function Create() {
                 <Trash2 className="size-5" aria-hidden />
               </button>
             </div>
+            {item.source === 'personal' && (
+              <p className="text-muted mt-2">
+                Personal exercise — excluded from weekly volume estimates
+              </p>
+            )}
+            <NoteInput
+              label={`${item.name} exercise note`}
+              maximum={500}
+              value={item.note ?? ''}
+              onChange={(value) =>
+                setPlanned(
+                  planned.map((exercise, i) =>
+                    i === index ? { ...exercise, note: value } : exercise,
+                  ),
+                )
+              }
+              disabled={saving}
+            />
             <div
               className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
               aria-hidden

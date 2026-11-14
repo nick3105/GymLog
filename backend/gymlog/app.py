@@ -18,6 +18,7 @@ from .models import (
     best_1rm,
     exercise_stats,
     number,
+    validate_personal_exercise,
     validate_registration,
     validate_session,
     validate_session_edit,
@@ -67,6 +68,11 @@ def create_app(config=None):
     ):
         raise RuntimeError("exercises.json must contain unique exercise IDs.")
     catalogue_by_id = {e["id"]: e for e in catalogue}
+
+    def catalogue_for(user_id):
+        """Combine built-ins with only the selected journal owner's personal exercises."""
+        personal = storage.personal_exercises(database, user_id)
+        return {**catalogue_by_id, **{exercise["id"]: exercise for exercise in personal}}
 
     def version(digest):
         # Stored in the cookie so that changing a password signs out other devices.
@@ -214,16 +220,27 @@ def create_app(config=None):
     @authenticated
     def state():
         return jsonify(
-            exercises=[exercise for exercise in catalogue if not exercise.get("retired")],
+            exercises=[
+                exercise
+                for exercise in catalogue_for(g.user_id).values()
+                if not exercise.get("retired")
+            ],
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
         )
 
+    @app.post("/api/exercises/personal")
+    @authenticated
+    def create_personal_exercise():
+        """Create an authenticated user's private exercise with retry-safe identity."""
+        data = validate_personal_exercise(request.get_json())
+        return jsonify(storage.add_personal_exercise(database, g.user_id, data)), 201
+
     @app.get("/api/exercises/<exercise_id>/stats")
     @authenticated
     def stats(exercise_id):
-        if exercise_id not in catalogue_by_id:
+        if exercise_id not in catalogue_for(g.user_id):
             return jsonify(error="That exercise is not in the catalogue."), 404
         sessions = storage.documents(database, g.user_id, "sessions")
         return jsonify(
@@ -237,7 +254,7 @@ def create_app(config=None):
     @app.post("/api/templates")
     @authenticated
     def create_template():
-        document = validate_template(request.get_json(), catalogue_by_id)
+        document = validate_template(request.get_json(), catalogue_for(g.user_id))
         return jsonify(storage.add_template(database, g.user_id, document)), 201
 
     @app.post("/api/templates/<template_id>")
@@ -247,7 +264,7 @@ def create_app(config=None):
         template = storage.get_template(database, g.user_id, template_id)
         if template is None:
             return jsonify(error="That workout template could not be found."), 404
-        changes = validate_template(request.get_json(), catalogue_by_id)
+        changes = validate_template(request.get_json(), catalogue_for(g.user_id))
         document = storage.update_template(database, g.user_id, {**template, **changes})
         return jsonify(document)
 
@@ -266,8 +283,24 @@ def create_app(config=None):
         saved = storage.get_session(database, g.user_id, session_id)
         if saved is None:
             return jsonify(error="That completed workout could not be found."), 404
-        document = validate_session_edit(request.get_json(), saved)
-        updated = storage.update_session(database, g.user_id, document)
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("A session object is required.")
+        entries = body.get("exercises")
+        has_notes = "note" in body or any(
+            isinstance(exercise, dict) and "note" in exercise
+            for exercise in (entries if isinstance(entries, list) else [])
+        )
+        if has_notes and "revision" not in body:
+            return jsonify(error="Reload this workout before editing notes."), 409
+        revision = body.get("revision", saved.get("revision", 0))
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+            raise ValueError("A valid workout revision is required.")
+        document = validate_session_edit(body, saved)
+        try:
+            updated = storage.update_session(database, g.user_id, document, revision)
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
         if updated is None:
             return jsonify(error="That completed workout could not be found."), 404
         return jsonify(updated)

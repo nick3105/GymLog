@@ -40,6 +40,12 @@ export default function ReviewDetail() {
       <Link to={`/review/${session.id}/edit`} className={`${secondaryButton} mb-4`}>
         Edit workout
       </Link>
+      {session.note && (
+        <div className={`${card} mb-4`}>
+          <h2 className="font-normal">Workout note</h2>
+          <p className="mt-2 break-words whitespace-pre-wrap">{session.note}</p>
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         {session.exercises.map((exercise) => (
           <section key={exercise.id} className={card}>
@@ -56,6 +62,14 @@ export default function ReviewDetail() {
                 </p>
               )}
             </div>
+            {exercise.note && (
+              <p className="mt-3 break-words whitespace-pre-wrap">{exercise.note}</p>
+            )}
+            {exercise.source === 'personal' && (
+              <p className="text-muted mt-2">
+                Personal exercise — excluded from weekly volume estimates
+              </p>
+            )}
             <ol className="mt-2 flex flex-col gap-1">
               {exercise.sets.map((set, index) => (
                 <li

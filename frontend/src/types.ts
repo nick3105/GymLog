@@ -1,6 +1,13 @@
 // The shapes the API sends and receives. The API (backend/gymlog/models.py) is the source of truth.
 
-export type Exercise = { id: string; name: string; group: string; measurement?: 'duration' }
+export type Exercise = {
+  id: string
+  name: string
+  group: string
+  measurement?: 'duration' | 'repetitions'
+  source?: 'personal'
+  volumeEligible?: false
+}
 
 export type Target = (
   | { reps: number; weight: number | null; durationSeconds?: never }
@@ -8,6 +15,9 @@ export type Target = (
 ) & { rpe: number | null }
 
 export type TemplateExercise = {
+  note?: string
+  source?: 'personal'
+  volumeEligible?: false
   measurement?: 'duration'
   id: string
   name: string
@@ -19,6 +29,7 @@ export type TemplateExercise = {
 }
 
 export type Template = {
+  note?: string
   id: string
   name: string
   createdAt: string
@@ -33,6 +44,8 @@ export type LoggedSet =
   | { skipped: true }
 
 export type Session = {
+  note?: string
+  revision?: number
   id: string
   templateId: string
   name: string
@@ -41,6 +54,9 @@ export type Session = {
   exercises: {
     id: string
     name: string
+    note?: string
+    source?: 'personal'
+    volumeEligible?: false
     sets: LoggedSet[]
     measurement?: 'duration'
     plannedSets?: number

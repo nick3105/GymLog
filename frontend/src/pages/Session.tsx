@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 
 import { api } from '../api'
+import NoteInput from '../components/NoteInput'
 import ExerciseLink from '../components/ExerciseLink'
 import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal, type ActiveWorkout } from '../journal'
@@ -123,8 +124,10 @@ export default function Session() {
         clientId: workout.clientId,
         templateId: workout.templateId,
         day: workout.day,
+        note: workout.note ?? '',
         exercises: workout.exercises.map((exercise) => ({
           id: exercise.id,
+          note: exercise.note ?? '',
           sets: exercise.sets.map(setPayload),
         })),
       })
@@ -158,7 +161,14 @@ export default function Session() {
         </button>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <NoteInput
+        label="Workout note"
+        maximum={1000}
+        value={workout.note ?? ''}
+        disabled={saving}
+        onChange={(value) => setActive({ ...workout, note: value })}
+      />
+      <div className="mt-4 flex flex-col gap-4">
         {workout.exercises.map((exercise, exerciseIndex) => {
           const estimate = bestOneRepMax(exercise.sets)
           const last = lastTime[exercise.id]
@@ -175,6 +185,25 @@ export default function Session() {
                   </p>
                 )}
               </div>
+              {exercise.source === 'personal' && (
+                <p className="text-muted mt-2">
+                  Personal exercise — excluded from weekly volume estimates
+                </p>
+              )}
+              <NoteInput
+                label={`${exercise.name} exercise note`}
+                maximum={500}
+                value={exercise.note ?? ''}
+                disabled={saving}
+                onChange={(value) =>
+                  setActive({
+                    ...workout,
+                    exercises: workout.exercises.map((item, index) =>
+                      index === exerciseIndex ? { ...item, note: value } : item,
+                    ),
+                  })
+                }
+              />
               <p className="text-muted mb-3 text-sm">
                 {last === undefined
                   ? 'Last time: …'
