@@ -64,12 +64,15 @@ export default function WeeklyVolume() {
   const initialized = useRef(false)
 
   const currentPreferences = JSON.stringify({ goals, profile })
-  const dirty = initialized.current && currentPreferences !== baseline
+  const dirty = baseline !== '' && currentPreferences !== baseline
   useEffect(() => {
     setBuilderDirty(dirty)
     return () => setBuilderDirty(false)
   }, [dirty, setBuilderDirty])
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname,
+  )
   useEffect(() => {
     if (blocker.state !== 'blocked') return
     if (window.confirm('Leave without saving your volume goals?')) blocker.proceed()
@@ -90,10 +93,14 @@ export default function WeeklyVolume() {
           )
           setProfile(result.profile)
           setRevision(result.revision)
-          setBaseline(JSON.stringify({
-            goals: Object.fromEntries(Object.entries(result.goals).map(([key, value]) => [key, String(value)])),
-            profile: result.profile,
-          }))
+          setBaseline(
+            JSON.stringify({
+              goals: Object.fromEntries(
+                Object.entries(result.goals).map(([key, value]) => [key, String(value)]),
+              ),
+              profile: result.profile,
+            }),
+          )
           initialized.current = true
         }
       })
@@ -153,8 +160,12 @@ export default function WeeklyVolume() {
       <div className="mb-4 grid grid-cols-[auto_1fr_auto] items-center gap-2">
         <button
           type="button"
-          aria-label="Previous week" disabled={saving}
-          onClick={() => { setVolume(null); setWeek(weekDate(-1, week)) }}
+          aria-label="Previous week"
+          disabled={saving}
+          onClick={() => {
+            setVolume(null)
+            setWeek(weekDate(-1, week))
+          }}
           className={secondaryButton}
         >
           ←
@@ -166,8 +177,12 @@ export default function WeeklyVolume() {
         </span>
         <button
           type="button"
-          aria-label="Next week" disabled={saving}
-          onClick={() => { setVolume(null); setWeek(weekDate(1, week)) }}
+          aria-label="Next week"
+          disabled={saving}
+          onClick={() => {
+            setVolume(null)
+            setWeek(weekDate(1, week))
+          }}
           className={secondaryButton}
         >
           →
@@ -281,6 +296,7 @@ export default function WeeklyVolume() {
                   <input
                     className={input}
                     inputMode="decimal"
+                    aria-label={`${muscleName(muscle.muscle)} weekly goal (sets)`}
                     value={goals[muscle.muscle] ?? ''}
                     placeholder="Not set"
                     onChange={(event) =>

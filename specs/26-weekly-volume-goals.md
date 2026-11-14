@@ -1,5 +1,5 @@
 # Task 26 — Weekly muscle volume and goals
-Assignee:
+Assignee: nick3105
 
 ## Why
 Users want to compare their performed weekly sets with a useful muscle-specific goal.
@@ -75,3 +75,11 @@ EMG-derived coefficients, automatic load progression and countdown timers.
   Two-device goal conflicts preserve the first saved version and the losing draft.
 - Before implementation, agree the reference-range policy and anatomical mappings. Run
   migration, accounting, ownership and boundary tests plus all repository checks.
+
+## Local test implementation
+The integrated preview provides owner-only weekly goals and evidence context. It has an
+explicit VOLUME_DRAFT_PREVIEW configuration, off by default, that enables numeric draft
+mappings in the disposable local demo. The UI identifies every resulting total as provisional.
+Six unresolved mappings, timed holds, retired unmapped entries and personal exercises stay
+excluded with visible coverage. The scientifically individualized optimum is not implemented.
+Coach-proposed volume goals remain a later extension; coaches can create and review plans.

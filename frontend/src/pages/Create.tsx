@@ -313,7 +313,7 @@ export default function Create({
               <section key={item.id}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <ExerciseLink id={item.id} name={item.name} />
+                    <ExerciseLink id={item.id} name={item.name} measurement={item.measurement} />
                     <p className="text-muted text-sm">{item.group}</p>
                     {item.supersetId && (
                       <p className="text-accent text-base">

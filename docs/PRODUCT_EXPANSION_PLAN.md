@@ -2,15 +2,19 @@
 
 Prepared 12 November 2026 from the eight requested ideas.
 
+Updated 14 November 2026. The integrated local preview now implements the workflows below.
+See [the local testing guide](LOCAL_PREVIEW.md) for demo accounts and restart instructions.
+The remaining release gates and scientific limitations are still applicable.
+
 | Idea | Result | Next implementation gate |
 | --- | --- | --- |
-| 1 Coach/coachee | Spec 22 | Agree consent scope and relationship defaults before shared-journal access |
-| 2 Personal exercises | Spec 23 | Add owner-scoped catalogue storage and migration tests |
-| 3 Supersets | Spec 24 | Preserve exercise snapshots and separate pairing from reordering |
-| 4 Warmup/cooldown | Spec 25 | Optional 100-character sections, Done checkboxes and old-draft compatibility |
+| 1 Coach/coachee | Implemented locally, spec 22 | Agree consent scope and relationship defaults before shared-journal access |
+| 2 Personal exercises | Implemented locally, spec 23 | Add owner-scoped catalogue storage and migration tests |
+| 3 Supersets | Implemented locally, spec 24 | Preserve exercise snapshots and separate pairing from reordering |
+| 4 Warmup/cooldown | Implemented locally, spec 25 | Optional 100-character sections, Done checkboxes and old-draft compatibility |
 | 5 Weekly volume | Spec 26, research memo and complete catalogue audit | Approve goal policy and review draft muscle mappings |
 | 6 Chart metric switch | Spec 28 plus local implementation on feature/exercise-average-weight | Review code and run CI/real-phone verification |
-| 7 Workout/exercise notes | Spec 27 | Review note scope, ownership and snapshot behavior |
+| 7 Workout/exercise notes | Implemented locally, spec 27 | Review note scope, ownership and snapshot behavior |
 | 8 Actual-RPE e1RM | Already implemented and covered by existing tests | No formula replacement needed |
 
 ## Files
@@ -65,19 +69,23 @@ metadata was insufficient, so the registry explicitly leaves coefficients unreso
 
 ## Verification and status
 
-Planning files are on local branch docs/product-expansion. They do not change application
-behavior. The chart code is on a separate local branch feature/exercise-average-weight.
+The integrated source is on local branch feature/local-product-preview. It includes the
+chart switch, coaching, personal exercises, notes, supersets, reminders and weekly volume.
 
-Chart checks completed
-- 20 focused backend tests passed, including old API shape, user isolation and duration sets.
-- 28 frontend unit tests passed. TypeScript, oxlint, Ruff and production build passed.
-- At 375 x 667, both metric controls are 48 px tall. Page and dialog widths equal 375 px.
-  Sample history switches from best e1RM 100 kg to best average weight 90 kg.
-- Full backend collection has the existing Windows fcntl limitation. Global Prettier reports
-  Windows line endings in unchanged checkout files. Changed files were formatted.
-- Screenshot capture failed in the browser connection. Real-phone verification remains pending.
+Verification completed
+- 78 integrated backend tests passed, covering privacy, ownership, snapshots and schema upgrades.
+- 31 frontend tests passed. TypeScript, oxlint, Ruff and production build pass.
+- The full feature demo was saved in the browser at 375 x 667 and reviewed as the accepted coach.
+  Notes, pair labels, reminders, seconds and personal-exercise exclusions survived the round trip.
+- Concurrent fresh/v1/v2/v3 migrations and a legacy-upgrade race have regression coverage.
+- Full backend collection has the Windows fcntl limitation. Unchanged checkout files can still
+  trigger Prettier line-ending warnings. Changed frontend files were formatted.
+- Screenshot capture is unavailable. Real-phone verification and Linux CI remain release gates.
 
-Nothing from these two new branches has been pushed, merged or deployed.
+Weekly volume draft counting is enabled only by VOLUME_DRAFT_PREVIEW in the disposable local
+server. Default app configuration excludes unapproved mappings. Goals are editable owner
+choices. No precise individualized optimum or coach-proposed volume-goal workflow is claimed.
+Nothing from the integration branch has been pushed, merged into main or deployed.
 
 ## Existing e1RM behavior
 

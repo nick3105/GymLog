@@ -1,8 +1,11 @@
+import { Link2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 
 import { api } from '../api'
 import type { CoacheeJournal, CoachingState } from '../coaching'
+import WorkoutReminder from '../components/WorkoutReminder'
+import { supersetLabel } from '../supersets'
 import { formatDay, formatSet } from '../format'
 import { card, errorText, secondaryButton } from '../ui'
 
@@ -83,9 +86,24 @@ export default function CoacheeDetail() {
                   {(template as { note?: string }).note}
                 </p>
               )}
+              {template.warmup && (
+                <div className="mb-3">
+                  <h4 className="font-normal">Warmup</h4>
+                  <p className="break-words whitespace-pre-wrap">{template.warmup}</p>
+                </div>
+              )}
               <ul className="mb-3 flex flex-col gap-2">
-                {template.exercises.map((exercise) => (
-                  <li key={exercise.id}>
+                {template.exercises.map((exercise, exerciseIndex) => (
+                  <li
+                    key={exercise.id}
+                    className={exercise.supersetId ? 'border-accent border-l-2 pl-3' : ''}
+                  >
+                    {exercise.supersetId && (
+                      <p className="text-accent flex items-center gap-2">
+                        <Link2 className="size-5" aria-hidden />
+                        {supersetLabel(template.exercises, exerciseIndex)}
+                      </p>
+                    )}
                     <button
                       className="text-accent min-h-11 text-left font-normal"
                       onClick={() => openExercise(exercise.id, exercise.name, exercise.measurement)}
@@ -100,6 +118,12 @@ export default function CoacheeDetail() {
                   </li>
                 ))}
               </ul>
+              {template.cooldown && (
+                <div className="mb-3">
+                  <h4 className="font-normal">Cooldown</h4>
+                  <p className="break-words whitespace-pre-wrap">{template.cooldown}</p>
+                </div>
+              )}
               {template.createdBy?.id === actorId && (
                 <Link
                   to={`/coachees/${coacheeId}/workouts/${template.id}/edit`}
@@ -124,8 +148,18 @@ export default function CoacheeDetail() {
                   {(session as { note?: string }).note}
                 </p>
               )}
-              {session.exercises.map((exercise) => (
-                <section key={exercise.id} className="border-border border-t py-3">
+              <WorkoutReminder title="Warmup" text={session.warmup} done={session.warmupDone} />
+              {session.exercises.map((exercise, exerciseIndex) => (
+                <section
+                  key={exercise.id}
+                  className={`py-3 ${exercise.supersetId ? 'border-accent border-l-2 pl-3' : 'border-border border-t'}`}
+                >
+                  {exercise.supersetId && (
+                    <p className="text-accent flex items-center gap-2">
+                      <Link2 className="size-5" aria-hidden />
+                      {supersetLabel(session.exercises, exerciseIndex)}
+                    </p>
+                  )}
                   <button
                     className="text-accent min-h-11 text-left font-normal"
                     onClick={() => openExercise(exercise.id, exercise.name, exercise.measurement)}
@@ -146,6 +180,11 @@ export default function CoacheeDetail() {
                   </ol>
                 </section>
               ))}
+              <WorkoutReminder
+                title="Cooldown"
+                text={session.cooldown}
+                done={session.cooldownDone}
+              />
             </details>
           ))}
         </>

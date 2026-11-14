@@ -109,9 +109,15 @@ def _already_upgraded(db):
 def _upgrade_profiles(db, path, tables, owner_password_hash):
     guests = []
     if "accounts" in tables:
-        guests = db.execute(
-            "SELECT profile, password_hash FROM accounts WHERE password_hash IS NOT NULL"
-        ).fetchall()
+        try:
+            guests = db.execute(
+                "SELECT profile, password_hash FROM accounts WHERE password_hash IS NOT NULL"
+            ).fetchall()
+        except sqlite3.OperationalError:
+            # A competing initializer can remove the legacy table before this pre-lock read.
+            if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+                return
+            raise
     # ATTACH is not allowed inside a transaction, so attach every guest file first.
     attached = []
     for index, (profile, _) in enumerate(guests):

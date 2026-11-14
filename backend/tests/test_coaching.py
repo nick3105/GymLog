@@ -284,8 +284,15 @@ def test_shared_personal_catalogue_comes_from_authorized_snapshot(accounts):
                 "volumeEligible": False,
             }
             db.execute(
-                "INSERT INTO personal_exercises VALUES (?, ?, ?, ?, ?)",
-                (exercise_id, person, str(uuid4()), json.dumps(document), "2026-01-01"),
+                "INSERT INTO personal_exercises (id, user_id, request_id, name_key, document, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    exercise_id,
+                    person,
+                    str(uuid4()),
+                    exercise_id,
+                    json.dumps(document),
+                    "2026-01-01",
+                ),
             )
     snapshot = storage.coachee_journal(path, relationship["coach_id"], owner)
     assert [item["id"] for item in snapshot["personalExercises"]] == ["custom-alice"]

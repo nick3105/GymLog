@@ -4,12 +4,23 @@ import { useSearchParams } from 'react-router'
 // An exercise name that opens its progress sheet on top of the current page (REV-03).
 // The sheet is a URL parameter, so the phone's back gesture closes it and nothing underneath
 // is unmounted — every unsaved input stays (REV-07).
-export default function ExerciseLink({ id, name }: { id: string; name: string }) {
+export default function ExerciseLink({
+  id,
+  name,
+  measurement,
+}: {
+  id: string
+  name: string
+  measurement?: 'duration' | 'repetitions'
+}) {
   const [searchParams, setSearchParams] = useSearchParams()
 
   function open() {
     const next = new URLSearchParams(searchParams)
     next.set('exercise', id)
+    next.set('exerciseName', name)
+    if (measurement === 'duration') next.set('measurement', 'duration')
+    else next.delete('measurement')
     setSearchParams(next, { preventScrollReset: true })
   }
 
