@@ -7,9 +7,13 @@ import {
   Plus,
   RefreshCw,
   Scale,
+  Settings as SettingsIcon,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { api } from '../api'
+import type { CoachingState } from '../coaching'
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-router'
 
 import { useJournal } from '../journal'
@@ -31,6 +35,30 @@ export default function Layout() {
   const [problem, setProblem] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const exerciseId = searchParams.get('exercise')
+  const coacheeId = location.pathname.match(/^\/coachees\/(\d+)(?:\/|$)/)?.[1]
+  const [hasCoachees, setHasCoachees] = useState(false)
+
+  useEffect(() => {
+    let current = true
+    function loadRelationships() {
+      api<CoachingState>('coaching')
+        .then((state) => {
+          if (current)
+            setHasCoachees(
+              state.relationships.some(
+                (item) => item.coach_id === state.userId && item.state === 'accepted',
+              ),
+            )
+        })
+        .catch(() => current && setHasCoachees(false))
+    }
+    loadRelationships()
+    window.addEventListener('gymlog-coaching-changed', loadRelationships)
+    return () => {
+      current = false
+      window.removeEventListener('gymlog-coaching-changed', loadRelationships)
+    }
+  }, [location.pathname, username])
 
   async function reload() {
     setRefreshing(true)
@@ -61,6 +89,13 @@ export default function Layout() {
             gymlog<span className="text-accent">.</span>
           </Link>
           <span className="text-muted ml-auto truncate text-sm">{username}</span>
+          <Link
+            to="/settings"
+            aria-label="Settings and coaching"
+            className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
+          >
+            <SettingsIcon className="size-5" aria-hidden />
+          </Link>
           <button
             type="button"
             onClick={reload}
@@ -99,6 +134,22 @@ export default function Layout() {
             {label === 'Weight' ? 'Weight Tracker' : label}
           </NavLink>
         ))}
+        <NavLink
+          to="/settings"
+          className="text-muted flex min-h-11 items-center gap-3 rounded-xl px-3 font-normal"
+        >
+          <SettingsIcon className="size-5" aria-hidden />
+          Settings
+        </NavLink>
+        {hasCoachees && (
+          <NavLink
+            to="/coachees"
+            className="text-muted flex min-h-11 items-center gap-3 rounded-xl px-3 font-normal"
+          >
+            <Users className="size-5" aria-hidden />
+            Coachees
+          </NavLink>
+        )}
       </nav>
 
       <main className="mx-auto max-w-2xl px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10">
@@ -134,7 +185,13 @@ export default function Layout() {
         </ul>
       </nav>
 
-      {exerciseId && <ProgressSheet exerciseId={exerciseId} />}
+      {exerciseId && (
+        <ProgressSheet
+          key={`${coacheeId ?? 'own'}-${exerciseId}`}
+          exerciseId={exerciseId}
+          coacheeId={coacheeId}
+        />
+      )}
     </div>
   )
 }

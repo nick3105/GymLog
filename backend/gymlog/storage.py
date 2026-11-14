@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -27,6 +27,20 @@ SCHEMA = [
         PRIMARY KEY (user_id, day))""",
     """CREATE TABLE IF NOT EXISTS login_attempts (
         address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL)""",
+]
+
+
+COACHING_SCHEMA = [
+    """CREATE TABLE coaching_relationships (
+        id TEXT PRIMARY KEY,
+        coachee_id INTEGER NOT NULL REFERENCES users(id),
+        coach_id INTEGER NOT NULL REFERENCES users(id),
+        state TEXT NOT NULL CHECK(state IN ('pending','accepted','declined','cancelled','revoked')),
+        created_at TEXT NOT NULL, decided_at TEXT,
+        CHECK(coachee_id != coach_id))""",
+    """CREATE UNIQUE INDEX one_current_coach ON coaching_relationships(coachee_id)
+        WHERE state IN ('pending','accepted')""",
+    "CREATE INDEX coach_relationships ON coaching_relationships(coach_id, state)",
 ]
 
 
@@ -53,6 +67,9 @@ def initialize(path, owner_password_hash=None):
     try:
         if db.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
             return
+        if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+            _upgrade_coaching(db)
+            return
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "templates" in tables:
             _upgrade_profiles(db, Path(path), tables, owner_password_hash)
@@ -62,15 +79,16 @@ def initialize(path, owner_password_hash=None):
                 return
             for statement in SCHEMA:
                 db.execute(statement)
-            db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            db.execute("PRAGMA user_version = 1")
             db.execute("COMMIT")
+        _upgrade_coaching(db)
     finally:
         db.close()
 
 
 def _already_upgraded(db):
     """Re-check under the write lock, in case another process upgraded first."""
-    if db.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
+    if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
         db.execute("COMMIT")
         return True
     return False
@@ -132,7 +150,7 @@ def _upgrade_profiles(db, path, tables, owner_password_hash):
         for table in ("templates", "sessions", "body_weights"):
             db.execute(f"DROP TABLE old_{table}")
         db.execute("DROP TABLE IF EXISTS accounts")
-        db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        db.execute("PRAGMA user_version = 1")
         db.execute("COMMIT")
     except BaseException:
         if db.in_transaction:
@@ -142,6 +160,21 @@ def _upgrade_profiles(db, path, tables, owner_password_hash):
         for schema in attached:
             if schema:
                 db.execute(f"DETACH DATABASE {schema}")
+
+
+def _upgrade_coaching(db):
+    """Add coaching after the baseline upgrade, under one migration write lock."""
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        if db.execute("PRAGMA user_version").fetchone()[0] < 2:
+            for statement in COACHING_SCHEMA:
+                db.execute(statement)
+            db.execute("PRAGMA user_version = 2")
+        db.execute("COMMIT")
+    except BaseException:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        raise
 
 
 def now():
@@ -308,3 +341,130 @@ def update_session(path, user_id, document):
             (json.dumps(document), document["id"], user_id),
         )
     return document if result.rowcount else None
+
+
+def coaching_state(path, user_id):
+    """Read only relationships in which this user is a participant."""
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT r.*, learner.username AS coachee, teacher.username AS coach
+            FROM coaching_relationships r JOIN users learner ON learner.id=r.coachee_id
+            JOIN users teacher ON teacher.id=r.coach_id
+            WHERE (r.coachee_id=? OR r.coach_id=?) AND r.state IN ('pending','accepted')
+            ORDER BY r.created_at DESC""",
+            (user_id, user_id),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def request_coach(path, coachee_id, username, validate):
+    """Create a request under the same lock as the current-relationship check."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        coach = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if coach is None:
+            return None
+        existing = db.execute(
+            "SELECT * FROM coaching_relationships WHERE coachee_id=? AND state IN ('pending','accepted')",
+            (coachee_id,),
+        ).fetchone()
+        validate(coachee_id, coach["id"], dict(existing) if existing else None)
+        if existing:
+            return dict(existing)
+        relationship = {
+            "id": str(uuid4()),
+            "coachee_id": coachee_id,
+            "coach_id": coach["id"],
+            "state": "pending",
+            "created_at": now(),
+            "decided_at": None,
+        }
+        db.execute(
+            "INSERT INTO coaching_relationships VALUES (?, ?, ?, ?, ?, ?)",
+            tuple(relationship.values()),
+        )
+        return relationship
+
+
+def change_coaching(path, relationship_id, actor_id, action, validate):
+    """Check a participant transition and persist it under one write lock."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT * FROM coaching_relationships WHERE id=? AND (coachee_id=? OR coach_id=?)",
+            (relationship_id, actor_id, actor_id),
+        ).fetchone()
+        if row is None:
+            return None
+        relationship = dict(row)
+        target = validate(relationship, actor_id, action)
+        if target != relationship["state"]:
+            relationship.update(state=target, decided_at=now())
+            db.execute(
+                "UPDATE coaching_relationships SET state=?, decided_at=? WHERE id=?",
+                (target, relationship["decided_at"], relationship_id),
+            )
+        return relationship
+
+
+def _accepted_coachee(db, coach_id, coachee_id):
+    """Find only an accepted coachee owned by this coach relationship."""
+    return db.execute(
+        """SELECT u.id, u.username FROM users u JOIN coaching_relationships r ON r.coachee_id=u.id
+        WHERE r.coachee_id=? AND r.coach_id=? AND r.state='accepted'""",
+        (coachee_id, coach_id),
+    ).fetchone()
+
+
+def coachee_journal(path, coach_id, coachee_id):
+    """Return training snapshots only, without private weights or security settings."""
+    with connect(path) as db:
+        db.execute("BEGIN")
+        owner = _accepted_coachee(db, coach_id, coachee_id)
+        if owner is None:
+            return None
+        result = {"owner": dict(owner)}
+        for table in ("templates", "sessions"):
+            result[table] = [
+                json.loads(row["document"])
+                for row in db.execute(
+                    f"SELECT document FROM {table} WHERE user_id=? ORDER BY created_at DESC, rowid DESC",
+                    (coachee_id,),
+                )
+            ]
+        return result
+
+
+def save_coached_template(path, coach_id, coachee_id, data, template_id=None):
+    """Authorize and write a coachee plan atomically with relationship revocation."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        if _accepted_coachee(db, coach_id, coachee_id) is None:
+            return None
+        creator = db.execute("SELECT username FROM users WHERE id=?", (coach_id,)).fetchone()
+        if template_id:
+            previous = db.execute(
+                "SELECT document FROM templates WHERE id=? AND user_id=?", (template_id, coachee_id)
+            ).fetchone()
+            if previous is None:
+                return None
+            document = json.loads(previous["document"])
+            if document.get("createdBy", {}).get("id") != coach_id:
+                return None
+            document.update(data)
+            db.execute(
+                "UPDATE templates SET document=? WHERE id=? AND user_id=?",
+                (json.dumps(document), template_id, coachee_id),
+            )
+        else:
+            document = {
+                **data,
+                "id": str(uuid4()),
+                "createdAt": now(),
+                "createdBy": {"id": coach_id, "username": creator["username"]},
+            }
+            db.execute(
+                "INSERT INTO templates VALUES (?, ?, ?, ?)",
+                (document["id"], coachee_id, json.dumps(document), document["createdAt"]),
+            )
+        return document

@@ -2,7 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
-import { api } from '../api'
+import { api, ApiError } from '../api'
 import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal } from '../journal'
 import type { ExerciseStats } from '../types'
@@ -10,27 +10,48 @@ import { card, secondaryButton } from '../ui'
 import LineChart from './LineChart'
 
 // Full-screen exercise progress (REV-03 to REV-06), drawn over whatever page opened it.
-export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
+export default function ProgressSheet({
+  exerciseId,
+  coacheeId,
+}: {
+  exerciseId: string
+  coacheeId?: string
+}) {
   const { journal } = useJournal()
   const navigate = useNavigate()
   const location = useLocation()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [stats, setStats] = useState<ExerciseStats | null>(null)
   const [metric, setMetric] = useState<'estimated1rm' | 'averageWeight'>('estimated1rm')
   const [problem, setProblem] = useState('')
   const exercise = journal.exercises.find((item) => item.id === exerciseId)
-  const name = exercise?.name ?? 'Exercise'
-  const timed = exercise?.measurement === 'duration'
+  const name = coacheeId
+    ? (searchParams.get('exerciseName') ?? 'Exercise')
+    : (exercise?.name ?? 'Exercise')
+  const timed = coacheeId
+    ? searchParams.get('measurement') === 'duration'
+    : exercise?.measurement === 'duration'
 
   useEffect(() => {
     let current = true
-    api<ExerciseStats>(`exercises/${encodeURIComponent(exerciseId)}/stats?include=average-weight`)
+    const prefix = coacheeId ? `coachees/${coacheeId}/` : ''
+    api<ExerciseStats>(
+      `${prefix}exercises/${encodeURIComponent(exerciseId)}/stats?include=average-weight`,
+    )
       .then((result) => current && setStats(result))
-      .catch((error: Error) => current && setProblem(error.message))
+      .catch((error: Error) => {
+        if (current) {
+          setStats(null)
+          setProblem(error.message)
+          if (coacheeId && error instanceof ApiError && error.status === 404) {
+            window.dispatchEvent(new Event('gymlog-coachee-unavailable'))
+          }
+        }
+      })
     return () => {
       current = false
     }
-  }, [exerciseId, journal.sessions])
+  }, [exerciseId, journal.sessions, coacheeId])
 
   const average = metric === 'averageWeight'
   const metricLabel = average ? 'average weight' : 'estimated 1RM'

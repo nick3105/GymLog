@@ -5,6 +5,10 @@ import AuthForm from './components/AuthForm'
 import Layout from './components/Layout'
 import { useJournal } from './journal'
 import Create from './pages/Create'
+import Settings from './pages/Settings'
+import Coachees from './pages/Coachees'
+import CoacheeDetail from './pages/CoacheeDetail'
+import CoacheeBuilder from './pages/CoacheeBuilder'
 import Home from './pages/Home'
 import EditSession from './pages/EditSession'
 import Review from './pages/Review'
@@ -62,6 +66,11 @@ const router = createBrowserRouter([
       { path: 'review/:id', element: <ReviewDetail /> },
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
+      { path: 'settings', element: <Settings /> },
+      { path: 'coachees', element: <Coachees /> },
+      { path: 'coachees/:coacheeId', element: <CoacheeDetail /> },
+      { path: 'coachees/:coacheeId/create', element: <CoacheeBuilder /> },
+      { path: 'coachees/:coacheeId/workouts/:id/edit', element: <CoacheeBuilder /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
