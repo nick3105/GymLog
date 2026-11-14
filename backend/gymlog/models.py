@@ -454,3 +454,46 @@ def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
         "goals": preferences.get("goals", {}),
         "revision": preferences.get("revision", 0),
     }
+
+
+def validate_coach_request(body):
+    """Require explicit sharing consent and a normalized existing username lookup."""
+    if not isinstance(body, dict) or body.get("consent") is not True:
+        raise ValueError("Confirm that you want to share saved workouts and notes with this coach.")
+    username = body.get("username")
+    if not isinstance(username, str) or not USERNAME.fullmatch(username.strip().lower()):
+        raise ValueError("Enter the coach's username.")
+    return username.strip().lower()
+
+
+def validate_new_coaching(coachee_id, coach_id, existing):
+    """Permit one current coach request per coachee and safe retries of the same request."""
+    if coachee_id == coach_id:
+        raise ValueError("Choose another person as your coach.")
+    if existing and existing["coach_id"] != coach_id:
+        raise ValueError(
+            "End your current coach relationship or request before assigning another coach."
+        )
+
+
+def validate_coaching_transition(relationship, actor_id, action):
+    """Return an authorized relationship state without reviving cancelled requests."""
+    state = relationship["state"]
+    if action in ("accept", "decline"):
+        if relationship["coach_id"] != actor_id:
+            raise ValueError("Only the requested coach can accept or decline this request.")
+        target = "accepted" if action == "accept" else "declined"
+        if state not in ("pending", target):
+            raise ValueError("This coaching request is no longer pending.")
+        return target
+    if action == "cancel":
+        if relationship["coachee_id"] != actor_id or state not in ("pending", "cancelled"):
+            raise ValueError("Only the coachee can cancel a pending request.")
+        return "cancelled"
+    if action == "revoke":
+        if actor_id not in (relationship["coachee_id"], relationship["coach_id"]):
+            raise ValueError("This coaching relationship is not yours.")
+        if state not in ("accepted", "revoked"):
+            raise ValueError("Only an accepted coaching relationship can be ended.")
+        return "revoked"
+    raise ValueError("Choose accept, decline, cancel or revoke.")

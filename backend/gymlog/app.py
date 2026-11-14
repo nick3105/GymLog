@@ -19,6 +19,9 @@ from .models import (
     exercise_stats,
     number,
     validate_personal_exercise,
+    validate_coach_request,
+    validate_coaching_transition,
+    validate_new_coaching,
     validate_registration,
     validate_session,
     validate_session_edit,
@@ -56,7 +59,6 @@ def create_app(config=None):
         raise RuntimeError("Run `uv run python setup_secret.py` before starting GymLog.")
     database = app.config["DATABASE"]
     storage.initialize(database, app.config["OWNER_PASSWORD_HASH"])
-    storage.initialize_volume_preferences(database)
     volume_registry = json.loads(
         (ROOT.parents[1] / "docs" / "VOLUME_COEFFICIENTS_DRAFT.json").read_text(encoding="utf-8")
     )
@@ -215,6 +217,79 @@ def create_app(config=None):
     def logout():
         session.clear()
         return jsonify(ok=True)
+
+    @app.get("/api/coaching")
+    @authenticated
+    def coaching():
+        """List only this account's requests and accepted relationships."""
+        return jsonify(userId=g.user_id, relationships=storage.coaching_state(database, g.user_id))
+
+    @app.post("/api/coaching/request")
+    @authenticated
+    def assign_coach():
+        """Send a request only after explicit coachee sharing consent."""
+        username = validate_coach_request(request.get_json())
+        result = storage.request_coach(database, g.user_id, username, validate_new_coaching)
+        if result is None:
+            return jsonify(error="That coach username could not be found."), 404
+        return jsonify(result), 201
+
+    @app.post("/api/coaching/<relationship_id>/<action>")
+    @authenticated
+    def coaching_action(relationship_id, action):
+        """Accept, decline, cancel or end only a participant's relationship."""
+        result = storage.change_coaching(
+            database, relationship_id, g.user_id, action, validate_coaching_transition
+        )
+        if result is None:
+            return jsonify(error="That coaching relationship could not be found."), 404
+        return jsonify(result)
+
+    @app.get("/api/coachees/<int:coachee_id>")
+    @authenticated
+    def coachee_state(coachee_id):
+        """Share only the training journal covered by an accepted relationship."""
+        result = storage.coachee_journal(database, g.user_id, coachee_id)
+        if result is None:
+            return jsonify(
+                error="This coachee is no longer available. Check your relationships."
+            ), 404
+        result["exercises"] = [
+            exercise
+            for exercise in catalogue_for(coachee_id).values()
+            if not exercise.get("retired")
+        ]
+        return jsonify(result)
+
+    @app.get("/api/coachees/<int:coachee_id>/exercises/<exercise_id>/stats")
+    @authenticated
+    def coachee_stats(coachee_id, exercise_id):
+        """Read exercise progress only inside an accepted coaching workspace."""
+        journal = storage.coachee_journal(database, g.user_id, coachee_id)
+        if journal is None or exercise_id not in catalogue_for(coachee_id):
+            return jsonify(error="That coachee exercise could not be found."), 404
+        return jsonify(
+            exercise_stats(
+                journal["sessions"],
+                exercise_id,
+                include_average_weight=request.args.get("include") == "average-weight",
+            )
+        )
+
+    @app.post("/api/coachees/<int:coachee_id>/templates", defaults={"template_id": None})
+    @app.post("/api/coachees/<int:coachee_id>/templates/<template_id>")
+    @authenticated
+    def save_coachee_template(coachee_id, template_id):
+        """Create or edit a coach-authored plan under an atomic relationship check."""
+        if storage.coachee_journal(database, g.user_id, coachee_id) is None:
+            return jsonify(
+                error="This coachee is no longer available. Check your relationships."
+            ), 404
+        data = validate_template(request.get_json(), catalogue_for(coachee_id))
+        result = storage.save_coached_template(database, g.user_id, coachee_id, data, template_id)
+        if result is None:
+            return jsonify(error="You can edit only your own plans for an accepted coachee."), 404
+        return jsonify(result), 200 if template_id else 201
 
     @app.get("/api/state")
     @authenticated

@@ -2,7 +2,8 @@ import { Check, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
-import { api } from '../api'
+import { api, ApiError } from '../api'
+import type { CoacheeJournal } from '../coaching'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
 import NoteInput from '../components/NoteInput'
@@ -29,8 +30,14 @@ const durationTargetFields: typeof targetFields = [
 ]
 
 // PLN-01 to PLN-11: plan a workout once, with targets for every set.
-export default function Create() {
-  const { journal, setJournal, setBuilderDirty, active } = useJournal()
+export default function Create({
+  coaching,
+}: {
+  coaching?: { journal: CoacheeJournal; onUnavailable: (message: string) => void }
+}) {
+  const { journal: ownJournal, setJournal, setBuilderDirty, active } = useJournal()
+  const journal = coaching ? { ...ownJournal, ...coaching.journal } : ownJournal
+  const returnPath = coaching ? `/coachees/${coaching.journal.owner.id}` : '/start'
   const navigate = useNavigate()
   const { id } = useParams()
   const original = journal.templates.find((template) => template.id === id)
@@ -115,42 +122,50 @@ export default function Create() {
     }
     setSaving(true)
     try {
-      const template = await api<Template>(id ? `templates/${id}` : 'templates', {
-        name,
-        note,
-        exercises: planned.map((item) => ({
-          id: item.id,
-          note: item.note ?? '',
-          targets: item.targets.map((target) =>
-            item.measurement === 'duration'
-              ? {
-                  durationSeconds:
-                    target.durationSeconds === '' ? null : Number(target.durationSeconds),
-                  rpe: target.rpe === '' ? null : Number(target.rpe),
-                }
-              : {
-                  reps: target.reps === '' ? null : Number(target.reps),
-                  weight: target.weight === '' ? null : Number(target.weight),
-                  rpe: target.rpe === '' ? null : Number(target.rpe),
-                },
-          ),
-        })),
-      })
-      setJournal((current) => ({
-        ...current,
-        templates: [template, ...current.templates.filter((item) => item.id !== template.id)],
-      }))
+      const endpoint = id ? `templates/${id}` : 'templates'
+      const template = await api<Template>(
+        coaching ? `coachees/${coaching.journal.owner.id}/${endpoint}` : endpoint,
+        {
+          name,
+          note,
+          exercises: planned.map((item) => ({
+            id: item.id,
+            note: item.note ?? '',
+            targets: item.targets.map((target) =>
+              item.measurement === 'duration'
+                ? {
+                    durationSeconds:
+                      target.durationSeconds === '' ? null : Number(target.durationSeconds),
+                    rpe: target.rpe === '' ? null : Number(target.rpe),
+                  }
+                : {
+                    reps: target.reps === '' ? null : Number(target.reps),
+                    weight: target.weight === '' ? null : Number(target.weight),
+                    rpe: target.rpe === '' ? null : Number(target.rpe),
+                  },
+            ),
+          })),
+        },
+      )
+      if (!coaching)
+        setJournal((current) => ({
+          ...current,
+          templates: [template, ...current.templates.filter((item) => item.id !== template.id)],
+        }))
+
       saved.current = true
-      navigate('/start', {
+      navigate(returnPath, {
         state: { notice: `"${template.name}" saved. Start it whenever you are ready.` },
       })
     } catch (error) {
+      if (coaching && error instanceof ApiError && error.status === 404)
+        coaching.onUnavailable(error.message)
       setProblem((error as Error).message)
       setSaving(false)
     }
   }
 
-  if (id && (!original || active)) {
+  if (id && (!original || (!coaching && active))) {
     return (
       <div className={card}>
         <p role="alert" className={errorText}>
@@ -158,7 +173,7 @@ export default function Create() {
             ? 'Finish or discard your active workout before editing a template.'
             : 'That workout could not be found. Refresh your journal and try again.'}
         </p>
-        <button type="button" onClick={() => navigate('/start')} className={secondaryButton}>
+        <button type="button" onClick={() => navigate(returnPath)} className={secondaryButton}>
           Back to workouts
         </button>
       </div>
@@ -167,6 +182,11 @@ export default function Create() {
 
   return (
     <form onSubmit={save} noValidate>
+      {coaching && (
+        <p className="text-accent mb-3 font-normal break-words">
+          Coaching {coaching.journal.owner.username}
+        </p>
+      )}
       <h1 className="gradient-text mb-4 text-3xl font-bold">
         {id ? 'Edit workout' : 'Create workout'}
       </h1>
@@ -330,7 +350,7 @@ export default function Create() {
           </p>
         )}
         <div className="grid grid-cols-[auto_1fr] gap-2">
-          <button type="button" onClick={() => navigate('/start')} className={secondaryButton}>
+          <button type="button" onClick={() => navigate(returnPath)} className={secondaryButton}>
             Cancel
           </button>
           <button type="submit" disabled={saving} className={primaryButton}>
