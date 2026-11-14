@@ -8,6 +8,7 @@ export type Target = (
 ) & { rpe: number | null }
 
 export type TemplateExercise = {
+  supersetId?: string
   measurement?: 'duration'
   id: string
   name: string
@@ -22,6 +23,8 @@ export type Template = {
   id: string
   name: string
   createdAt: string
+  warmup?: string
+  cooldown?: string
   exercises: TemplateExercise[]
 }
 
@@ -38,11 +41,16 @@ export type Session = {
   name: string
   day: string
   completedAt: string
+  warmup?: string
+  cooldown?: string
+  warmupDone?: boolean
+  cooldownDone?: boolean
   exercises: {
     id: string
     name: string
     sets: LoggedSet[]
     measurement?: 'duration'
+    supersetId?: string
     plannedSets?: number
     estimated1rm: number | null
   }[]

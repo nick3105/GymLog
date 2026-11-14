@@ -1,4 +1,4 @@
-import { Check, Trash2, X } from 'lucide-react'
+import { Check, Link2, Unlink, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
@@ -6,13 +6,16 @@ import { api } from '../api'
 import ExerciseLink from '../components/ExerciseLink'
 import ExercisePicker from '../components/ExercisePicker'
 import ReorderList from '../components/ReorderList'
+import WorkoutInstructions from '../components/WorkoutInstructions'
+import { exerciseUnits, linkExercises, unlinkSuperset, supersetLabel } from '../supersets'
+import { newId } from '../newId'
 import { useJournal } from '../journal'
 import { targetsFor } from '../targets'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
 
 type TargetInput = { reps: string; weight: string; rpe: string; durationSeconds: string }
-type Planned = Exercise & { targets: TargetInput[] }
+type Planned = Exercise & { supersetId?: string; targets: TargetInput[] }
 
 const newTarget = (): TargetInput => ({ reps: '8', weight: '', rpe: '', durationSeconds: '60' })
 
@@ -34,12 +37,16 @@ export default function Create() {
   const { id } = useParams()
   const original = journal.templates.find((template) => template.id === id)
   const [name, setName] = useState(original?.name ?? '')
+  const [warmup, setWarmup] = useState(original?.warmup ?? '')
+  const [cooldown, setCooldown] = useState(original?.cooldown ?? '')
+  const [pairNotice, setPairNotice] = useState('')
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
         measurement: exercise.measurement,
+        supersetId: exercise.supersetId,
         group: journal.exercises.find((item) => item.id === exercise.id)?.group ?? '',
         targets: targetsFor(exercise).map((target) => ({
           reps: target.reps === undefined ? '' : String(target.reps),
@@ -54,7 +61,7 @@ export default function Create() {
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
-  const dirty = name.trim() !== '' || planned.length > 0
+  const dirty = name.trim() !== '' || planned.length > 0 || warmup !== '' || cooldown !== ''
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -93,8 +100,20 @@ export default function Create() {
     setPlanned([...planned, { ...exercise, targets: [newTarget(), newTarget(), newTarget()] }])
   }
 
-  function changeTargets(index: number, targets: TargetInput[]) {
-    setPlanned(planned.map((item, i) => (i === index ? { ...item, targets } : item)))
+  function changeTargets(id: string, targets: TargetInput[]) {
+    setPlanned(planned.map((item) => (item.id === id ? { ...item, targets } : item)))
+  }
+
+  function pair(firstId: string, secondId: string) {
+    const changed = linkExercises(planned, firstId, secondId, newId())
+    setPlanned(changed)
+    setPairNotice('Superset linked. Use Unlink superset to separate the exercises.')
+  }
+
+  function removeExercise(item: Planned) {
+    if (item.supersetId && !window.confirm(`Remove ${item.name} and unlink its superset?`)) return
+    const unpaired = item.supersetId ? unlinkSuperset(planned, item.supersetId) : planned
+    setPlanned(unpaired.filter((exercise) => exercise.id !== item.id))
   }
 
   async function save(event: FormEvent) {
@@ -112,8 +131,11 @@ export default function Create() {
     try {
       const template = await api<Template>(id ? `templates/${id}` : 'templates', {
         name,
+        warmup,
+        cooldown,
         exercises: planned.map((item) => ({
           id: item.id,
+          supersetId: item.supersetId,
           targets: item.targets.map((target) =>
             item.measurement === 'duration'
               ? {
@@ -182,6 +204,12 @@ export default function Create() {
             onChange={(event) => setName(event.target.value)}
           />
         </div>
+        <WorkoutInstructions
+          warmup={warmup}
+          cooldown={cooldown}
+          disabled={saving}
+          onChange={(field, value) => (field === 'warmup' ? setWarmup(value) : setCooldown(value))}
+        />
         <ExercisePicker
           exercises={journal.exercises}
           plannedIds={planned.map((item) => item.id)}
@@ -195,90 +223,163 @@ export default function Create() {
         </p>
       )}
 
-      <ReorderList items={planned} enabled={!saving} onChange={setPlanned}>
-        {(item, index) => (
-          <section key={item.id}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <ExerciseLink id={item.id} name={item.name} />
-                <p className="text-muted text-sm">{item.group}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPlanned(planned.filter((_, i) => i !== index))}
-                aria-label={`Remove ${item.name}`}
-                className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
-              >
-                <Trash2 className="size-5" aria-hidden />
-              </button>
-            </div>
-            <div
-              className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
-              aria-hidden
-            >
-              <span>Set</span>
-              {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                (field) => (
-                  <span key={field.key}>{field.label}</span>
-                ),
-              )}
-            </div>
-            {item.targets.map((target, setIndex) => (
-              <div
-                key={setIndex}
-                className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
-              >
-                <span className="text-muted text-center font-normal">{setIndex + 1}</span>
-                {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                  ({ key, label: fieldLabel, mode }) => (
-                    <input
-                      key={key}
-                      type="text"
-                      inputMode={mode}
-                      aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
-                      placeholder={
-                        key === 'durationSeconds' ? 'seconds' : key === 'reps' ? 'reps' : 'opt.'
-                      }
-                      value={target[key]}
-                      onChange={(event) =>
-                        changeTargets(
-                          index,
-                          item.targets.map((row, j) =>
-                            j === setIndex
-                              ? { ...row, [key]: event.target.value.replace(',', '.') }
-                              : row,
-                          ),
-                        )
-                      }
-                      className={`${input} text-center`}
-                    />
-                  ),
-                )}
+      <p role="status" aria-live="polite" className="sr-only">
+        {pairNotice}
+      </p>
+      <ReorderList
+        items={exerciseUnits(planned)}
+        enabled={!saving}
+        onChange={(units) => setPlanned(units.flatMap((unit) => unit.exercises))}
+        onPair={(draggedId, targetId) => pair(targetId, draggedId)}
+      >
+        {(unit) => (
+          <div
+            className={
+              unit.exercises.length === 2 ? 'border-accent flex flex-col gap-4 border-l-2 pl-3' : ''
+            }
+          >
+            {unit.exercises.length === 2 && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-accent flex items-center gap-2">
+                  <Link2 className="size-5" aria-hidden />
+                  {
+                    supersetLabel(
+                      planned,
+                      planned.findIndex((exercise) => exercise.id === unit.id),
+                    )?.split(' · ')[0]
+                  }
+                </p>
                 <button
                   type="button"
-                  disabled={item.targets.length === 1}
-                  onClick={() =>
-                    changeTargets(
-                      index,
-                      item.targets.filter((_, j) => j !== setIndex),
-                    )
-                  }
-                  aria-label={`Remove set ${setIndex + 1} of ${item.name}`}
-                  className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                  disabled={saving}
+                  className={textButton}
+                  onClick={() => {
+                    setPlanned(unlinkSuperset(planned, unit.exercises[0].supersetId!))
+                    setPairNotice('Superset unlinked. Exercise targets and order are unchanged.')
+                  }}
                 >
-                  <X className="size-5" aria-hidden />
+                  <Unlink className="mr-2 size-4" aria-hidden />
+                  Unlink superset
                 </button>
               </div>
+            )}
+            {unit.exercises.map((item) => (
+              <section key={item.id}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <ExerciseLink id={item.id} name={item.name} />
+                    <p className="text-muted text-sm">{item.group}</p>
+                    {item.supersetId && (
+                      <p className="text-accent text-base">
+                        {supersetLabel(
+                          planned,
+                          planned.findIndex((exercise) => exercise.id === item.id),
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeExercise(item)}
+                    aria-label={`Remove ${item.name}`}
+                    className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
+                  >
+                    <Trash2 className="size-5" aria-hidden />
+                  </button>
+                </div>
+                {!item.supersetId &&
+                  planned.some((exercise) => exercise.id !== item.id && !exercise.supersetId) && (
+                    <label className="mt-3 block text-base">
+                      Link as superset
+                      <select
+                        value=""
+                        disabled={saving}
+                        className={`${input} mt-1`}
+                        aria-label={`Link ${item.name} as superset`}
+                        onChange={(event) => {
+                          if (event.target.value) pair(item.id, event.target.value)
+                        }}
+                      >
+                        <option value="">Choose another exercise</option>
+                        {planned
+                          .filter((exercise) => exercise.id !== item.id && !exercise.supersetId)
+                          .map((exercise) => (
+                            <option key={exercise.id} value={exercise.id}>
+                              {exercise.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
+                <div
+                  className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
+                  aria-hidden
+                >
+                  <span>Set</span>
+                  {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                    (field) => (
+                      <span key={field.key}>{field.label}</span>
+                    ),
+                  )}
+                </div>
+                {item.targets.map((target, setIndex) => (
+                  <div
+                    key={setIndex}
+                    className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
+                  >
+                    <span className="text-muted text-center font-normal">{setIndex + 1}</span>
+                    {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                      ({ key, label: fieldLabel, mode }) => (
+                        <input
+                          key={key}
+                          type="text"
+                          inputMode={mode}
+                          aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
+                          placeholder={
+                            key === 'durationSeconds' ? 'seconds' : key === 'reps' ? 'reps' : 'opt.'
+                          }
+                          value={target[key]}
+                          onChange={(event) =>
+                            changeTargets(
+                              item.id,
+                              item.targets.map((row, j) =>
+                                j === setIndex
+                                  ? { ...row, [key]: event.target.value.replace(',', '.') }
+                                  : row,
+                              ),
+                            )
+                          }
+                          className={`${input} text-center`}
+                        />
+                      ),
+                    )}
+                    <button
+                      type="button"
+                      disabled={item.targets.length === 1}
+                      onClick={() =>
+                        changeTargets(
+                          item.id,
+                          item.targets.filter((_, j) => j !== setIndex),
+                        )
+                      }
+                      aria-label={`Remove set ${setIndex + 1} of ${item.name}`}
+                      className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                    >
+                      <X className="size-5" aria-hidden />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  disabled={item.targets.length >= 20}
+                  onClick={() => changeTargets(item.id, [...item.targets, newTarget()])}
+                  className={`${textButton} mt-2`}
+                >
+                  + Add set
+                </button>
+              </section>
             ))}
-            <button
-              type="button"
-              disabled={item.targets.length >= 20}
-              onClick={() => changeTargets(index, [...item.targets, newTarget()])}
-              className={`${textButton} mt-2`}
-            >
-              + Add set
-            </button>
-          </section>
+          </div>
         )}
       </ReorderList>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api } from '../api'
+import WorkoutReminder from '../components/WorkoutReminder'
 import EmptyState from '../components/EmptyState'
 import { durationFields, repFields, setPayload } from '../setInput'
 import { today } from '../format'
@@ -16,6 +17,8 @@ export default function EditSession() {
   const navigate = useNavigate()
   // Hold the snapshot while typing, including when the journal refreshes.
   const [original] = useState(() => journal.sessions.find((session) => session.id === id))
+  const [warmupDone, setWarmupDone] = useState(original?.warmupDone ?? false)
+  const [cooldownDone, setCooldownDone] = useState(original?.cooldownDone ?? false)
   const [day, setDay] = useState(original?.day ?? '')
   const [rows, setRows] = useState<Row[][]>(
     () =>
@@ -39,7 +42,11 @@ export default function EditSession() {
   const saved = useRef(false)
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState('')
-  const dirty = day !== original?.day || JSON.stringify(rows) !== initialRows
+  const dirty =
+    day !== original?.day ||
+    JSON.stringify(rows) !== initialRows ||
+    warmupDone !== (original?.warmupDone ?? false) ||
+    cooldownDone !== (original?.cooldownDone ?? false)
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -100,6 +107,8 @@ export default function EditSession() {
     try {
       const corrected = await api<Session>(`sessions/${session.id}`, {
         day,
+        warmupDone,
+        cooldownDone,
         timezoneOffset: new Date().getTimezoneOffset(),
         exercises: session.exercises.map((exercise, index) => ({
           id: exercise.id,
@@ -134,6 +143,15 @@ export default function EditSession() {
         onChange={(event) => setDay(event.target.value)}
         className={`${input} mb-4`}
       />
+      <div className="mb-4">
+        <WorkoutReminder
+          title="Warmup"
+          text={session.warmup}
+          done={warmupDone}
+          disabled={saving}
+          onChange={setWarmupDone}
+        />
+      </div>
       <div className="flex flex-col gap-4">
         {session.exercises.map((exercise, exerciseIndex) => (
           <section key={exercise.id} className={card}>
@@ -173,6 +191,15 @@ export default function EditSession() {
             ))}
           </section>
         ))}
+      </div>
+      <div className="mt-4">
+        <WorkoutReminder
+          title="Cooldown"
+          text={session.cooldown}
+          done={cooldownDone}
+          disabled={saving}
+          onChange={setCooldownDone}
+        />
       </div>
       <div className="bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-lg p-3 backdrop-blur md:bottom-4">
         {problem && (
