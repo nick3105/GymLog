@@ -72,6 +72,8 @@ def create_app(config=None):
     ):
         raise RuntimeError("exercises.json must contain unique exercise IDs.")
     catalogue_by_id = {e["id"]: e for e in catalogue}
+    # Steps per exercise; the photos are in frontend/public/exercise-images (spec 24).
+    guides = json.loads((ROOT / "exercise_guides.json").read_text(encoding="utf-8"))
 
     def catalogue_for(user_id):
         """Combine built-ins with only the selected journal owner's personal exercises."""
@@ -336,6 +338,19 @@ def create_app(config=None):
                 exercise_id,
                 include_average_weight=request.args.get("include") == "average-weight",
             )
+        )
+
+    @app.get("/api/exercises/<exercise_id>/guide")
+    @authenticated
+    def guide(exercise_id):
+        """How an exercise is done: numbered steps and its start and end photos (REV-10)."""
+        if exercise_id not in catalogue_for(g.user_id):
+            return jsonify(error="That exercise is not in the catalogue."), 404
+        if exercise_id not in guides:
+            return jsonify(steps=[], images=[])
+        return jsonify(
+            steps=guides[exercise_id]["steps"],
+            images=[f"/exercise-images/{exercise_id}/{number}.jpg" for number in (0, 1)],
         )
 
     @app.get("/api/body-load")

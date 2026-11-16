@@ -1,4 +1,13 @@
-import { ChevronRight, ListChecks, Play, Plus, Scale, X, type LucideIcon } from 'lucide-react'
+import {
+  BookOpen,
+  ChevronRight,
+  ListChecks,
+  Play,
+  Plus,
+  Scale,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { Link } from 'react-router'
 
 import Notice from '../components/Notice'
@@ -31,6 +40,12 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
     title: 'Weight Tracker',
     text: 'Log your body weight and follow the trend.',
     icon: Scale,
+  },
+  {
+    to: '/exercises',
+    title: 'Exercise library',
+    text: 'How every exercise is done.',
+    icon: BookOpen,
   },
 ]
 

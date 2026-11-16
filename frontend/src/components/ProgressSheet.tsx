@@ -7,9 +7,11 @@ import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal } from '../journal'
 import type { ExerciseStats } from '../types'
 import { card, secondaryButton } from '../ui'
+import ExerciseGuide from './ExerciseGuide'
 import LineChart from './LineChart'
 
-// Full-screen exercise progress (REV-03 to REV-06), drawn over whatever page opened it.
+// Full-screen exercise sheet, drawn over whatever page opened it: how the exercise is done
+// (REV-10), then its progress (REV-03 to REV-06).
 export default function ProgressSheet({
   exerciseId,
   coacheeId,
@@ -92,13 +94,13 @@ export default function ProgressSheet({
           Back
         </button>
         <div>
-          <p className="text-label text-xs font-normal tracking-widest uppercase">
-            Exercise progress
-          </p>
+          <p className="text-label text-xs font-normal tracking-widest uppercase">Exercise</p>
           <h2 id="progress-title" className="text-2xl font-light">
             {name}
           </h2>
         </div>
+        <ExerciseGuide exerciseId={exerciseId} name={name} />
+        <h3 className="text-label mt-2 text-xs font-normal tracking-widest uppercase">Progress</h3>
         {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
         {!stats && !problem && <p className="text-muted">Loading…</p>}
         {stats && (
