@@ -16,6 +16,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import storage
 from .models import (
     best_1rm,
+    body_load,
     exercise_stats,
     number,
     validate_registration,
@@ -223,6 +224,17 @@ def create_app(config=None):
             return jsonify(error="That exercise is not in the catalogue."), 404
         sessions = storage.documents(database, g.user_id, "sessions")
         return jsonify(exercise_stats(sessions, exercise_id))
+
+    @app.get("/api/body-load")
+    @authenticated
+    def body_load_report():
+        """Sets, volume and seconds per muscle group for the chosen period (REV-09)."""
+        sessions = storage.documents(database, g.user_id, "sessions")
+        return jsonify(
+            body_load(
+                sessions, catalogue_by_id, request.args.get("today"), request.args.get("days")
+            )
+        )
 
     @app.post("/api/templates")
     @authenticated

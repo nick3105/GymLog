@@ -59,6 +59,17 @@ export type Journal = {
   weightGoal: WeightGoal | null
 }
 
+export type LoadTotals = { sets: number; volumeKg: number; durationSeconds: number }
+
+export type BodyLoad = {
+  groups: (LoadTotals & {
+    group: string
+    // 0 untrained, 1 light, 2 medium, 3 most — relative to the busiest group.
+    level: 0 | 1 | 2 | 3
+    exercises: (LoadTotals & { id: string; name: string })[]
+  })[]
+}
+
 export type ExerciseStats = {
   last: { day: string; sets: LoggedSet[] } | null
   points: { day: string; estimate: number }[]
