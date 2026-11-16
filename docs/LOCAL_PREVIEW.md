@@ -35,8 +35,9 @@ other account to test both sides. You can also register more disposable accounts
    Use Unlink superset, or tap the chain and blue Link as superset text at the bottom of an
    exercise card to reveal its selector. The distinct drag pairing target also still works.
    Plan changes affect future starts; completed history keeps its snapshot.
-10. Open Review > Create workout > Create personal exercise to add a repetition-based or timed
-    movement. New accounts see Create your first workout here on Home and Review.
+10. Open Create > Create personal exercise to add a repetition-based or timed movement.
+    Create and Review are separate navigation entries. New accounts also see
+    Create your first workout here on Home.
 11. Sign in as coach-demo. Settings shows accepted coachee-demo and pending family-demo.
     Accept the family request if you wish, then open Coachees.
 12. Open coachee-demo, review their completed workouts/notes and create another plan for them.

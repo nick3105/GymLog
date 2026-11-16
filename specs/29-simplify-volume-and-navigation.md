@@ -1,9 +1,9 @@
-# Task 29 — Simplify volume and put workout creation in Review
+# Task 29 — Simplify volume and exercise progress navigation
 Assignee: nick3105
 
 ## Why
-Users visit workout creation less often after building their routines. Review should contain
-the creation action, while a new account should have an obvious first-workout button.
+Create and Review remain separate destinations, following the user's revised preference.
+A new account should have an obvious first-workout button on Home.
 Weekly volume should show performed sets and an editable default goal of 10.
 
 ## What
@@ -13,14 +13,10 @@ exclusions, editable goals and default10 for every muscle group. Saved goals tak
 The existing preference API remains compatible but the UI no longer submits profile inputs.
 Collapse the exercise's superset selector behind a chain icon and blue Link as superset
 action at the bottom of its card. Expand on click, preserving drag-to-pair behavior.
-Remove Create from the main desktop/mobile navigation and the permanent Home action cards.
-Put Create workout in Review. A new account with no routines or history sees
-Create your first workout here on Home and Review.
-Name the page and its Home/navigation links Review and Create. Put creation first under
-the page heading as a full-width blue gradient card, above the volume/progress buttons
-and history. Keep the first-workout wording for new users. The phone navigation label
-wraps within its existing column without horizontal scrolling.
-Use /review/create for the builder and preserve /create as a redirect for existing links.
+Keep Create and Review as separate desktop/mobile navigation entries and Home cards.
+Review workouts contains volume/progress actions and history, without the creation box.
+A new account sees Create your first workout here on Home.
+Use /create for the builder and redirect the earlier /review/create URL to /create.
 Keep coach creation, workout editing, active drafts and normal save behavior working.
 Add Exercise Progress beside Weekly volume in Review. Open /review/progress with a
 searchable list of distinct exercises from completed history, newest training day first,
@@ -34,9 +30,9 @@ controls. Closing it returns to the same search. Timed holds retain their second
 Individualized recommendations, new scientific rules and deleting stored profile data.
 
 ## Done when
-At375x667 the bottom bar has Home/Start/Review/Weight with no gap for Create.
-New accounts can reach and save their first workout. Existing accounts can create more
-from Review. /create redirects to /review/create and marks Review active in navigation.
+At375x667 the bottom bar has Home/Start/Create/Review/Weight without horizontal scrolling.
+New and existing accounts can reach the builder from Create and Home; /review/create
+redirects to /create and marks Create active in navigation.
 Weekly volume has no profile inputs or optimal-range content, default10 remains editable,
 saved custom/zero goals remain intact, and goal changes warn before leaving unsaved.
 Coach builder and old workout links still work. TypeScript, lint, tests and build pass.

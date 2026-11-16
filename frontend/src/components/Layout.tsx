@@ -4,6 +4,7 @@ import {
   ListChecks,
   LogOut,
   Play,
+  Plus,
   RefreshCw,
   Scale,
   Settings as SettingsIcon,
@@ -21,7 +22,8 @@ import ProgressSheet from './ProgressSheet'
 const pages: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Home', icon: House },
   { to: '/start', label: 'Start', icon: Play },
-  { to: '/review', label: 'Review and Create', icon: ListChecks },
+  { to: '/create', label: 'Create', icon: Plus },
+  { to: '/review', label: 'Review', icon: ListChecks },
   { to: '/weight', label: 'Weight', icon: Scale },
 ]
 
@@ -165,7 +167,7 @@ export default function Layout() {
       </main>
 
       <nav className="border-border bg-panel fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] md:hidden">
-        <ul className="grid grid-cols-4">
+        <ul className="grid grid-cols-5">
           {pages.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <NavLink

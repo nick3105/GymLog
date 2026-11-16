@@ -1,4 +1,4 @@
-import { ChevronRight, ListChecks, Play, Scale, type LucideIcon } from 'lucide-react'
+import { ChevronRight, ListChecks, Play, Plus, Scale, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 
 import Notice from '../components/Notice'
@@ -14,9 +14,15 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
     icon: Play,
   },
   {
+    to: '/create',
+    title: 'Create workout',
+    text: 'Build a routine with exercises and targets.',
+    icon: Plus,
+  },
+  {
     to: '/review',
-    title: 'Review and Create',
-    text: 'Create a workout and review your progress.',
+    title: 'Review workouts',
+    text: 'See what you lifted and how you progress.',
     icon: ListChecks,
   },
   {
@@ -38,10 +44,7 @@ export default function Home() {
       <h1 className="gradient-text mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
       {journal.templates.length === 0 && journal.sessions.length === 0 && (
-        <Link
-          to="/review/create"
-          className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}
-        >
+        <Link to="/create" className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}>
           Create your first workout here
         </Link>
       )}

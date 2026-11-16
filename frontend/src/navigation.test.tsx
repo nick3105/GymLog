@@ -30,7 +30,7 @@ function page(Page: typeof Home, journal: Journal) {
   )
 }
 
-describe('workout creation in Review', () => {
+describe('separate workout creation and review', () => {
   it('links to exercise progress beside weekly volume, with a searchable empty state', () => {
     const review = page(Review, emptyJournal)
     expect(review).toContain('href="/review/progress"')
@@ -39,15 +39,14 @@ describe('workout creation in Review', () => {
     expect(progress).toContain('type="search"')
     expect(progress).toContain('Finish a workout to see your exercise progress here.')
   })
-  it('gives new users a direct first-workout action on Home and Review', () => {
-    for (const Page of [Home, Review]) {
-      const html = page(Page, emptyJournal)
-      expect(html).toContain('Create your first workout here')
-      expect(html).toContain('href="/review/create"')
-    }
+  it('gives new users a first-workout action on Home while Review stays separate', () => {
+    const home = page(Home, emptyJournal)
+    expect(home).toContain('Create your first workout here')
+    expect(home).toContain('href="/create"')
+    expect(page(Review, emptyJournal)).not.toContain('href="/create"')
   })
 
-  it('keeps creation available in Review after a routine exists', () => {
+  it('keeps a separate Home creation card after a routine exists', () => {
     const journal: Journal = {
       ...emptyJournal,
       templates: [
@@ -69,9 +68,11 @@ describe('workout creation in Review', () => {
     const home = page(Home, journal)
     const review = page(Review, journal)
     expect(home).not.toContain('Create your first workout here')
-    expect(home).not.toContain('href="/review/create"')
-    expect(review).toContain('href="/review/create"')
-    expect(review).toContain('Create workout')
+    expect(home).toContain('href="/create"')
+    expect(home).toContain('Create workout')
+    expect(review).not.toContain('href="/create"')
+    expect(review).not.toContain('href="/review/create"')
+    expect(review).not.toContain('Review and Create')
     expect(review).not.toContain('Create your first workout here')
   })
 })

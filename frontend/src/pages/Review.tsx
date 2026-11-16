@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 
 import EmptyState from '../components/EmptyState'
@@ -20,19 +20,7 @@ export default function Review() {
 
   return (
     <>
-      <h1 className="gradient-text mb-4 text-3xl font-bold">Review and Create</h1>
-      <Link
-        to="/review/create"
-        className="from-gradient-start to-gradient-end mb-4 flex min-h-20 w-full items-center gap-4 rounded-lg bg-linear-to-tr p-4 text-white"
-      >
-        <Plus className="size-7 shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1 text-lg font-normal">
-          {journal.templates.length === 0 && journal.sessions.length === 0
-            ? 'Create your first workout here'
-            : 'Create workout'}
-        </span>
-        <ChevronRight className="size-5 shrink-0" aria-hidden />
-      </Link>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
       <div className="mb-4 flex flex-wrap gap-2">
         <Link to="/review/volume" className={secondaryButton}>
           Weekly volume

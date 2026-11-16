@@ -109,7 +109,7 @@ export default function Start() {
       )}
       <div className="mb-4 flex items-end justify-between gap-2">
         <h1 className="gradient-text text-3xl font-bold">Start workout</h1>
-        <Link to="/review/create" className={textButton}>
+        <Link to="/create" className={textButton}>
           + New
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function Start() {
         <EmptyState
           title="Your routine starts here."
           text="Create your first workout, then come back here to start it."
-          to="/review/create"
+          to="/create"
           action="Create workout"
         />
       ) : (
