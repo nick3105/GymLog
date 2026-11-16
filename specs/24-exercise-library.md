@@ -17,16 +17,19 @@ visual, and that repository's licence says cloning it grants no right to use the
 
 **Imported once, on 16 November 2026** (like spec 11, no import script is kept; this is the record):
 - A catalogue exercise gets the dataset exercise with the same name, ignoring capitals and
-  punctuation (612 exercises).
+  punctuation (605 exercises with photos and steps).
 - 38 of our hand-written exercises are matched by hand to the same movement, for example
   Bench press → `Barbell_Bench_Press_-_Medium_Grip`, Squat → `Barbell_Full_Squat`,
   Overhead press → `Standing_Military_Press`. The `source` field of each guide names it.
 - Six have no fair equivalent and get no guide: Paused, Spoto and Larsen bench press,
   Cable lateral raise, Bulgarian split squat, One-leg hip thrust. Showing a different exercise
   would teach the wrong movement.
-- Retired exercises get no guide.
-- The photos are shrunk from 850 to 480 px wide (JPEG quality 70, macOS `sips`) so all of them
-  take about 30 MB instead of 85 MB.
+- Seven more get no guide because the dataset has no photos or no steps for them: Iron Cross,
+  Push Press, One-Arm Kettlebell Swings, Side Jackknife, Kettlebell Halo, Kettlebell Halo with
+  Overhead Extension, Kettlebell Overhead Triceps Extension.
+- 643 of 656 exercises have a guide. Retired exercises get no guide.
+- The photos are shrunk from 850 to 480 px wide (JPEG quality 70, macOS `sips`) so the 1,286
+  photos take 46 MB instead of about 85 MB.
 
 **Data**
 - `backend/gymlog/exercise_guides.json`: `{"bench-press": {"source": "Barbell_Bench_Press_-_Medium_Grip", "steps": ["Lie back on a flat bench…", …]}, …}`.

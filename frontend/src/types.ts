@@ -94,6 +94,9 @@ export type BodyLoad = {
   })[]
 }
 
+// Both lists are empty when there is no guide for the exercise.
+export type ExerciseGuide = { steps: string[]; images: string[] }
+
 export type ExerciseStats = {
   averageWeight?: {
     points: { day: string; weight: number }[]
