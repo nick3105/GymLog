@@ -3,16 +3,19 @@ import { useState } from 'react'
 
 import { searchExercises } from '../exerciseSearch'
 import type { Exercise } from '../types'
-import { input, label } from '../ui'
+import PersonalExerciseForm from './PersonalExerciseForm'
+import { input, label, secondaryButton } from '../ui'
 
 type Props = {
   exercises: Exercise[]
   plannedIds: string[]
   onAdd: (exercise: Exercise) => void
+  onCreate?: (exercise: Exercise) => void
 }
 
 // PLN-02: find an exercise by typing, by tapping a muscle, or both.
-export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) {
+export default function ExercisePicker({ exercises, plannedIds, onAdd, onCreate }: Props) {
+  const [creating, setCreating] = useState(false)
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState('')
   // Groups in the order the API sends them — no hard-coded list here.
@@ -55,6 +58,27 @@ export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) 
           </button>
         ))}
       </div>
+      {onCreate && !creating && (
+        <button
+          type="button"
+          className={`${secondaryButton} mt-3`}
+          onClick={() => setCreating(true)}
+        >
+          Create personal exercise
+        </button>
+      )}
+      {onCreate && creating && (
+        <PersonalExerciseForm
+          exercises={exercises}
+          initialName={query}
+          onCancel={() => setCreating(false)}
+          onCreated={(exercise) => {
+            onCreate(exercise)
+            setQuery('')
+            setCreating(false)
+          }}
+        />
+      )}
       {showing && (
         <>
           <p className="text-muted mt-3 mb-1 text-sm" aria-live="polite">
@@ -74,7 +98,14 @@ export default function ExercisePicker({ exercises, plannedIds, onAdd }: Props) 
                     }}
                     className="flex min-h-12 w-full items-center justify-between gap-2 px-3 py-2 text-left"
                   >
-                    <span className="min-w-0">{exercise.name}</span>
+                    <span className="min-w-0">
+                      {exercise.name}
+                      {exercise.source === 'personal' && (
+                        <span className="text-muted block text-sm">
+                          Personal — excluded from volume estimates
+                        </span>
+                      )}
+                    </span>
                     <span className="text-muted flex shrink-0 items-center gap-1 text-sm">
                       {plannedIds.includes(exercise.id) && (
                         <Check className="text-accent size-4" aria-label="In this workout" />

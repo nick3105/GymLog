@@ -1,8 +1,10 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Link2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 
 import EmptyState from '../components/EmptyState'
 import ExerciseLink from '../components/ExerciseLink'
+import WorkoutReminder from '../components/WorkoutReminder'
+import { supersetLabel } from '../supersets'
 import Notice from '../components/Notice'
 import { formatDay, formatNumber } from '../format'
 import { useJournal } from '../journal'
@@ -40,9 +42,27 @@ export default function ReviewDetail() {
       <Link to={`/review/${session.id}/edit`} className={`${secondaryButton} mb-4`}>
         Edit workout
       </Link>
+      {session.note && (
+        <div className={`${card} mb-4`}>
+          <h2 className="font-normal">Workout note</h2>
+          <p className="mt-2 break-words whitespace-pre-wrap">{session.note}</p>
+        </div>
+      )}
+      <div className="mb-4">
+        <WorkoutReminder title="Warmup" text={session.warmup} done={session.warmupDone} />
+      </div>
       <div className="flex flex-col gap-4">
-        {session.exercises.map((exercise) => (
-          <section key={exercise.id} className={card}>
+        {session.exercises.map((exercise, exerciseIndex) => (
+          <section
+            key={exercise.id}
+            className={`${card} ${exercise.supersetId ? 'border-accent border-l-2' : ''} ${exercise.supersetId && session.exercises[exerciseIndex - 1]?.supersetId === exercise.supersetId ? '-mt-4 rounded-t-none border-t' : ''}`}
+          >
+            {exercise.supersetId && (
+              <p className="text-accent mb-2 flex items-center gap-2">
+                <Link2 className="size-5" aria-hidden />
+                {supersetLabel(session.exercises, exerciseIndex)}
+              </p>
+            )}
             <div className="flex items-start justify-between gap-3">
               <ExerciseLink id={exercise.id} name={exercise.name} />
               {exercise.measurement !== 'duration' && (
@@ -56,6 +76,14 @@ export default function ReviewDetail() {
                 </p>
               )}
             </div>
+            {exercise.note && (
+              <p className="mt-3 break-words whitespace-pre-wrap">{exercise.note}</p>
+            )}
+            {exercise.source === 'personal' && (
+              <p className="text-muted mt-2">
+                Personal exercise — excluded from weekly volume estimates
+              </p>
+            )}
             <ol className="mt-2 flex flex-col gap-1">
               {exercise.sets.map((set, index) => (
                 <li
@@ -87,6 +115,9 @@ export default function ReviewDetail() {
             </ol>
           </section>
         ))}
+      </div>
+      <div className="mt-4">
+        <WorkoutReminder title="Cooldown" text={session.cooldown} done={session.cooldownDone} />
       </div>
     </>
   )

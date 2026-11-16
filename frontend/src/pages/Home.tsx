@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import Notice from '../components/Notice'
 import { formatDay, today } from '../format'
+import { primaryButton } from '../ui'
 import { useJournal } from '../journal'
 import { shouldShowWeightReminder } from '../weightReminder'
 
@@ -16,7 +17,7 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
   {
     to: '/create',
     title: 'Create workout',
-    text: 'Plan exercises and targets once, repeat them.',
+    text: 'Build a routine with exercises and targets.',
     icon: Plus,
   },
   {
@@ -33,7 +34,7 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
   },
 ]
 
-// NAV-01: the four starting points, and a short summary of the journal.
+// NAV-01: the main starting points, and a short summary of the journal.
 export default function Home() {
   const { username, journal, weightReminderDismissed, dismissWeightReminder } = useJournal()
   const lastSession = [...journal.sessions].sort((a, b) => b.day.localeCompare(a.day))[0]
@@ -48,6 +49,11 @@ export default function Home() {
       <Notice />
       <h1 className="gradient-text mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
+      {journal.templates.length === 0 && journal.sessions.length === 0 && (
+        <Link to="/create" className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}>
+          Create your first workout here
+        </Link>
+      )}
       {showWeightReminder && (
         <section
           aria-labelledby="weight-reminder-title"

@@ -5,15 +5,24 @@ import type { SetInput } from './oneRepMax'
 import type { Journal as JournalData, Target } from './types'
 
 export type ActiveWorkout = {
+  note?: string
   // One ID per workout, so pressing Finish twice (or retrying after a network error) saves once.
   clientId: string
   templateId: string
   name: string
   day: string
+  warmup?: string
+  cooldown?: string
+  warmupDone?: boolean
+  cooldownDone?: boolean
   exercises: {
     id: string
     name: string
+    note?: string
+    source?: 'personal'
+    volumeEligible?: false
     measurement?: 'duration'
+    supersetId?: string
     targets: Target[]
     sets: SetInput[]
   }[]

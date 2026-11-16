@@ -1,6 +1,13 @@
 // The shapes the API sends and receives. The API (backend/gymlog/models.py) is the source of truth.
 
-export type Exercise = { id: string; name: string; group: string; measurement?: 'duration' }
+export type Exercise = {
+  id: string
+  name: string
+  group: string
+  measurement?: 'duration' | 'repetitions'
+  source?: 'personal'
+  volumeEligible?: false
+}
 
 export type Target = (
   | { reps: number; weight: number | null; durationSeconds?: never }
@@ -8,6 +15,10 @@ export type Target = (
 ) & { rpe: number | null }
 
 export type TemplateExercise = {
+  note?: string
+  source?: 'personal'
+  volumeEligible?: false
+  supersetId?: string
   measurement?: 'duration'
   id: string
   name: string
@@ -19,9 +30,12 @@ export type TemplateExercise = {
 }
 
 export type Template = {
+  note?: string
   id: string
   name: string
   createdAt: string
+  warmup?: string
+  cooldown?: string
   exercises: TemplateExercise[]
 }
 
@@ -33,16 +47,26 @@ export type LoggedSet =
   | { skipped: true }
 
 export type Session = {
+  note?: string
+  revision?: number
   id: string
   templateId: string
   name: string
   day: string
   completedAt: string
+  warmup?: string
+  cooldown?: string
+  warmupDone?: boolean
+  cooldownDone?: boolean
   exercises: {
     id: string
     name: string
+    note?: string
+    source?: 'personal'
+    volumeEligible?: false
     sets: LoggedSet[]
     measurement?: 'duration'
+    supersetId?: string
     plannedSets?: number
     estimated1rm: number | null
   }[]
@@ -71,6 +95,11 @@ export type BodyLoad = {
 }
 
 export type ExerciseStats = {
+  averageWeight?: {
+    points: { day: string; weight: number }[]
+    best: number | null
+    latest: number | null
+  }
   last: { day: string; sets: LoggedSet[] } | null
   points: { day: string; estimate: number }[]
   best: number | null

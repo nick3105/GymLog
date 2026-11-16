@@ -5,6 +5,7 @@ import BodyLoadCard from '../components/BodyLoadCard'
 import EmptyState from '../components/EmptyState'
 import { formatDay } from '../format'
 import { useJournal } from '../journal'
+import { secondaryButton } from '../ui'
 import type { Session } from '../types'
 
 // Newest training day first; two sessions on one day by the time they were saved.
@@ -21,13 +22,25 @@ export default function Review() {
   return (
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link to="/review/volume" className={secondaryButton}>
+          Weekly volume
+        </Link>
+        <Link to="/review/progress" className={secondaryButton}>
+          Exercise Progress
+        </Link>
+      </div>
       {journal.sessions.length === 0 ? (
-        <EmptyState
-          title="Your first session is waiting."
-          text="Finish a workout and your sets, reps and effort appear here."
-          to="/start"
-          action="Start workout"
-        />
+        journal.templates.length > 0 ? (
+          <EmptyState
+            title="Your first session is waiting."
+            text="Finish a workout and your sets, reps and effort appear here."
+            to="/start"
+            action="Start workout"
+          />
+        ) : (
+          <p className="text-muted">Create a workout plan to start logging your training.</p>
+        )
       ) : (
         <>
           <BodyLoadCard />
