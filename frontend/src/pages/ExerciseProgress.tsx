@@ -28,7 +28,7 @@ export default function ExerciseProgress() {
         className="text-accent mb-2 inline-flex min-h-11 items-center gap-2 font-normal"
       >
         <ArrowLeft className="size-5" aria-hidden />
-        Review workouts
+        Review and Create
       </Link>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Exercise Progress</h1>
       <label className={label} htmlFor="exercise-search">

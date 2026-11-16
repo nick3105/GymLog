@@ -16,6 +16,10 @@ action at the bottom of its card. Expand on click, preserving drag-to-pair behav
 Remove Create from the main desktop/mobile navigation and the permanent Home action cards.
 Put Create workout in Review. A new account with no routines or history sees
 Create your first workout here on Home and Review.
+Name the page and its Home/navigation links Review and Create. Put creation first under
+the page heading as a full-width blue gradient card, above the volume/progress buttons
+and history. Keep the first-workout wording for new users. The phone navigation label
+wraps within its existing column without horizontal scrolling.
 Use /review/create for the builder and preserve /create as a redirect for existing links.
 Keep coach creation, workout editing, active drafts and normal save behavior working.
 Add Exercise Progress beside Weekly volume in Review. Open /review/progress with a

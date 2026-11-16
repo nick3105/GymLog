@@ -1,10 +1,10 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 
 import EmptyState from '../components/EmptyState'
 import { formatDay } from '../format'
 import { useJournal } from '../journal'
-import { primaryButton, secondaryButton } from '../ui'
+import { secondaryButton } from '../ui'
 import type { Session } from '../types'
 
 // Newest training day first; two sessions on one day by the time they were saved.
@@ -20,7 +20,19 @@ export default function Review() {
 
   return (
     <>
-      <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
+      <h1 className="gradient-text mb-4 text-3xl font-bold">Review and Create</h1>
+      <Link
+        to="/review/create"
+        className="from-gradient-start to-gradient-end mb-4 flex min-h-20 w-full items-center gap-4 rounded-lg bg-linear-to-tr p-4 text-white"
+      >
+        <Plus className="size-7 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 text-lg font-normal">
+          {journal.templates.length === 0 && journal.sessions.length === 0
+            ? 'Create your first workout here'
+            : 'Create workout'}
+        </span>
+        <ChevronRight className="size-5 shrink-0" aria-hidden />
+      </Link>
       <div className="mb-4 flex flex-wrap gap-2">
         <Link to="/review/volume" className={secondaryButton}>
           Weekly volume
@@ -28,20 +40,7 @@ export default function Review() {
         <Link to="/review/progress" className={secondaryButton}>
           Exercise Progress
         </Link>
-        {journal.templates.length > 0 || journal.sessions.length > 0 ? (
-          <Link to="/review/create" className={secondaryButton}>
-            Create workout
-          </Link>
-        ) : null}
       </div>
-      {journal.templates.length === 0 && journal.sessions.length === 0 && (
-        <Link
-          to="/review/create"
-          className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}
-        >
-          Create your first workout here
-        </Link>
-      )}
       {journal.sessions.length === 0 ? (
         journal.templates.length > 0 ? (
           <EmptyState

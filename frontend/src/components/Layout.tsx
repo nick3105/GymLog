@@ -21,7 +21,7 @@ import ProgressSheet from './ProgressSheet'
 const pages: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Home', icon: House },
   { to: '/start', label: 'Start', icon: Play },
-  { to: '/review', label: 'Review', icon: ListChecks },
+  { to: '/review', label: 'Review and Create', icon: ListChecks },
   { to: '/weight', label: 'Weight', icon: Scale },
 ]
 
@@ -176,7 +176,7 @@ export default function Layout() {
                 }
               >
                 <Icon className="size-6" aria-hidden />
-                {label}
+                <span className="px-1 text-center leading-tight">{label}</span>
               </NavLink>
             </li>
           ))}

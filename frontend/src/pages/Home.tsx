@@ -15,8 +15,8 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
   },
   {
     to: '/review',
-    title: 'Review workouts',
-    text: 'See what you lifted and how you progress.',
+    title: 'Review and Create',
+    text: 'Create a workout and review your progress.',
     icon: ListChecks,
   },
   {
