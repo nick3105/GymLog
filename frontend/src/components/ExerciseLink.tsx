@@ -28,7 +28,7 @@ export default function ExerciseLink({
     <button
       type="button"
       onClick={open}
-      className="inline-flex min-h-11 min-w-0 items-center gap-1 text-left text-lg font-normal"
+      className="inline-flex min-h-11 max-w-full min-w-0 items-center gap-1 text-left text-lg font-normal"
     >
       <span className="truncate">{name}</span>
       <ChevronRight className="text-accent size-4 shrink-0" aria-hidden />

@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 import EmptyState from '../components/EmptyState'
 import { formatDay } from '../format'
 import { useJournal } from '../journal'
-import { secondaryButton } from '../ui'
+import { primaryButton, secondaryButton } from '../ui'
 import type { Session } from '../types'
 
 // Newest training day first; two sessions on one day by the time they were saved.
@@ -21,16 +21,38 @@ export default function Review() {
   return (
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
-      <Link to="/review/volume" className={`${secondaryButton} mb-4`}>
-        Weekly volume
-      </Link>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link to="/review/volume" className={secondaryButton}>
+          Weekly volume
+        </Link>
+        <Link to="/review/progress" className={secondaryButton}>
+          Exercise Progress
+        </Link>
+        {journal.templates.length > 0 || journal.sessions.length > 0 ? (
+          <Link to="/review/create" className={secondaryButton}>
+            Create workout
+          </Link>
+        ) : null}
+      </div>
+      {journal.templates.length === 0 && journal.sessions.length === 0 && (
+        <Link
+          to="/review/create"
+          className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}
+        >
+          Create your first workout here
+        </Link>
+      )}
       {journal.sessions.length === 0 ? (
-        <EmptyState
-          title="Your first session is waiting."
-          text="Finish a workout and your sets, reps and effort appear here."
-          to="/start"
-          action="Start workout"
-        />
+        journal.templates.length > 0 ? (
+          <EmptyState
+            title="Your first session is waiting."
+            text="Finish a workout and your sets, reps and effort appear here."
+            to="/start"
+            action="Start workout"
+          />
+        ) : (
+          <p className="text-muted">Create a workout plan to start logging your training.</p>
+        )
       ) : (
         <ul className="flex flex-col gap-3">
           {newestFirst(journal.sessions).map((session) => {

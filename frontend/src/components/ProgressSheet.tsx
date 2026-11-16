@@ -27,10 +27,10 @@ export default function ProgressSheet({
   const exercise = journal.exercises.find((item) => item.id === exerciseId)
   const name = coacheeId
     ? (searchParams.get('exerciseName') ?? 'Exercise')
-    : (exercise?.name ?? 'Exercise')
+    : (exercise?.name ?? searchParams.get('exerciseName') ?? 'Exercise')
   const timed = coacheeId
     ? searchParams.get('measurement') === 'duration'
-    : exercise?.measurement === 'duration'
+    : (exercise?.measurement ?? searchParams.get('measurement')) === 'duration'
 
   useEffect(() => {
     let current = true

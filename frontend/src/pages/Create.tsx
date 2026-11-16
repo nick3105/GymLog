@@ -351,30 +351,6 @@ export default function Create({
                   }
                   disabled={saving}
                 />
-                {!item.supersetId &&
-                  planned.some((exercise) => exercise.id !== item.id && !exercise.supersetId) && (
-                    <label className="mt-3 block text-base">
-                      Link as superset
-                      <select
-                        value=""
-                        disabled={saving}
-                        className={`${input} mt-1`}
-                        aria-label={`Link ${item.name} as superset`}
-                        onChange={(event) => {
-                          if (event.target.value) pair(item.id, event.target.value)
-                        }}
-                      >
-                        <option value="">Choose another exercise</option>
-                        {planned
-                          .filter((exercise) => exercise.id !== item.id && !exercise.supersetId)
-                          .map((exercise) => (
-                            <option key={exercise.id} value={exercise.id}>
-                              {exercise.name}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                  )}
                 <div
                   className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
                   aria-hidden
@@ -441,6 +417,33 @@ export default function Create({
                 >
                   + Add set
                 </button>
+                {!item.supersetId &&
+                  planned.some((exercise) => exercise.id !== item.id && !exercise.supersetId) && (
+                    <details className="mt-2">
+                      <summary className="text-accent flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 font-normal">
+                        <Link2 className="size-4" aria-hidden />
+                        Link as superset
+                      </summary>
+                      <select
+                        value=""
+                        disabled={saving}
+                        className={`${input} mt-1`}
+                        aria-label={`Link ${item.name} as superset`}
+                        onChange={(event) => {
+                          if (event.target.value) pair(item.id, event.target.value)
+                        }}
+                      >
+                        <option value="">Choose another exercise</option>
+                        {planned
+                          .filter((exercise) => exercise.id !== item.id && !exercise.supersetId)
+                          .map((exercise) => (
+                            <option key={exercise.id} value={exercise.id}>
+                              {exercise.name}
+                            </option>
+                          ))}
+                      </select>
+                    </details>
+                  )}
               </section>
             ))}
           </div>

@@ -143,5 +143,25 @@ def test_preview_supplies_starting_goals_for_every_group():
         )
     adult = weekly_volume([], "2026-11-09", REGISTRY, {}, False)
     younger = weekly_volume([], "2026-11-09", REGISTRY, {"profile": {"ageBand": "under18"}}, True)
-    assert all(muscle["goal"] is None for muscle in adult["muscles"])
-    assert all(muscle["goal"] is None for muscle in younger["muscles"])
+    assert all(muscle["goal"] == 10 for muscle in adult["muscles"])
+    assert all(muscle["goal"] == 10 for muscle in younger["muscles"])
+
+
+def test_goal_only_save_preserves_legacy_profile_without_using_it(volume_client):
+    """Removing profile inputs must not erase old fields or change the default goal."""
+    _, client, headers = volume_client
+    response = client.post(
+        "/api/volume/preferences",
+        json={"goals": {"chest": 12}, "profile": {"ageBand": "under18"}, "revision": 0},
+        headers=headers,
+    )
+    response = client.post(
+        "/api/volume/preferences",
+        json={"goals": {"chest": 14}, "revision": response.json["revision"]},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    result = client.get("/api/volume?week=2026-11-09").json
+    assert result["profile"]["ageBand"] == "under18"
+    assert result["startingGoal"] == 10
+    assert result["goals"]["chest"] == 14

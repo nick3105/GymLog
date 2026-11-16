@@ -28,12 +28,15 @@ other account to test both sides. You can also register more disposable accounts
 6. Open Edit workout from Review to correct notes, duration values and reminder completion.
 7. Open Review > Weekly volume. Change weeks, expand exercise breakdowns and edit/save goals.
    Custom exercises and timed holds appear under excluded coverage.
-8. Open an exercise's progress and switch Estimated 1RM / Average weight. Actual RPE changes
+8. Open Review > Exercise Progress. Search recorded exercises, ordered by last performed,
+   and select one to switch Estimated 1RM / Average weight. Back keeps the search. Actual RPE changes
    the existing e1RM estimate, while target RPE does not.
 9. From Start, edit the saved plan. Change warmup/cooldown text, notes, targets or the superset.
-   Use Unlink superset, the Link as superset selector, or the distinct drag pairing target.
+   Use Unlink superset, or tap the chain and blue Link as superset text at the bottom of an
+   exercise card to reveal its selector. The distinct drag pairing target also still works.
    Plan changes affect future starts; completed history keeps its snapshot.
-10. Open Create > Create personal exercise to add a repetition-based or timed movement.
+10. Open Review > Create workout > Create personal exercise to add a repetition-based or timed
+    movement. New accounts see Create your first workout here on Home and Review.
 11. Sign in as coach-demo. Settings shows accepted coachee-demo and pending family-demo.
     Accept the family request if you wish, then open Coachees.
 12. Open coachee-demo, review their completed workouts/notes and create another plan for them.
@@ -54,6 +57,9 @@ necessary before release. Browser screenshot capture is currently unavailable.
 
 ## Checks completed
 
-The combined API, privacy, notes, supersets, duration, volume and upgrade suites have 78 passing
-tests. Frontend has 31 passing tests. TypeScript, oxlint, Ruff and production build pass.
+Frontend has 37 passing tests. TypeScript, oxlint, Ruff and production build pass.
+Weekly-volume tests include fixed default goals and compatibility with stored preferences.
 The full backend collection is blocked on Windows by the deployment module's Linux fcntl import.
+With that Linux-only module excluded, 115 feature tests passed. The 11 account tests were
+rerun using a writable temporary folder: 10 passed; the password-change test reached cleanup
+but Windows kept its temporary SQLite file locked. That cleanup failure remains unresolved.

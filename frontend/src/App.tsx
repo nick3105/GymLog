@@ -17,6 +17,7 @@ import Session from './pages/Session'
 import Start from './pages/Start'
 import Weight from './pages/Weight'
 import WeeklyVolume from './pages/WeeklyVolume'
+import ExerciseProgress from './pages/ExerciseProgress'
 
 // Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
 function SignedIn({ children }: { children: ReactNode }) {
@@ -61,13 +62,15 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: 'start', element: <Start /> },
       { path: 'session', element: <Session /> },
-      { path: 'create', element: <Create key="new" /> },
+      { path: 'create', element: <Navigate to="/review/create" replace /> },
+      { path: 'review/create', element: <Create key="new" /> },
       { path: 'workouts/:id/edit', element: <Create key="edit" /> },
       { path: 'review', element: <Review /> },
       { path: 'review/:id', element: <ReviewDetail /> },
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
       { path: 'review/volume', element: <WeeklyVolume /> },
+      { path: 'review/progress', element: <ExerciseProgress /> },
       { path: 'settings', element: <Settings /> },
       { path: 'coachees', element: <Coachees /> },
       { path: 'coachees/:coacheeId', element: <CoacheeDetail /> },

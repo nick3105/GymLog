@@ -433,6 +433,11 @@ def create_app(config=None):
     def update_volume_preferences():
         """Save the owner's editable goals with a revision check."""
         body = request.get_json()
+        if isinstance(body, dict) and "profile" not in body:
+            body = {
+                **body,
+                "profile": storage.volume_preferences(database, g.user_id).get("profile", {}),
+            }
         document = validate_volume_preferences(
             body, {row["id"] for row in volume_registry["taxonomy"]}
         )

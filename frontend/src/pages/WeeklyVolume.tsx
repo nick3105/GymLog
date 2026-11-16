@@ -23,7 +23,6 @@ type MuscleVolume = {
   goalSource: 'saved' | 'starter'
   exercises: Contribution[]
 }
-type Profile = { ageBand?: string; experience?: string; gender?: string }
 type Volume = {
   weekStart: string
   weekEnd: string
@@ -34,7 +33,6 @@ type Volume = {
   startingGoal: number | null
   mappingVersion: string
   goals: Record<string, number>
-  profile: Profile
   revision: number
 }
 
@@ -58,14 +56,13 @@ export default function WeeklyVolume() {
   const [week, setWeek] = useState(() => weekDate(0))
   const [volume, setVolume] = useState<Volume | null>(null)
   const [goals, setGoals] = useState<Record<string, string>>({})
-  const [profile, setProfile] = useState<Profile>({})
   const [revision, setRevision] = useState(0)
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState('')
   const [notice, setNotice] = useState('')
   const initialized = useRef(false)
 
-  const currentPreferences = JSON.stringify({ goals, profile })
+  const currentPreferences = JSON.stringify({ goals })
   const dirty = baseline !== '' && currentPreferences !== baseline
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -95,7 +92,6 @@ export default function WeeklyVolume() {
                 .map((muscle) => [muscle.muscle, String(muscle.goal)]),
             ),
           )
-          setProfile(result.profile)
           setRevision(result.revision)
           setBaseline(
             JSON.stringify({
@@ -104,7 +100,6 @@ export default function WeeklyVolume() {
                   .filter((muscle) => muscle.goal !== null)
                   .map((muscle) => [muscle.muscle, String(muscle.goal)]),
               ),
-              profile: result.profile,
             }),
           )
           initialized.current = true
@@ -129,9 +124,8 @@ export default function WeeklyVolume() {
       )
       const saved = await api<{
         goals: Record<string, number>
-        profile: Profile
         revision: number
-      }>('volume/preferences', { goals: values, profile, revision })
+      }>('volume/preferences', { goals: values, revision })
       setRevision(saved.revision)
       const updated = await api<Volume>(`volume?week=${week}`)
       const updatedGoals = Object.fromEntries(
@@ -141,8 +135,7 @@ export default function WeeklyVolume() {
       )
       setVolume(updated)
       setGoals(updatedGoals)
-      setProfile(updated.profile)
-      setBaseline(JSON.stringify({ goals: updatedGoals, profile: updated.profile }))
+      setBaseline(JSON.stringify({ goals: updatedGoals }))
       setNotice('Your goals are saved.')
     } catch (error) {
       setProblem((error as Error).message)
@@ -200,92 +193,20 @@ export default function WeeklyVolume() {
       {volume && (
         <form onSubmit={save}>
           <fieldset disabled={saving} className="min-w-0">
-            {volume.startingGoal !== null && (
-              <p className="text-muted mb-4">
-                Each group starts with {volume.startingGoal} estimated sets per week unless you
-                saved a different goal. This is an editable planning default, not a personalized
-                optimum. Empty fields return to the starting goal when saved.
-              </p>
-            )}
             <div className={`${card} mb-4`}>
-              <p className="font-normal">
-                {volume.draftPreview
-                  ? 'Local preview — draft muscle coefficients'
-                  : 'Reviewed mappings required'}
-              </p>
+              <p className="font-normal">Default weekly goal · 10 sets per muscle group</p>
               <p className="text-muted mt-2">
-                {volume.draftPreview
-                  ? 'These anatomy-based estimates have not been individually validated. Direct sets count as 1 and indirect work as 0.5 in this preview.'
-                  : 'Unreviewed mappings are excluded. Your goals remain editable.'}
+                Edit any goal below. Empty fields return to 10 when saved.
               </p>
-              <p className="text-muted mt-2">
-                Age, experience and gender do not determine a scientifically exact optimum. Goals
-                below are values you choose.
-              </p>
-              <p className="text-muted mt-2">
-                Mapping version {volume.mappingVersion.slice(0, 8)} · {volume.countedSets} included
-                performed sets
-              </p>
-              <a
-                className="text-accent inline-flex min-h-11 items-center"
-                href="https://pubmed.ncbi.nlm.nih.gov/41343037/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Read the volume research
-              </a>
-            </div>
-            <div className={`${card} mb-4 grid gap-3`}>
-              <h2 className="text-xl">Optional evidence context</h2>
-              <label>
-                <span className={label}>Age band</span>
-                <select
-                  className={input}
-                  value={profile.ageBand ?? ''}
-                  onChange={(event) => setProfile({ ...profile, ageBand: event.target.value })}
-                >
-                  <option value="">Prefer not to say</option>
-                  <option value="under18">Under 18</option>
-                  <option value="18-39">18–39</option>
-                  <option value="40-64">40–64</option>
-                  <option value="65+">65+</option>
-                </select>
-              </label>
-              <label>
-                <span className={label}>Consistent training experience</span>
-                <select
-                  className={input}
-                  value={profile.experience ?? ''}
-                  onChange={(event) => setProfile({ ...profile, experience: event.target.value })}
-                >
-                  <option value="">Not specified</option>
-                  <option value="under1">Under 1 year</option>
-                  <option value="1-3">1 to under 3 years</option>
-                  <option value="3+">3+ years</option>
-                </select>
-              </label>
-              <label>
-                <span className={label}>Gender (optional)</span>
-                <select
-                  className={input}
-                  value={profile.gender ?? ''}
-                  onChange={(event) => setProfile({ ...profile, gender: event.target.value })}
-                >
-                  <option value="">Not specified</option>
-                  <option value="woman">Woman</option>
-                  <option value="man">Man</option>
-                  <option value="nonbinary">Nonbinary</option>
-                  <option value="self-described">Self-described</option>
-                  <option value="prefer-not-to-say">Prefer not to say</option>
-                </select>
-              </label>
-              <p className="text-muted">
-                {profile.ageBand === 'under18'
-                  ? 'Adult training studies do not establish a target for under-18s.'
-                  : profile.ageBand === '65+'
-                    ? 'Older-adult evidence supports resistance training but gives limited precision about an optimal weekly set dose.'
-                    : 'These groups organize the research context. They do not apply a multiplier to your goals.'}
-              </p>
+              <details className="mt-2">
+                <summary className="text-accent min-h-11 cursor-pointer py-3">
+                  How sets are counted
+                </summary>
+                <p className="text-muted">
+                  Direct sets count as 1 and indirect work as 0.5. Muscle contributions are
+                  estimated. Excluded exercises are listed below.
+                </p>
+              </details>
             </div>
             <div className="flex flex-col gap-3">
               {volume.muscles.map((muscle) => (
@@ -299,7 +220,7 @@ export default function WeeklyVolume() {
                     {formatNumber(muscle.direct)} direct + {formatNumber(muscle.indirect)} indirect
                   </p>
                   <p className="text-muted">
-                    {muscle.goalSource === 'saved' ? 'Your saved goal' : 'Starting goal'} ·{' '}
+                    {muscle.goalSource === 'saved' ? 'Your saved goal' : 'Default goal'} ·{' '}
                     {muscle.goal === null ? 'Not set' : `${formatNumber(muscle.goal)} sets`}
                   </p>
                   <label className="mt-3 block">
@@ -359,7 +280,7 @@ export default function WeeklyVolume() {
             <div className="bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-lg p-3 backdrop-blur md:bottom-4">
               {notice && <p role="status">{notice}</p>}
               <button disabled={saving} className={primaryButton}>
-                {saving ? 'Saving…' : 'Save goals and profile'}
+                {saving ? 'Saving…' : 'Save goals'}
               </button>
             </div>
           </fieldset>

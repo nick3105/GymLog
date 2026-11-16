@@ -1,8 +1,9 @@
-import { ChevronRight, ListChecks, Play, Plus, Scale, type LucideIcon } from 'lucide-react'
+import { ChevronRight, ListChecks, Play, Scale, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 
 import Notice from '../components/Notice'
 import { formatDay } from '../format'
+import { primaryButton } from '../ui'
 import { useJournal } from '../journal'
 
 const choices: { to: string; title: string; text: string; icon: LucideIcon }[] = [
@@ -11,12 +12,6 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
     title: 'Start workout',
     text: 'Pick a saved workout and log your sets.',
     icon: Play,
-  },
-  {
-    to: '/create',
-    title: 'Create workout',
-    text: 'Plan exercises and targets once, repeat them.',
-    icon: Plus,
   },
   {
     to: '/review',
@@ -32,7 +27,7 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
   },
 ]
 
-// NAV-01: the four starting points, and a short summary of the journal.
+// NAV-01: the main starting points, and a short summary of the journal.
 export default function Home() {
   const { username, journal } = useJournal()
   const lastSession = [...journal.sessions].sort((a, b) => b.day.localeCompare(a.day))[0]
@@ -42,6 +37,14 @@ export default function Home() {
       <Notice />
       <h1 className="gradient-text mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
+      {journal.templates.length === 0 && journal.sessions.length === 0 && (
+        <Link
+          to="/review/create"
+          className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}
+        >
+          Create your first workout here
+        </Link>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {choices.map(({ to, title, text, icon: Icon }, index) => (
           <Link

@@ -432,9 +432,7 @@ def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
     except OverflowError:
         raise ValueError("Choose a week within the supported date range.") from None
     profiles = {row["exerciseId"]: row for row in registry["exercises"]}
-    starting_goal = (
-        10 if allow_draft and preferences.get("profile", {}).get("ageBand") != "under18" else None
-    )
+    starting_goal = 10
     muscles = {
         muscle["id"]: {
             "muscle": muscle["id"],
