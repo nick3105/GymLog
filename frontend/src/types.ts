@@ -73,6 +73,47 @@ export type Session = {
 }
 
 export type Weight = { day: string; kg: number }
+
+// GET /api/profile (REV-11). Each record or favourite is null until there is data for it.
+export type Profile = {
+  level: { name: string; next: string | null; toNextLevel: number | null }
+  overview: {
+    workouts: number
+    sets: number
+    reps: number
+    liftedKg: number
+    heldSeconds: number
+    exercises: number
+  }
+  consistency: {
+    currentStreakWeeks: number
+    longestStreakWeeks: number
+    thisWeek: number
+    thisMonth: number
+    perWeek: number | null
+    trainingDaysLast30: number
+  }
+  duration: {
+    recordedSince: string | null
+    count: number
+    averageSeconds: number | null
+    totalSeconds: number
+    longestSeconds: number | null
+  }
+  averages: { setsPerWorkout: number | null; weightPerSet: number | null; rpe: number | null }
+  records: {
+    heaviestSet: { weight: number; reps: number; exercise: string; day: string } | null
+    best1rm: { estimate: number; exercise: string; day: string } | null
+    biggestWorkout: { liftedKg: number; name: string; day: string } | null
+    mostReps: { reps: number; exercise: string; day: string } | null
+  }
+  favourites: {
+    exercise: { name: string; sets: number } | null
+    workout: { name: string; count: number } | null
+    group: { name: string; sets: number } | null
+  }
+  bodyWeight: { latest: Weight | null; change: number | null; since: string | null }
+}
 export type WeightGoal = { kg: number; mode: 'lose' | 'gain' }
 
 export type Journal = {

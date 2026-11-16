@@ -22,7 +22,7 @@ Covers REV-11 and RUN-11 (new). Branch `feature/profile`.
 
 ### The profile (REV-11)
 `GET /api/profile?today=2026-11-16`, signed in only. Every number is calculated in
-`models.profile_stats(sessions, weights, today)` from the user's own data.
+`models.profile_stats(sessions, weights, catalogue, today)` from the user's own data.
 "Performed set" means a set that was not skipped. Weeks run Monday to Sunday, by session `day`.
 
 **Header:** a circle with the username's first letter (gradient), the username, and the level.
@@ -45,6 +45,7 @@ exercises trained.
 **Duration** (only workouts with a counted duration; the section says "Recorded from
 16 Nov 2026" and "No timed workouts yet" until there is one):
 - average workout, total time trained, longest workout. Shown as "1 h 05 min" or "48 min".
+  Under them: "Recorded from 16 Nov 2026. Older workouts have no duration."
 
 **Averages:** sets per workout, weight per set (only sets with weight above 0 kg), RPE (only
 sets with RPE). Each is "–" when there is nothing to average.
@@ -90,7 +91,8 @@ profiles.
 - **Privacy:** a second user's sessions and weights never change the numbers.
 - `today` missing or invalid → 400; signed out → 401.
 
-`npm test` covers the duration and tonnes formatting and that starting a workout sets `startedAt`.
+`npm test` covers the duration and tonnes formatting and the UTC format of `startTime()`, which
+Start workout puts in the draft.
 
 At 375 × 667 with demo data plus one timed workout: tap the username → profile, every card
 fits without horizontal scrolling, numbers are readable at arm's length.

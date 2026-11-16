@@ -274,6 +274,237 @@ def body_load(sessions, catalogue, today, days):
     return {"groups": result}
 
 
+# (level, completed workouts needed), lowest first (REV-11).
+LEVELS = [("Bronze", 0), ("Silver", 10), ("Gold", 50), ("Platinum", 150)]
+# Shorter is a test, longer is a workout left open (RUN-11).
+SHORTEST_WORKOUT_SECONDS = 60
+LONGEST_WORKOUT_SECONDS = 4 * 60 * 60
+
+
+def level_for(workouts):
+    """The level reached with this many workouts, and how many are left to the next one."""
+    for index in range(len(LEVELS) - 1, -1, -1):
+        name, needed = LEVELS[index]
+        if workouts >= needed:
+            if index == len(LEVELS) - 1:
+                return {"name": name, "next": None, "toNextLevel": None}
+            next_name, next_needed = LEVELS[index + 1]
+            return {"name": name, "next": next_name, "toNextLevel": next_needed - workouts}
+
+
+def week_start(day):
+    """The Monday of the week a date is in."""
+    return day - timedelta(days=day.weekday())
+
+
+def average(total, count):
+    """Total ÷ count to one decimal, or None when there is nothing to average."""
+    return round(total / count, 1) if count else None
+
+
+def workout_seconds(session):
+    """How long a workout took, or None if unknown or outside 1 minute to 4 hours (RUN-11)."""
+    if "startedAt" not in session:
+        return None
+    started = datetime.fromisoformat(session["startedAt"])
+    completed = datetime.fromisoformat(session["completedAt"])
+    seconds = (completed - started).total_seconds()
+    if not SHORTEST_WORKOUT_SECONDS <= seconds <= LONGEST_WORKOUT_SECONDS:
+        return None
+    return round(seconds)
+
+
+def streaks(trained_weeks, this_week):
+    """Weeks in a row with a workout: the current run and the longest run."""
+    current = 0
+    # Until this week has a workout, the streak runs up to last week.
+    week = this_week if this_week in trained_weeks else this_week - timedelta(days=7)
+    while week in trained_weeks:
+        current += 1
+        week -= timedelta(days=7)
+    longest = 0
+    run = 0
+    previous = None
+    for week in sorted(trained_weeks):
+        if previous is not None and week - previous == timedelta(days=7):
+            run += 1
+        else:
+            run = 1
+        longest = max(longest, run)
+        previous = week
+    return current, longest
+
+
+def profile_stats(sessions, weights, catalogue, today):
+    """Level and statistics of one user's journal, for the profile (REV-11)."""
+    try:
+        today = date.fromisoformat(today)
+    except (ValueError, TypeError):
+        raise ValueError("Send today's date as YYYY-MM-DD.") from None
+    ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
+
+    sets = 0
+    reps = 0
+    lifted = 0.0
+    held = 0
+    weighted_total = 0.0
+    weighted_sets = 0
+    rpe_total = 0.0
+    rpe_sets = 0
+    sets_by_exercise = {}
+    exercise_names = {}
+    sets_by_group = {}
+    workouts_by_name = {}
+    heaviest = None
+    best_estimate = None
+    most_reps = None
+    biggest = None
+    durations = []
+    recorded_since = None
+
+    for session in ordered:
+        workouts_by_name[session["name"]] = workouts_by_name.get(session["name"], 0) + 1
+        if recorded_since is None and "startedAt" in session:
+            recorded_since = session["day"]
+        seconds = workout_seconds(session)
+        if seconds is not None:
+            durations.append(seconds)
+        session_lifted = 0.0
+        for exercise in session["exercises"]:
+            name = exercise["name"]
+            for row in exercise["sets"]:
+                if row.get("skipped", False):
+                    continue
+                sets += 1
+                sets_by_exercise[exercise["id"]] = sets_by_exercise.get(exercise["id"], 0) + 1
+                exercise_names[exercise["id"]] = name
+                group = catalogue.get(exercise["id"], {}).get("group")
+                if group:
+                    sets_by_group[group] = sets_by_group.get(group, 0) + 1
+                if row.get("rpe") is not None:
+                    rpe_total += row["rpe"]
+                    rpe_sets += 1
+                if "durationSeconds" in row:
+                    held += row["durationSeconds"]
+                    continue
+                weight = row["weight"]
+                reps += row["reps"]
+                session_lifted += weight * row["reps"]
+                if weight > 0:
+                    weighted_total += weight
+                    weighted_sets += 1
+                # Strictly better only, so on a tie the earlier day keeps the record.
+                if weight > 0 and (
+                    heaviest is None
+                    or weight > heaviest["weight"]
+                    or (weight == heaviest["weight"] and row["reps"] > heaviest["reps"])
+                ):
+                    heaviest = {
+                        "weight": weight,
+                        "reps": row["reps"],
+                        "exercise": name,
+                        "day": session["day"],
+                    }
+                estimate = estimated_1rm(weight, row["reps"], row.get("rpe"))
+                if estimate is not None and (
+                    best_estimate is None or estimate > best_estimate["estimate"]
+                ):
+                    best_estimate = {"estimate": estimate, "exercise": name, "day": session["day"]}
+                if most_reps is None or row["reps"] > most_reps["reps"]:
+                    most_reps = {"reps": row["reps"], "exercise": name, "day": session["day"]}
+        lifted += session_lifted
+        if session_lifted > 0 and (biggest is None or session_lifted > biggest["liftedKg"]):
+            biggest = {
+                "liftedKg": round(session_lifted, 1),
+                "name": session["name"],
+                "day": session["day"],
+            }
+
+    days = [date.fromisoformat(session["day"]) for session in ordered]
+    this_week = week_start(today)
+    current_streak, longest_streak = streaks({week_start(day) for day in days}, this_week)
+    per_week = None
+    if days:
+        weeks = (this_week - week_start(days[0])).days // 7 + 1
+        per_week = round(len(days) / weeks, 1)
+    this_week_count = 0
+    this_month_count = 0
+    recent_days = set()
+    for day in days:
+        if week_start(day) == this_week:
+            this_week_count += 1
+        if (day.year, day.month) == (today.year, today.month):
+            this_month_count += 1
+        if today - timedelta(days=29) <= day <= today:
+            recent_days.add(day)
+
+    favourite_exercise = None
+    for exercise_id, count in sets_by_exercise.items():
+        if favourite_exercise is None or count > favourite_exercise["sets"]:
+            favourite_exercise = {"name": exercise_names[exercise_id], "sets": count}
+    favourite_workout = None
+    for name, count in workouts_by_name.items():
+        if favourite_workout is None or count > favourite_workout["count"]:
+            favourite_workout = {"name": name, "count": count}
+    favourite_group = None
+    for name, count in sets_by_group.items():
+        if favourite_group is None or count > favourite_group["sets"]:
+            favourite_group = {"name": name, "sets": count}
+
+    by_day = sorted(weights, key=lambda entry: entry["day"])
+    body_weight = {"latest": None, "change": None, "since": None}
+    if by_day:
+        body_weight = {
+            "latest": by_day[-1],
+            "change": round(by_day[-1]["kg"] - by_day[0]["kg"], 1),
+            "since": by_day[0]["day"],
+        }
+
+    return {
+        "level": level_for(len(ordered)),
+        "overview": {
+            "workouts": len(ordered),
+            "sets": sets,
+            "reps": reps,
+            "liftedKg": round(lifted, 1),
+            "heldSeconds": held,
+            "exercises": len(sets_by_exercise),
+        },
+        "consistency": {
+            "currentStreakWeeks": current_streak,
+            "longestStreakWeeks": longest_streak,
+            "thisWeek": this_week_count,
+            "thisMonth": this_month_count,
+            "perWeek": per_week,
+            "trainingDaysLast30": len(recent_days),
+        },
+        "duration": {
+            "recordedSince": recorded_since,
+            "count": len(durations),
+            "averageSeconds": round(sum(durations) / len(durations)) if durations else None,
+            "totalSeconds": sum(durations),
+            "longestSeconds": max(durations, default=None),
+        },
+        "averages": {
+            "setsPerWorkout": average(sets, len(ordered)),
+            "weightPerSet": average(weighted_total, weighted_sets),
+            "rpe": average(rpe_total, rpe_sets),
+        },
+        "records": {
+            "heaviestSet": heaviest,
+            "best1rm": best_estimate,
+            "biggestWorkout": biggest,
+            "mostReps": most_reps,
+        },
+        "favourites": {
+            "exercise": favourite_exercise,
+            "workout": favourite_workout,
+            "group": favourite_group,
+        },
+        "bodyWeight": body_weight,
+    }
+
+
 def validate_template(body, catalogue):
     if not isinstance(body, dict):
         raise ValueError("A workout object is required.")
@@ -435,7 +666,21 @@ def validate_session(body, template):
     }
     if "note" in body or "note" in template:
         document["note"] = note(body.get("note", template.get("note", "")), 1000, "Workout note")
+    # Workouts started before RUN-11 have no start time and save as before.
+    if body.get("startedAt") is not None:
+        document["startedAt"] = validate_start_time(body["startedAt"])
     return document
+
+
+def validate_start_time(value):
+    """A workout's start: a date and time with a time zone, as the phone sends it (RUN-11)."""
+    try:
+        moment = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        raise ValueError("The workout start time is not valid.") from None
+    if moment.tzinfo is None:
+        raise ValueError("The workout start time is not valid.")
+    return value
 
 
 def validate_session_edit(body, saved):
@@ -474,6 +719,8 @@ def validate_session_edit(body, saved):
             "cooldown": saved.get("cooldown", ""),
             "warmupDone": body.get("warmupDone", saved.get("warmupDone", False)),
             "cooldownDone": body.get("cooldownDone", saved.get("cooldownDone", False)),
+            # A correction never moves the start time.
+            "startedAt": saved.get("startedAt"),
         },
         {**saved, "id": saved["templateId"], "exercises": planned},
     )

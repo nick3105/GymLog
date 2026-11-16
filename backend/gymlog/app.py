@@ -19,6 +19,7 @@ from .models import (
     body_load,
     exercise_stats,
     number,
+    profile_stats,
     validate_coach_request,
     validate_coaching_transition,
     validate_new_coaching,
@@ -362,6 +363,16 @@ def create_app(config=None):
             body_load(
                 sessions, catalogue_by_id, request.args.get("today"), request.args.get("days")
             )
+        )
+
+    @app.get("/api/profile")
+    @authenticated
+    def profile():
+        """The signed-in user's level and training statistics (REV-11)."""
+        sessions = storage.documents(database, g.user_id, "sessions")
+        weights = storage.weights(database, g.user_id)
+        return jsonify(
+            profile_stats(sessions, weights, catalogue_for(g.user_id), request.args.get("today"))
         )
 
     @app.post("/api/templates")
