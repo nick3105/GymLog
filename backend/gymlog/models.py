@@ -100,6 +100,81 @@ def exercise_stats(sessions, exercise_id):
     }
 
 
+def first_day_of_period(today, days):
+    """The first date a body-load period counts, or None for all time."""
+    try:
+        last_day = date.fromisoformat(today)
+    except (ValueError, TypeError):
+        raise ValueError("Send today's date as YYYY-MM-DD.") from None
+    if days == "all":
+        return None
+    if days not in ("7", "28"):
+        raise ValueError("Choose a period of 7 days, 28 days or all.")
+    return last_day - timedelta(days=int(days) - 1)
+
+
+def body_load(sessions, catalogue, today, days):
+    """Completed sets, kg volume and seconds per muscle group in a period (REV-09)."""
+    first_day = first_day_of_period(today, days)
+    last_day = date.fromisoformat(today)
+    groups = {}
+    for exercise in catalogue.values():
+        groups[exercise["group"]] = {
+            "sets": 0,
+            "volumeKg": 0.0,
+            "durationSeconds": 0,
+            "exercises": {},
+        }
+
+    ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
+    for session in ordered:
+        day = date.fromisoformat(session["day"])
+        if day > last_day or (first_day is not None and day < first_day):
+            continue
+        for exercise in session["exercises"]:
+            group = groups[catalogue[exercise["id"]]["group"]]
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            totals = group["exercises"].setdefault(
+                exercise["id"],
+                {"id": exercise["id"], "sets": 0, "volumeKg": 0.0, "durationSeconds": 0},
+            )
+            # The newest session's snapshot names the exercise, as it was when trained.
+            totals["name"] = exercise["name"]
+            for row in performed:
+                volume = row.get("weight", 0) * row.get("reps", 0)
+                seconds = row.get("durationSeconds", 0)
+                for counted in (group, totals):
+                    counted["sets"] += 1
+                    counted["volumeKg"] += volume
+                    counted["durationSeconds"] += seconds
+
+    most_sets = max(group["sets"] for group in groups.values())
+    result = []
+    for name, group in groups.items():
+        exercises = []
+        for totals in group["exercises"].values():
+            totals["volumeKg"] = round(totals["volumeKg"], 1)
+            exercises.append(totals)
+        exercises.sort(key=lambda totals: (-totals["sets"], totals["name"]))
+        level = 0
+        if group["sets"] > 0:
+            level = math.ceil(3 * group["sets"] / most_sets)
+        result.append(
+            {
+                "group": name,
+                "sets": group["sets"],
+                "volumeKg": round(group["volumeKg"], 1),
+                "durationSeconds": group["durationSeconds"],
+                "level": level,
+                "exercises": exercises,
+            }
+        )
+    result.sort(key=lambda group: (-group["sets"], group["group"]))
+    return {"groups": result}
+
+
 def validate_template(body, catalogue):
     if not isinstance(body, dict):
         raise ValueError("A workout object is required.")

@@ -67,6 +67,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-06 | **View Estimated 1RM Trend** | Plot eligible estimates over time in a line chart. Identify the exercise and units, and show an empty state when no estimates exist. |
 | REV-08 | **Correct Completed Workout** | From Review, correct the date (today or past) and existing performed sets’ weight, reps and optional RPE. Preserve skipped rows, exercise snapshots and the saved routine; update history and progress. |
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
+| REV-09 | **View Body Load** | From Review, show how many completed sets, kg of volume and seconds each muscle group received in the last 7 days, 28 days or all time, as a body map and a list with each group's exercises. Name the groups that were not trained. Each exercise counts for its catalogue group only. |
 
 **Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
 
