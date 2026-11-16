@@ -8,8 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 4
-
+SCHEMA_VERSION = 5
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -26,6 +25,9 @@ SCHEMA = [
     """CREATE TABLE body_weights (
         user_id INTEGER NOT NULL REFERENCES users(id), day TEXT NOT NULL, kg REAL NOT NULL,
         PRIMARY KEY (user_id, day))""",
+    """CREATE TABLE body_weight_goals (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id), kg REAL NOT NULL,
+        mode TEXT NOT NULL CHECK (mode IN ('lose', 'gain')))""",
     """CREATE TABLE IF NOT EXISTS login_attempts (
         address TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL)""",
 ]
@@ -78,7 +80,6 @@ def initialize(path, owner_password_hash=None):
             return
         if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
             _upgrade_extensions(db)
-
             return
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "templates" in tables:
@@ -327,6 +328,29 @@ def save_weight(path, user_id, day, kg):
     return {"day": day, "kg": kg}
 
 
+def weight_goal(path, user_id):
+    """Return the signed-in user's private goal, if they have set one."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT kg, mode FROM body_weight_goals WHERE user_id=?", (user_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def save_weight_goal(path, user_id, goal):
+    """Save or clear only this user's weight goal."""
+    with connect(path) as db:
+        if goal["kg"] is None:
+            db.execute("DELETE FROM body_weight_goals WHERE user_id=?", (user_id,))
+            return None
+        db.execute(
+            """INSERT INTO body_weight_goals VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET kg=excluded.kg, mode=excluded.mode""",
+            (user_id, goal["kg"], goal["mode"]),
+        )
+    return {"kg": goal["kg"], "mode": goal["mode"]}
+
+
 def get_session(path, user_id, session_id):
     """Read only this user's completed workout."""
     with connect(path) as db:
@@ -419,6 +443,13 @@ def _upgrade_extensions(db):
     db.execute("BEGIN IMMEDIATE")
     try:
         if db.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+            # Version 2 existed in both weight-goal main and the coaching preview.
+            # Install each extension idempotently so either history upgrades safely.
+            db.execute(
+                """CREATE TABLE IF NOT EXISTS body_weight_goals (
+                    user_id INTEGER PRIMARY KEY REFERENCES users(id), kg REAL NOT NULL,
+                    mode TEXT NOT NULL CHECK (mode IN ('lose', 'gain')))"""
+            )
             for statement in (
                 COACHING_SCHEMA + PERSONAL_EXERCISE_SCHEMA + [VOLUME_PREFERENCES_SCHEMA]
             ):

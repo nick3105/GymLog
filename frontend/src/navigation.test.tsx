@@ -15,6 +15,8 @@ function page(Page: typeof Home, journal: Journal) {
     journal,
     active: null,
     setJournal: () => {},
+    weightReminderDismissed: false,
+    dismissWeightReminder: () => {},
     refresh: async () => {},
     signIn: async () => {},
     signOut: async () => {},

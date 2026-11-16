@@ -73,12 +73,25 @@ export type Session = {
 }
 
 export type Weight = { day: string; kg: number }
+export type WeightGoal = { kg: number; mode: 'lose' | 'gain' }
 
 export type Journal = {
   exercises: Exercise[]
   templates: Template[]
   sessions: Session[]
   weights: Weight[]
+  weightGoal: WeightGoal | null
+}
+
+export type LoadTotals = { sets: number; volumeKg: number; durationSeconds: number }
+
+export type BodyLoad = {
+  groups: (LoadTotals & {
+    group: string
+    // 0 untrained, 1 light, 2 medium, 3 most — relative to the busiest group.
+    level: 0 | 1 | 2 | 3
+    exercises: (LoadTotals & { id: string; name: string })[]
+  })[]
 }
 
 export type ExerciseStats = {

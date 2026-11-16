@@ -193,7 +193,7 @@ def test_coached_private_timed_superset_notes_reminders_and_volume(tmp_path, mon
     assert alice.get("/api/state").json["sessions"][0] == corrected
 
 
-@pytest.mark.parametrize("version", [0, 1, 2, 3])
+@pytest.mark.parametrize("version", [0, 1, 2, 3, 4])
 def test_preview_migrations_are_repeatable_and_concurrent(tmp_path, version):
     """Upgrade fresh and each prior additive schema under simultaneous initialization."""
     path = str(tmp_path / "upgrade.sqlite3")
@@ -212,6 +212,8 @@ def test_preview_migrations_are_repeatable_and_concurrent(tmp_path, version):
             if version >= 3:
                 for statement in storage.PERSONAL_EXERCISE_SCHEMA:
                     db.execute(statement)
+            if version >= 4:
+                db.execute(storage.VOLUME_PREFERENCES_SCHEMA)
             db.execute(f"PRAGMA user_version={version}")
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(lambda _: storage.initialize(path), range(4)))
@@ -225,6 +227,39 @@ def test_preview_migrations_are_repeatable_and_concurrent(tmp_path, version):
             assert json.loads(db.execute("SELECT document FROM templates").fetchone()[0]) == {
                 "id": "plan"
             }
+
+
+@pytest.mark.parametrize("version,has_weight_goal", [(2, True), (4, False)])
+def test_shared_and_preview_schema_histories_keep_private_data(tmp_path, version, has_weight_goal):
+    """Upgrade shared weight-goal and older preview histories without losing private data."""
+    path = str(tmp_path / "histories.sqlite3")
+    with sqlite3.connect(path) as db:
+        for statement in storage.SCHEMA:
+            db.execute(statement)
+        db.execute("INSERT INTO users VALUES (1,'alice','hash','2026-01-01')")
+        db.execute("INSERT INTO users VALUES (2,'bob','hash','2026-01-01')")
+        if has_weight_goal:
+            db.execute("INSERT INTO body_weight_goals VALUES (1,80,'gain')")
+        else:
+            db.execute("DROP TABLE body_weight_goals")
+            for statement in storage.COACHING_SCHEMA + storage.PERSONAL_EXERCISE_SCHEMA:
+                db.execute(statement)
+            db.execute(storage.VOLUME_PREFERENCES_SCHEMA)
+            db.execute(
+                "INSERT INTO user_preferences VALUES (1,?,'2026-01-01')",
+                ('{"goals":{"chest":12},"revision":1}',),
+            )
+        db.execute(f"PRAGMA user_version={version}")
+    storage.initialize(path)
+    storage.initialize(path)
+    assert storage.weight_goal(path, 1) == ({"kg": 80, "mode": "gain"} if has_weight_goal else None)
+    assert storage.weight_goal(path, 2) is None
+    assert storage.volume_preferences(path, 2)["goals"] == {}
+    if not has_weight_goal:
+        assert storage.volume_preferences(path, 1)["goals"] == {"chest": 12}
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == storage.SCHEMA_VERSION
+        assert db.execute("SELECT count(*) FROM coaching_relationships").fetchone()[0] == 0
 
 
 def test_competing_legacy_upgrade_can_finish_before_accounts_read(tmp_path, monkeypatch):

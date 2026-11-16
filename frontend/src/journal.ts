@@ -33,6 +33,8 @@ export type JournalContext = {
   username: string
   journal: JournalData
   setJournal: (update: (journal: JournalData) => JournalData) => void
+  weightReminderDismissed: boolean
+  dismissWeightReminder: () => void
   refresh: () => Promise<void>
   signIn: (path: 'login' | 'register', username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -42,7 +44,13 @@ export type JournalContext = {
   setBuilderDirty: (dirty: boolean) => void
 }
 
-export const emptyJournal: JournalData = { exercises: [], templates: [], sessions: [], weights: [] }
+export const emptyJournal: JournalData = {
+  exercises: [],
+  templates: [],
+  sessions: [],
+  weights: [],
+  weightGoal: null,
+}
 
 export const JournalStore = createContext<JournalContext | null>(null)
 

@@ -1,6 +1,7 @@
 # GymLog
 
-Plan strength workouts, log every set, follow your estimated 1RM and body weight — from a phone
+Plan strength workouts, log every set, follow your estimated 1RM and body weight, and set a
+personal weight-loss or weight-gain goal — from a phone
 or a computer. Requirements: [docs/BRD.md](docs/BRD.md).
 
 **Live journal:** https://nickkkk3105.pythonanywhere.com/ (the old GitHub Pages address redirects
@@ -30,7 +31,15 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173/ and create an account. Your local `backend/instance/` is a separate,
+Open http://localhost:5173/ and create an account.
+
+To try every screen without logging weeks of training first, fill a fresh local journal with
+demo data while Flask is running, then sign in as `demo` / `demo-password-123`:
+
+```sh
+cd backend
+uv run python seed_demo.py
+``` Your local `backend/instance/` is a separate,
 throwaway journal — never copy the production one to your computer.
 
 On a phone on the same Wi-Fi: run `npm run dev -- --host` and open the Network address it prints.

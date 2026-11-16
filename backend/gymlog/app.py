@@ -16,6 +16,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import storage
 from .models import (
     best_1rm,
+    body_load,
     exercise_stats,
     number,
     validate_coach_request,
@@ -27,6 +28,7 @@ from .models import (
     validate_session_edit,
     validate_template,
     validate_volume_preferences,
+    validate_weight_goal,
     weekly_volume,
 )
 
@@ -312,6 +314,7 @@ def create_app(config=None):
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
+            weightGoal=storage.weight_goal(database, g.user_id),
         )
 
     @app.post("/api/exercises/personal")
@@ -332,6 +335,17 @@ def create_app(config=None):
                 sessions,
                 exercise_id,
                 include_average_weight=request.args.get("include") == "average-weight",
+            )
+        )
+
+    @app.get("/api/body-load")
+    @authenticated
+    def body_load_report():
+        """Sets, volume and seconds per muscle group for the chosen period (REV-09)."""
+        sessions = storage.documents(database, g.user_id, "sessions")
+        return jsonify(
+            body_load(
+                sessions, catalogue_by_id, request.args.get("today"), request.args.get("days")
             )
         )
 
@@ -461,5 +475,14 @@ def create_app(config=None):
             raise ValueError("Choose a valid date.") from None
         kg = number(body.get("kg"), "Body weight", 1, 700)
         return jsonify(storage.save_weight(database, g.user_id, day, kg))
+
+    @app.post("/api/weight-goal")
+    @authenticated
+    def set_weight_goal():
+        body = request.get_json()
+        entries = storage.weights(database, g.user_id)
+        latest_weight = entries[-1]["kg"] if entries else None
+        goal = validate_weight_goal(body, latest_weight)
+        return jsonify(weightGoal=storage.save_weight_goal(database, g.user_id, goal))
 
     return app
