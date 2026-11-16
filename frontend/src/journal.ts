@@ -8,6 +8,8 @@ export type ActiveWorkout = {
   note?: string
   // One ID per workout, so pressing Finish twice (or retrying after a network error) saves once.
   clientId: string
+  // When Start was tapped (RUN-11); drafts from before this have none.
+  startedAt?: string
   templateId: string
   name: string
   day: string

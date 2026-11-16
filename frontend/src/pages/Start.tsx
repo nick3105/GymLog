@@ -8,6 +8,7 @@ import { api, ApiError } from '../api'
 import Notice from '../components/Notice'
 import { today } from '../format'
 import { useJournal } from '../journal'
+import { startTime } from '../profile'
 import { newId } from '../newId'
 import { targetsFor } from '../targets'
 import type { Template } from '../types'
@@ -62,6 +63,7 @@ export default function Start() {
       return
     setActive({
       clientId: newId(),
+      startedAt: startTime(),
       templateId: template.id,
       name: template.name,
       note: template.note ?? '',

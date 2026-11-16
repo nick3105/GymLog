@@ -27,6 +27,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 22 | Body load analysis | `22-body-load.md` | `feature/body-load` | REV-09 | 7, 21 |
 | 23 | Demo data for local testing | `23-demo-data.md` | `feature/demo-data` | — | — |
 | 24 | Exercise library and how-to guides | `24-exercise-library.md` | `feature/exercise-library` | NAV-04, REV-10 | 11 |
+| 30 | Profile and training statistics | `30-profile.md` | `feature/profile` | RUN-11, REV-11 | 7 |
 
 ## Who can start when
 

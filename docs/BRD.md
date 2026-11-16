@@ -55,6 +55,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-08 | **View Live Estimated 1RM** | Update the best eligible estimated 1RM for an exercise as actual set results are entered. |
 | RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. During an active session, users may append extra sets up to 20 total per exercise without changing the template. Extra sets are saved in that session only. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
+| RUN-11 | **Record Workout Duration** | Record when a workout starts and save it with the session. Duration is the time from start to saving; durations under 1 minute or over 4 hours are not counted. Workouts saved before this existed have no duration. |
 
 ## 4. Review and progress
 
@@ -70,6 +71,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
 | REV-09 | **View Body Load** | From Review, show how many completed sets, kg of volume and seconds each muscle group received in the last 7 days, 28 days or all time, as a body map and a list with each group's exercises. Name the groups that were not trained. Each exercise counts for its catalogue group only. |
 | REV-10 | **View Exercise Guide** | Wherever an exercise's name opens its progress (builder, active session, review, library), show how the exercise is done first: start and end photos and numbered steps, or a plain note when no guide exists. Preserve unsaved inputs (REV-07). |
+| REV-11 | **View Profile and Statistics** | From the username in the top bar, show the user's level (Bronze, Silver, Gold, Platinum by completed workouts) and statistics computed from their own journal: totals, weekly streaks, duration, averages, records, favourites and body-weight change. |
 
 **Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
 

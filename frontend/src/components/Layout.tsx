@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CircleUserRound,
   Dumbbell,
   House,
   ListChecks,
@@ -89,7 +90,13 @@ export default function Layout() {
             <Dumbbell className="text-accent size-5" aria-hidden />
             gymlog<span className="text-accent">.</span>
           </Link>
-          <span className="text-muted ml-auto truncate text-sm">{username}</span>
+          <Link
+            to="/profile"
+            aria-label={`Your profile, ${username}`}
+            className="text-muted ml-auto flex min-h-11 min-w-11 items-center justify-end truncate text-sm"
+          >
+            {username}
+          </Link>
           <Link
             to="/settings"
             aria-label="Settings and coaching"
@@ -144,6 +151,15 @@ export default function Layout() {
         >
           <BookOpen className="size-5" aria-hidden />
           Exercises
+        </NavLink>
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex min-h-11 items-center gap-3 rounded-xl px-3 font-normal ${isActive ? 'bg-accent/10 text-accent' : 'text-muted'}`
+          }
+        >
+          <CircleUserRound className="size-5" aria-hidden />
+          Profile
         </NavLink>
         <NavLink
           to="/settings"

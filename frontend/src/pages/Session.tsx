@@ -129,6 +129,7 @@ export default function Session() {
     try {
       const saved = await api<SavedSession>('sessions', {
         clientId: workout.clientId,
+        startedAt: workout.startedAt,
         templateId: workout.templateId,
         day: workout.day,
         note: workout.note ?? '',
