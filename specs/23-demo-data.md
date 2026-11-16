@@ -11,11 +11,13 @@ No BRD ID: a developer tool, not an app feature. Branch `feature/demo-data`.
 
 - `backend/seed_demo.py`, Python standard library only (`urllib`, `http.cookiejar`, `json`,
   `datetime`). Run it while Flask is running: `uv run python seed_demo.py`. An optional
-  argument gives another address: `uv run python seed_demo.py http://localhost:5000`.
+  argument gives another address: `uv run python seed_demo.py http://127.0.0.1:5055`.
+  The default is `http://127.0.0.1:5000`, where Flask listens; on macOS `localhost:5000` can
+  reach AirPlay instead.
 - It goes **through the running API**, exactly as the React app does, so every rule in
   `models.py` checks the data. It never opens the database itself.
 - It refuses any address whose host is not `localhost` or `127.0.0.1`: "Demo data is only
-  for a local GymLog. Use http://localhost:5000." Production can never get demo data.
+  for a local GymLog. Use http://127.0.0.1:5000." Production can never get demo data.
 - It registers `demo` with the password `demo-password-123`. If `demo` already exists, it stops
   with: "The demo user already exists. Delete backend/instance/ for a fresh journal, or sign in
   as demo." Nothing is changed.
