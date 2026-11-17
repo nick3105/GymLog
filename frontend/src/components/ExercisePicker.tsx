@@ -40,6 +40,32 @@ export default function ExercisePicker({
       <label htmlFor="exercise-search" className={label}>
         Add an exercise
       </label>
+      <div className="relative">
+        <Search
+          className="text-muted pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2"
+          aria-hidden
+        />
+        <input
+          id="exercise-search"
+          type="search"
+          className={`${input} ${favoriteExerciseIds ? 'pr-14' : ''} pl-10`}
+          placeholder="Search, e.g. db row"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {favoriteExerciseIds && (
+          <button
+            type="button"
+            onClick={() => setFavoritesOpen(!favoritesOpen)}
+            aria-label="Favourite exercises"
+            aria-expanded={favoritesOpen}
+            className="border-accent/50 bg-accent/10 text-accent focus-visible:outline-accent absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border focus-visible:outline-2"
+          >
+            <Star className="size-5 fill-current" aria-hidden />
+          </button>
+        )}
+      </div>
       {favoritesOpen && (
         <div
           role="region"
@@ -90,32 +116,6 @@ export default function ExercisePicker({
           )}
         </div>
       )}
-      <div className="relative">
-        <Search
-          className="text-muted pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2"
-          aria-hidden
-        />
-        <input
-          id="exercise-search"
-          type="search"
-          className={`${input} ${favoriteExerciseIds ? 'pr-14' : ''} pl-10`}
-          placeholder="Search, e.g. db row"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        {favoriteExerciseIds && (
-          <button
-            type="button"
-            onClick={() => setFavoritesOpen(!favoritesOpen)}
-            aria-label="Favourite exercises"
-            aria-expanded={favoritesOpen}
-            className="border-accent/50 bg-accent/10 text-accent focus-visible:outline-accent absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border focus-visible:outline-2"
-          >
-            <Star className="size-5 fill-current" aria-hidden />
-          </button>
-        )}
-      </div>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Muscle">
         {['', ...groups].map((name) => (
           <button
