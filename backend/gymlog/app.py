@@ -310,7 +310,14 @@ def create_app(config=None):
     def state():
         return jsonify(
             exercises=[
-                exercise
+                {
+                    **exercise,
+                    **(
+                        {"thumbnail": f"/exercise-images/{exercise['id']}/0.jpg"}
+                        if exercise["id"] in guides
+                        else {}
+                    ),
+                }
                 for exercise in catalogue_for(g.user_id).values()
                 if not exercise.get("retired")
             ],

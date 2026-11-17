@@ -29,6 +29,8 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 24 | Exercise library and how-to guides | `24-exercise-library.md` | `feature/exercise-library` | NAV-04, REV-10 | 11 |
 | 30 | Profile and training statistics | `30-profile.md` | `feature/profile` | RUN-11, REV-11 | 7 |
 
+| 31 | Visual exercise library | `31-exercise-visual-cards.md` | `feature/exercise-visual-cards` | NAV-04, REV-10 | 24 |
+
 ## Who can start when
 
 Tasks 1, 2 and 3 have no dependencies — **three people start on day one**. Task 3 is backend-only
