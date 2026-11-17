@@ -1,4 +1,4 @@
-import { Check, Search, Star } from 'lucide-react'
+import { Check, Search, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { favoriteExercises } from '../exerciseFavorites'
@@ -11,6 +11,7 @@ type Props = {
   exercises: Exercise[]
   plannedIds: string[]
   favoriteExerciseIds?: string[]
+  onRemoveFavorite?: (exerciseId: string) => void
   onAdd: (exercise: Exercise) => void
   onCreate?: (exercise: Exercise) => void
 }
@@ -20,6 +21,7 @@ export default function ExercisePicker({
   exercises,
   plannedIds,
   favoriteExerciseIds,
+  onRemoveFavorite,
   onAdd,
   onCreate,
 }: Props) {
@@ -35,22 +37,9 @@ export default function ExercisePicker({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3">
-        <label htmlFor="exercise-search" className={label}>
-          Add an exercise
-        </label>
-        {favoriteExerciseIds && (
-          <button
-            type="button"
-            onClick={() => setFavoritesOpen(!favoritesOpen)}
-            aria-label="Favourite exercises"
-            aria-expanded={favoritesOpen}
-            className="border-accent/50 bg-accent/10 text-accent focus-visible:outline-accent flex size-11 shrink-0 items-center justify-center rounded-full border focus-visible:outline-2"
-          >
-            <Star className="size-5" aria-hidden />
-          </button>
-        )}
-      </div>
+      <label htmlFor="exercise-search" className={label}>
+        Add an exercise
+      </label>
       {favoritesOpen && (
         <div
           role="region"
@@ -61,21 +50,42 @@ export default function ExercisePicker({
             <p className="text-muted p-2 text-sm">No favourites yet. Add stars in Exercises.</p>
           ) : (
             <ul className="max-h-60 overflow-y-auto">
-              {favorites.map((exercise) => (
-                <li key={exercise.id} className="border-border border-b last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onAdd(exercise)
-                      setFavoritesOpen(false)
-                    }}
-                    className="flex min-h-11 w-full items-center justify-between gap-2 px-2 py-2 text-left"
-                  >
-                    <span>{exercise.name}</span>
-                    <span className="text-muted text-sm">{exercise.group}</span>
-                  </button>
-                </li>
-              ))}
+              {favorites.map((exercise) => {
+                const inWorkout = plannedIds.includes(exercise.id)
+                return (
+                  <li key={exercise.id} className="border-border flex border-b last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAdd(exercise)
+                        setFavoritesOpen(false)
+                      }}
+                      className={`flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-2 text-left ${inWorkout ? 'bg-accent/10' : ''}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate">{exercise.name}</span>
+                        <span className="text-muted block text-sm">{exercise.group}</span>
+                      </span>
+                      {inWorkout && (
+                        <span className="text-accent flex shrink-0 items-center gap-1 text-sm">
+                          <Check className="size-4" aria-hidden />
+                          In workout
+                        </span>
+                      )}
+                    </button>
+                    {onRemoveFavorite && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveFavorite(exercise.id)}
+                        aria-label={`Remove ${exercise.name} from favourites`}
+                        className="text-muted hover:text-danger focus-visible:outline-accent flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-2"
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -88,12 +98,23 @@ export default function ExercisePicker({
         <input
           id="exercise-search"
           type="search"
-          className={`${input} pl-10`}
+          className={`${input} ${favoriteExerciseIds ? 'pr-14' : ''} pl-10`}
           placeholder="Search, e.g. db row"
           autoComplete="off"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+        {favoriteExerciseIds && (
+          <button
+            type="button"
+            onClick={() => setFavoritesOpen(!favoritesOpen)}
+            aria-label="Favourite exercises"
+            aria-expanded={favoritesOpen}
+            className="border-accent/50 bg-accent/10 text-accent focus-visible:outline-accent absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border focus-visible:outline-2"
+          >
+            <Star className="size-5 fill-current" aria-hidden />
+          </button>
+        )}
       </div>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Muscle">
         {['', ...groups].map((name) => (

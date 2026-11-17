@@ -11,11 +11,12 @@ exercise row or in the exercise guide to add or remove it from their own favouri
 accent star is a favourite; an outline star is not. The row still opens the guide when the user
 taps anywhere else.
 
-In Create and Edit workout, a 44 px star next to **Add an exercise** opens a small dropdown
-directly below the control. It lists only the user's favourites, each with its muscle group; a
-tap adds that exercise through the existing add behaviour. The ordinary search and muscle
-picker remain available and unchanged. If there are no favourites, the dropdown plainly says so
-and points the user to the Exercise library.
+In Create and Edit workout, a 44 px star inside the search field opens a small dropdown directly
+below it. It lists only the user's favourites, each with its muscle group; a tap adds that
+exercise through the existing add behaviour. Exercises already in the plan have a clear selected
+state. A separate small bin removes an item only from favourites, never from the workout plan.
+The ordinary search and muscle picker remain available and unchanged. If there are no favourites,
+the dropdown plainly says so and points the user to the Exercise library.
 
 Favourite IDs are stored separately for each signed-in user. They may include an owned personal
 exercise, but never someone else's private exercise. The API validates that the exercise is in
@@ -31,7 +32,8 @@ libraries, or changes to completed workouts.
 - Tapping a library or exercise-guide star persists the current user's choice and never changes
   another user's favourites; API tests cover both ownership and a missing/foreign exercise.
 - The builder star opens a dropdown with only that user's favourite exercises; tapping one adds
-  it using the existing duplicate/add-set and 20-exercise rules.
+  it using the existing duplicate/add-set and 20-exercise rules. Exercises already in the plan
+  are visibly selected, and the bin removes only the favourite state.
 - At 375 × 667 both stars are at least 44 × 44 px, the dropdown remains on screen without
   horizontal scrolling, and a real-phone screenshot goes in the pull request.
 - Backend and frontend tests pass, including a database upgrade test for existing journals.
