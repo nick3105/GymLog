@@ -157,6 +157,20 @@ export default function Create({
     setPlanned(next)
   }
 
+  function removeExerciseUnit(unit: (typeof exerciseUnitsForBuilder)[number]) {
+    if (unit.exercises.length === 1) {
+      removeExercise(unit.exercises[0])
+      return
+    }
+    if (!window.confirm(`Remove ${unit.name} and unlink its superset?`)) return
+    const ids = new Set(unit.exercises.map((exercise) => exercise.id))
+    const next = planned.filter((exercise) => !ids.has(exercise.id))
+    setActiveExerciseIndex((current) =>
+      current === null ? null : Math.min(current, Math.max(0, next.length - 1)),
+    )
+    setPlanned(next)
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault()
     setProblem('')
@@ -373,6 +387,14 @@ export default function Create({
                 {draggedOverExerciseIndex === index && draggedExerciseIndex !== index && (
                   <span className="text-accent pr-3 text-xs font-normal">Drop here</span>
                 )}
+                <button
+                  type="button"
+                  aria-label={`Remove ${unit.name} from this workout`}
+                  onClick={() => removeExerciseUnit(unit)}
+                  className="text-muted hover:text-danger flex size-11 shrink-0 items-center justify-center rounded-full"
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </button>
               </div>
             ))}
           </div>
