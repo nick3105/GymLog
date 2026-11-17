@@ -1,6 +1,10 @@
 // The shapes the API sends and receives. The API (backend/gymlog/models.py) is the source of truth.
 
+export type Equipment =
+  'barbell' | 'dumbbell' | 'cable' | 'machine' | 'bodyweight' | 'kettlebell' | 'bands' | 'other'
+
 export type Exercise = {
+  equipment?: Equipment
   thumbnail?: string
   id: string
   name: string

@@ -2,11 +2,14 @@ import { ChevronRight, LayoutGrid, List, Rows2, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { filterExerciseLibrary } from '../equipment'
+import type { Equipment } from '../types'
+
 import { groupExercises } from '../exerciseLibrary'
-import { searchExercises } from '../exerciseSearch'
 import { useJournal } from '../journal'
 import { input } from '../ui'
 import ExerciseCard from '../components/ExerciseCard'
+import EquipmentFilter from '../components/EquipmentFilter'
 
 // NAV-04: every exercise, searchable and by muscle. A tap opens its guide and progress.
 export default function Exercises() {
@@ -14,6 +17,7 @@ export default function Exercises() {
   const [, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState('')
+  const [equipment, setEquipment] = useState<Equipment | ''>('')
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [phoneControls, setPhoneControls] = useState(
     () => window.matchMedia('(max-width: 639px), (pointer: coarse)').matches,
@@ -30,8 +34,8 @@ export default function Exercises() {
   const [layout, setLayout] = useState<'list' | 'cards' | 'grid'>('list')
   // Groups in the order the API sends them — no hard-coded list here.
   const groups = [...new Set(journal.exercises.map((exercise) => exercise.group))]
-  const filtering = query.trim() !== '' || group !== ''
-  const results = filtering ? searchExercises(journal.exercises, query, group) : journal.exercises
+  const filtering = query.trim() !== '' || group !== '' || equipment !== ''
+  const results = filterExerciseLibrary(journal.exercises, query, group, equipment)
   // Search results are ranked best first, so they stay one list; otherwise one list per muscle.
   const blocks = filtering ? [{ group: '', exercises: results }] : groupExercises(results)
 
@@ -62,6 +66,13 @@ export default function Exercises() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
+      <EquipmentFilter
+        value={equipment}
+        onChange={(value) => {
+          setEquipment(value)
+          setPlayingId(null)
+        }}
+      />
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Muscle">
         {['', ...groups].map((name) => (
           <button
@@ -102,7 +113,9 @@ export default function Exercises() {
       </div>
       <p className="text-muted mt-4 mb-2 text-sm" aria-live="polite">
         {results.length === 0
-          ? `No exercise matches "${query.trim()}".`
+          ? query.trim()
+            ? `No exercise matches "${query.trim()}" with these filters.`
+            : 'No exercises match these filters.'
           : `${results.length} ${results.length === 1 ? 'exercise' : 'exercises'}`}
       </p>
       <div className="flex flex-col gap-4">

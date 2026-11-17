@@ -39,3 +39,33 @@ exercise instructions/photos, new services/libraries, editing another person's t
 preview includes the cards. The equipment changes are separate commits. Review/merge spec 31
 first, or initially compare this branch against `feature/exercise-visual-cards` so its PR shows
 only the equipment task. Neither branch tracks main and nothing is pushed automatically.
+
+## Import record
+Source: https://github.com/yuhonas/free-exercise-db/tree/f00c92c (`dist/exercises.json`),
+public domain / Unlicense, downloaded to a temporary directory on 17 November 2026.
+643 guide source IDs matched exactly; other exercises used exact normalised ID/name matches.
+Unmatched items remain Other / unspecified. All fields except the new equipment tag were
+compared with the pre-import catalogue and remained identical, including order.
+
+## Menu design — user feedback, 17 November 2026
+Replace the native select with a themed Equipment button and a native dialog styled as a
+bottom sheet on phones and a centred panel on desktop. Large two-column options show a check
+on the current selection; selection applies immediately and closes. Close/Escape keep the
+previous value and return focus to the trigger. The sheet scrolls within short screens and
+respects the home-bar safe area. No extra library or new CSS file.
+
+## Final dropdown refinement — user correction
+Supersedes the bottom sheet: keep a rounded trigger with a small chevron, and open a rounded
+panel immediately below it. Single-column rounded option rows, selected checkmark, max height
+42dvh with internal scrolling (keeps options above phone navigation). Outside click, focus leaving the control, or Escape closes it;
+Escape and selection return focus to the trigger. No full-screen modal or bottom drawer.
+
+## Local verification
+- Full backend checks: 168 tests passed, Ruff lint and formatting passed.
+- Frontend checks after final dropdown styling: 54 tests passed, oxlint, Prettier,
+  TypeScript and production build passed.
+- At 375 × 667: equipment plus muscle plus text search returned their intersection; opening
+  and closing a guide preserved equipment. Dropdown selection and Escape closed the panel
+  and selection returned keyboard focus to its trigger. No horizontal overflow.
+- Preview runs locally on port 5058 with disposable data. Real-phone confirmation remains.
+- Changes stay on `feature/exercise-equipment-filter`; no push or merge performed.
