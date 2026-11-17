@@ -7,9 +7,9 @@ find them quickly while creating or editing a workout (PLN-02).
 
 ## What
 This task is claimed on 17 November 2026. Each signed-in user can tap the 44 px star on an
-exercise row in the library to add or remove it from their own favourites. A filled star is a
-favourite; an outline star is not. The row still opens the guide when the user taps anywhere
-else.
+exercise row or in the exercise guide to add or remove it from their own favourites. A filled
+accent star is a favourite; an outline star is not. The row still opens the guide when the user
+taps anywhere else.
 
 In Create and Edit workout, a 44 px star next to **Add an exercise** opens a small dropdown
 directly below the control. It lists only the user's favourites, each with its muscle group; a
@@ -28,8 +28,8 @@ favouriting an exercise based on training history, reordering the ordinary catal
 libraries, or changes to completed workouts.
 
 ## Done when
-- Tapping a library star persists the current user's choice and never changes another user's
-  favourites; API tests cover both ownership and a missing/foreign exercise.
+- Tapping a library or exercise-guide star persists the current user's choice and never changes
+  another user's favourites; API tests cover both ownership and a missing/foreign exercise.
 - The builder star opens a dropdown with only that user's favourite exercises; tapping one adds
   it using the existing duplicate/add-set and 20-exercise rules.
 - At 375 × 667 both stars are at least 44 × 44 px, the dropdown remains on screen without

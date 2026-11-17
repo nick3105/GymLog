@@ -48,8 +48,8 @@ def test_favourites_are_toggled_and_never_shared_between_users(tmp_path):
     assert missing.status_code == 404
 
 
-def test_version_five_journal_upgrades_without_losing_its_user(tmp_path):
-    """A version-five journal receives the favourites table in place."""
+def test_version_six_journal_upgrades_without_losing_its_user(tmp_path):
+    """A version-six journal receives the favourites table in place."""
     database = tmp_path / "journal.sqlite3"
     with sqlite3.connect(database) as db:
         for statement in storage.SCHEMA:
@@ -58,10 +58,15 @@ def test_version_five_journal_upgrades_without_losing_its_user(tmp_path):
             db.execute(statement)
         db.execute(storage.VOLUME_PREFERENCES_SCHEMA)
         db.execute(
+            """CREATE TABLE workout_drafts (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id),
+                document TEXT NOT NULL, updated_at TEXT NOT NULL)"""
+        )
+        db.execute(
             "INSERT INTO users VALUES (?, ?, ?, ?)",
             (1, "existing-user", "hash", "2026-11-17T00:00:00+00:00"),
         )
-        db.execute("PRAGMA user_version = 5")
+        db.execute("PRAGMA user_version = 6")
 
     create_app(
         {

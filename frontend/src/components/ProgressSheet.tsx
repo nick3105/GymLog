@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
@@ -19,7 +19,7 @@ export default function ProgressSheet({
   exerciseId: string
   coacheeId?: string
 }) {
-  const { journal } = useJournal()
+  const { journal, setJournal } = useJournal()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -77,6 +77,25 @@ export default function ProgressSheet({
       )
   }
 
+  async function toggleFavorite() {
+    if (!exercise) return
+    setProblem('')
+    try {
+      const result = await api<{ exerciseId: string; favorite: boolean }>(
+        `exercises/${exercise.id}/favorite`,
+        {},
+      )
+      setJournal((current) => ({
+        ...current,
+        favoriteExerciseIds: result.favorite
+          ? [...current.favoriteExerciseIds, result.exerciseId]
+          : current.favoriteExerciseIds.filter((id) => id !== result.exerciseId),
+      }))
+    } catch (error) {
+      setProblem((error as Error).message)
+    }
+  }
+
   return (
     <div
       role="dialog"
@@ -93,11 +112,27 @@ export default function ProgressSheet({
           <ArrowLeft className="size-5" aria-hidden />
           Back
         </button>
-        <div>
-          <p className="text-label text-xs font-normal tracking-widest uppercase">Exercise</p>
-          <h2 id="progress-title" className="text-2xl font-light">
-            {name}
-          </h2>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-label text-xs font-normal tracking-widest uppercase">Exercise</p>
+            <h2 id="progress-title" className="text-2xl font-light">
+              {name}
+            </h2>
+          </div>
+          {!coacheeId && exercise && (
+            <button
+              type="button"
+              onClick={toggleFavorite}
+              aria-label={`${journal.favoriteExerciseIds.includes(exercise.id) ? 'Remove' : 'Add'} ${exercise.name} ${journal.favoriteExerciseIds.includes(exercise.id) ? 'from' : 'to'} favourites`}
+              className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${journal.favoriteExerciseIds.includes(exercise.id) ? 'bg-accent/15 text-accent' : 'border-border bg-panel text-muted border'}`}
+            >
+              <Star
+                className={`size-[1.35rem] ${journal.favoriteExerciseIds.includes(exercise.id) ? 'fill-current' : ''}`}
+                strokeWidth={2.4}
+                aria-hidden
+              />
+            </button>
+          )}
         </div>
         <ExerciseGuide exerciseId={exerciseId} name={name} />
         <h3 className="text-label mt-2 text-xs font-normal tracking-widest uppercase">Progress</h3>
