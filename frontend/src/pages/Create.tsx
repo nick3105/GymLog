@@ -379,7 +379,9 @@ export default function Create({
                   type="button"
                   aria-label={`Open ${unit.name}`}
                   aria-current={index === currentExerciseIndex ? 'step' : undefined}
-                  onClick={() => setActiveExerciseIndex(index)}
+                  onClick={() =>
+                    setActiveExerciseIndex(index === currentExerciseIndex ? null : index)
+                  }
                   className="min-h-11 rounded-full px-3 text-left text-sm"
                 >
                   {index + 1}. {unit.name}
