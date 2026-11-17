@@ -30,6 +30,8 @@ export type ActiveWorkout = {
   }[]
 }
 
+export type DraftStatus = 'loading' | 'idle' | 'saving' | 'saved' | 'error'
+
 export type JournalContext = {
   status: 'loading' | 'signed-out' | 'signed-in'
   username: string
@@ -41,7 +43,10 @@ export type JournalContext = {
   signIn: (path: 'login' | 'register', username: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   active: ActiveWorkout | null
+  draftStatus: DraftStatus
   setActive: (workout: ActiveWorkout | null) => void
+  discardActiveDraft: () => Promise<void>
+  retryDraft: () => void
   // The workout builder reports unsaved typing here, so signing out can warn first.
   setBuilderDirty: (dirty: boolean) => void
 }

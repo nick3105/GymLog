@@ -14,6 +14,7 @@ function page(Page: typeof Home, journal: Journal) {
     username: 'preview',
     journal,
     active: null,
+    draftStatus: 'idle',
     setJournal: () => {},
     weightReminderDismissed: false,
     dismissWeightReminder: () => {},
@@ -21,6 +22,8 @@ function page(Page: typeof Home, journal: Journal) {
     signIn: async () => {},
     signOut: async () => {},
     setActive: () => {},
+    discardActiveDraft: async () => {},
+    retryDraft: () => {},
     setBuilderDirty: () => {},
   }
   return renderToStaticMarkup(

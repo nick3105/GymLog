@@ -51,7 +51,14 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
 
 // NAV-01: the main starting points, and a short summary of the journal.
 export default function Home() {
-  const { username, journal, weightReminderDismissed, dismissWeightReminder } = useJournal()
+  const {
+    username,
+    journal,
+    draftStatus,
+    retryDraft,
+    weightReminderDismissed,
+    dismissWeightReminder,
+  } = useJournal()
   const lastSession = [...journal.sessions].sort((a, b) => b.day.localeCompare(a.day))[0]
   const showWeightReminder = shouldShowWeightReminder(
     journal.weights,
@@ -68,6 +75,18 @@ export default function Home() {
         <Link to="/create" className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}>
           Create your first workout here
         </Link>
+      )}
+      {draftStatus === 'error' && (
+        <section role="alert" className="border-danger/40 bg-panel mb-6 rounded-2xl border p-4">
+          <p>Your saved workout could not be checked. Retry before starting a different workout.</p>
+          <button
+            type="button"
+            onClick={retryDraft}
+            className="border-border text-accent mt-3 min-h-11 rounded-lg border px-3 font-normal"
+          >
+            Check again
+          </button>
+        </section>
       )}
       {showWeightReminder && (
         <section
