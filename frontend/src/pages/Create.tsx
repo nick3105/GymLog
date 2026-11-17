@@ -372,7 +372,7 @@ export default function Create({
               Close all
             </button>
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex min-w-0 touch-pan-x gap-2 overflow-x-auto pb-1">
             {exerciseUnitsForBuilder.map((unit, index) => (
               <div
                 key={unit.id}
@@ -393,7 +393,7 @@ export default function Create({
                   setDraggedExerciseIndex(null)
                   setDraggedOverExerciseIndex(null)
                 }}
-                className={`flex min-h-11 shrink-0 touch-none items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
+                className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
               >
                 <GripVertical className="ml-2 size-4" aria-hidden />
                 <button
