@@ -325,6 +325,18 @@ def create_app(config=None):
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
             weightGoal=storage.weight_goal(database, g.user_id),
+            favoriteExerciseIds=storage.favorite_exercise_ids(database, g.user_id),
+        )
+
+    @app.post("/api/exercises/<exercise_id>/favorite")
+    @authenticated
+    def toggle_favorite_exercise(exercise_id):
+        """Add or remove one exercise from the signed-in user's favourites."""
+        if exercise_id not in catalogue_for(g.user_id):
+            return jsonify(error="That exercise is not in your catalogue."), 404
+        return jsonify(
+            exerciseId=exercise_id,
+            favorite=storage.toggle_favorite_exercise(database, g.user_id, exercise_id),
         )
 
     @app.post("/api/exercises/personal")

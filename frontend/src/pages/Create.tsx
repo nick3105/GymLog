@@ -113,6 +113,24 @@ export default function Create({
     setPlanned([...planned, { ...exercise, targets: [newTarget(), newTarget(), newTarget()] }])
   }
 
+  async function removeFavorite(exerciseId: string) {
+    setProblem('')
+    try {
+      const result = await api<{ exerciseId: string; favorite: boolean }>(
+        `exercises/${exerciseId}/favorite`,
+        {},
+      )
+      setJournal((current) => ({
+        ...current,
+        favoriteExerciseIds: result.favorite
+          ? [...current.favoriteExerciseIds, result.exerciseId]
+          : current.favoriteExerciseIds.filter((item) => item !== result.exerciseId),
+      }))
+    } catch (error) {
+      setProblem((error as Error).message)
+    }
+  }
+
   function changeTargets(id: string, targets: TargetInput[]) {
     setPlanned(planned.map((item) => (item.id === id ? { ...item, targets } : item)))
   }
@@ -248,6 +266,8 @@ export default function Create({
         <ExercisePicker
           exercises={journal.exercises}
           plannedIds={planned.map((item) => item.id)}
+          favoriteExerciseIds={coaching ? undefined : ownJournal.favoriteExerciseIds}
+          onRemoveFavorite={coaching ? undefined : removeFavorite}
           onAdd={add}
           onCreate={
             coaching

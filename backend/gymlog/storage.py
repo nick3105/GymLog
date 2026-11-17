@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -466,6 +466,11 @@ VOLUME_PREFERENCES_SCHEMA = """CREATE TABLE IF NOT EXISTS user_preferences (
     updated_at TEXT NOT NULL)"""
 
 
+FAVORITE_EXERCISE_SCHEMA = """CREATE TABLE IF NOT EXISTS favorite_exercises (
+    user_id INTEGER NOT NULL REFERENCES users(id), exercise_id TEXT NOT NULL,
+    created_at TEXT NOT NULL, PRIMARY KEY (user_id, exercise_id))"""
+
+
 def _upgrade_extensions(db):
     """Install additive account extensions under one lock."""
     db.execute("BEGIN IMMEDIATE")
@@ -486,6 +491,7 @@ def _upgrade_extensions(db):
                     """CREATE TABLE IF NOT EXISTS workout_drafts (
                         user_id INTEGER PRIMARY KEY REFERENCES users(id),
                         document TEXT NOT NULL, updated_at TEXT NOT NULL)""",
+                    FAVORITE_EXERCISE_SCHEMA,
                 ]
             ):
                 db.execute(statement)
@@ -495,6 +501,39 @@ def _upgrade_extensions(db):
         if db.in_transaction:
             db.execute("ROLLBACK")
         raise
+
+
+def favorite_exercise_ids(path, user_id):
+    """Read the selected owner's favourite exercise IDs in saved order."""
+    with connect(path) as db:
+        return [
+            row["exercise_id"]
+            for row in db.execute(
+                "SELECT exercise_id FROM favorite_exercises WHERE user_id=? ORDER BY created_at, rowid",
+                (user_id,),
+            )
+        ]
+
+
+def toggle_favorite_exercise(path, user_id, exercise_id):
+    """Add or remove one favourite for its owner and return its new state."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        existing = db.execute(
+            "SELECT 1 FROM favorite_exercises WHERE user_id=? AND exercise_id=?",
+            (user_id, exercise_id),
+        ).fetchone()
+        if existing:
+            db.execute(
+                "DELETE FROM favorite_exercises WHERE user_id=? AND exercise_id=?",
+                (user_id, exercise_id),
+            )
+            return False
+        db.execute(
+            "INSERT INTO favorite_exercises VALUES (?, ?, ?)",
+            (user_id, exercise_id, now()),
+        )
+        return True
 
 
 def volume_preferences(path, user_id):
