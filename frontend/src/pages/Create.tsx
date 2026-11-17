@@ -1,4 +1,4 @@
-import { Check, Link2, Unlink, Trash2, X } from 'lucide-react'
+import { Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
@@ -10,6 +10,7 @@ import NoteInput from '../components/NoteInput'
 import ReorderList from '../components/ReorderList'
 import WorkoutInstructions from '../components/WorkoutInstructions'
 import { exerciseUnits, linkExercises, unlinkSuperset, supersetLabel } from '../supersets'
+import { moveItem } from '../reorder'
 import { newId } from '../newId'
 import { useJournal } from '../journal'
 import { targetsFor } from '../targets'
@@ -50,6 +51,7 @@ export default function Create({
   const [cooldown, setCooldown] = useState(original?.cooldown ?? '')
   const [pairNotice, setPairNotice] = useState('')
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null)
+  const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
@@ -234,6 +236,20 @@ export default function Create({
       ? null
       : Math.min(activeExerciseIndex, Math.max(0, exerciseUnitsForBuilder.length - 1))
 
+  function reorderFromOverview(targetIndex: number) {
+    if (draggedExerciseIndex === null || draggedExerciseIndex === targetIndex) return
+    const reordered = moveItem(exerciseUnitsForBuilder, draggedExerciseIndex, targetIndex)
+    setPlanned(reordered.flatMap((unit) => unit.exercises))
+    setActiveExerciseIndex((current) => {
+      if (current === null) return null
+      if (current === draggedExerciseIndex) return targetIndex
+      if (draggedExerciseIndex < current && targetIndex >= current) return current - 1
+      if (draggedExerciseIndex > current && targetIndex <= current) return current + 1
+      return current
+    })
+    setDraggedExerciseIndex(null)
+  }
+
   return (
     <form onSubmit={save} noValidate>
       {coaching && (
@@ -323,16 +339,26 @@ export default function Create({
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {exerciseUnitsForBuilder.map((unit, index) => (
-              <button
+              <div
                 key={unit.id}
-                type="button"
-                aria-label={`Open ${unit.name}`}
-                aria-current={index === currentExerciseIndex ? 'step' : undefined}
-                onClick={() => setActiveExerciseIndex(index)}
-                className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'}`}
+                draggable
+                onDragStart={() => setDraggedExerciseIndex(index)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => reorderFromOverview(index)}
+                onDragEnd={() => setDraggedExerciseIndex(null)}
+                className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''}`}
               >
-                {index + 1}. {unit.name}
-              </button>
+                <GripVertical className="ml-2 size-4" aria-hidden />
+                <button
+                  type="button"
+                  aria-label={`Open ${unit.name}`}
+                  aria-current={index === currentExerciseIndex ? 'step' : undefined}
+                  onClick={() => setActiveExerciseIndex(index)}
+                  className="min-h-11 rounded-full px-3 text-left text-sm"
+                >
+                  {index + 1}. {unit.name}
+                </button>
+              </div>
             ))}
           </div>
         </div>
