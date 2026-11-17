@@ -284,6 +284,15 @@ export default function Create({
     if (target !== null && target !== undefined) setDraggedOverExerciseIndex(Number(target))
   }
 
+  function startOverviewPointer(event: PointerEvent<HTMLDivElement>, index: number) {
+    const target = event.target as HTMLElement
+    if (!target.closest('[data-drag-handle]') || !event.isPrimary) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setDraggedExerciseIndex(index)
+    setDraggedOverExerciseIndex(index)
+  }
+
   return (
     <form onSubmit={save} noValidate>
       {coaching && (
@@ -377,13 +386,7 @@ export default function Create({
               <div
                 key={unit.id}
                 data-overview-index={index}
-                onPointerDown={(event) => {
-                  if (event.isPrimary) {
-                    event.currentTarget.setPointerCapture(event.pointerId)
-                    setDraggedExerciseIndex(index)
-                    setDraggedOverExerciseIndex(index)
-                  }
-                }}
+                onPointerDown={(event) => startOverviewPointer(event, index)}
                 onPointerMove={moveOverviewPointer}
                 onPointerUp={(event) => {
                   if (!event.isPrimary) return
@@ -395,7 +398,13 @@ export default function Create({
                 }}
                 className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
               >
-                <GripVertical className="ml-2 size-4" aria-hidden />
+                <span
+                  data-drag-handle
+                  aria-label={`Drag to reorder ${unit.name}`}
+                  className="cursor-grab touch-none px-2 active:cursor-grabbing"
+                >
+                  <GripVertical className="size-4" aria-hidden />
+                </span>
                 <button
                   type="button"
                   aria-label={`Open ${unit.name}`}
