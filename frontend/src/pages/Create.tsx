@@ -49,7 +49,7 @@ export default function Create({
   const [warmup, setWarmup] = useState(original?.warmup ?? '')
   const [cooldown, setCooldown] = useState(original?.cooldown ?? '')
   const [pairNotice, setPairNotice] = useState('')
-  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0)
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null)
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
@@ -148,7 +148,9 @@ export default function Create({
     if (item.supersetId && !window.confirm(`Remove ${item.name} and unlink its superset?`)) return
     const unpaired = item.supersetId ? unlinkSuperset(planned, item.supersetId) : planned
     const next = unpaired.filter((exercise) => exercise.id !== item.id)
-    setActiveExerciseIndex((current) => Math.min(current, Math.max(0, next.length - 1)))
+    setActiveExerciseIndex((current) =>
+      current === null ? null : Math.min(current, Math.max(0, next.length - 1)),
+    )
     setPlanned(next)
   }
 
@@ -227,10 +229,10 @@ export default function Create({
   }
 
   const exerciseUnitsForBuilder = exerciseUnits(planned)
-  const currentExerciseIndex = Math.min(
-    activeExerciseIndex,
-    Math.max(0, exerciseUnitsForBuilder.length - 1),
-  )
+  const currentExerciseIndex =
+    activeExerciseIndex === null
+      ? null
+      : Math.min(activeExerciseIndex, Math.max(0, exerciseUnitsForBuilder.length - 1))
 
   return (
     <form onSubmit={save} noValidate>
@@ -307,26 +309,17 @@ export default function Create({
         <div className={`${card} mb-4`}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-muted text-sm">
-              Exercise {currentExerciseIndex + 1} of {exerciseUnitsForBuilder.length}
+              {currentExerciseIndex === null
+                ? 'All exercises closed'
+                : `Exercise ${currentExerciseIndex + 1} of ${exerciseUnitsForBuilder.length}`}
             </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={currentExerciseIndex === 0}
-                onClick={() => setActiveExerciseIndex(currentExerciseIndex - 1)}
-                className={`${secondaryButton} min-h-11 disabled:opacity-40`}
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={currentExerciseIndex === exerciseUnitsForBuilder.length - 1}
-                onClick={() => setActiveExerciseIndex(currentExerciseIndex + 1)}
-                className={`${secondaryButton} min-h-11 disabled:opacity-40`}
-              >
-                Next
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveExerciseIndex(null)}
+              className={`${textButton} min-h-11`}
+            >
+              Close all
+            </button>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {exerciseUnitsForBuilder.map((unit, index) => (
