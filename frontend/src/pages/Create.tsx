@@ -1,4 +1,4 @@
-import { Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
@@ -274,6 +274,19 @@ export default function Create({
     setDraggedOverExerciseIndex(null)
   }
 
+  function moveOverviewByButton(index: number, direction: number) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= exerciseUnitsForBuilder.length) return
+    const reordered = moveItem(exerciseUnitsForBuilder, index, targetIndex)
+    setPlanned(reordered.flatMap((unit) => unit.exercises))
+    setActiveExerciseIndex((current) => {
+      if (current === null) return null
+      if (current === index) return targetIndex
+      if (current === targetIndex) return index
+      return current
+    })
+  }
+
   function moveOverviewPointer(event: PointerEvent<HTMLDivElement>) {
     if (draggedExerciseIndex === null) return
     event.preventDefault()
@@ -419,6 +432,24 @@ export default function Create({
                 {draggedOverExerciseIndex === index && draggedExerciseIndex !== index && (
                   <span className="text-accent pr-3 text-xs font-normal">Drop here</span>
                 )}
+                <button
+                  type="button"
+                  disabled={index === 0}
+                  aria-label={`Move ${unit.name} up`}
+                  onClick={() => moveOverviewByButton(index, -1)}
+                  className="text-muted flex size-11 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
+                >
+                  <ArrowUp className="size-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  disabled={index === exerciseUnitsForBuilder.length - 1}
+                  aria-label={`Move ${unit.name} down`}
+                  onClick={() => moveOverviewByButton(index, 1)}
+                  className="text-muted flex size-11 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
+                >
+                  <ArrowDown className="size-4" aria-hidden />
+                </button>
                 <button
                   type="button"
                   aria-label={`Remove ${unit.name} from this workout`}
