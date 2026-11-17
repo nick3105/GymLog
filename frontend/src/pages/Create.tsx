@@ -1,5 +1,5 @@
 import { Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
 import { api, ApiError } from '../api'
@@ -274,6 +274,16 @@ export default function Create({
     setDraggedOverExerciseIndex(null)
   }
 
+  function moveOverviewPointer(event: PointerEvent<HTMLDivElement>) {
+    if (draggedExerciseIndex === null) return
+    event.preventDefault()
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest('[data-overview-index]')
+      ?.getAttribute('data-overview-index')
+    if (target !== null && target !== undefined) setDraggedOverExerciseIndex(Number(target))
+  }
+
   return (
     <form onSubmit={save} noValidate>
       {coaching && (
@@ -366,19 +376,24 @@ export default function Create({
             {exerciseUnitsForBuilder.map((unit, index) => (
               <div
                 key={unit.id}
-                draggable
-                onDragStart={() => setDraggedExerciseIndex(index)}
-                onDragEnter={(event) => {
-                  event.preventDefault()
-                  setDraggedOverExerciseIndex(index)
+                data-overview-index={index}
+                onPointerDown={(event) => {
+                  if (event.isPrimary) {
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    setDraggedExerciseIndex(index)
+                    setDraggedOverExerciseIndex(index)
+                  }
                 }}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => reorderFromOverview(index)}
-                onDragEnd={() => {
+                onPointerMove={moveOverviewPointer}
+                onPointerUp={(event) => {
+                  if (!event.isPrimary) return
+                  reorderFromOverview(draggedOverExerciseIndex ?? index)
+                }}
+                onPointerCancel={() => {
                   setDraggedExerciseIndex(null)
                   setDraggedOverExerciseIndex(null)
                 }}
-                className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
+                className={`flex min-h-11 shrink-0 touch-none items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
               >
                 <GripVertical className="ml-2 size-4" aria-hidden />
                 <button
