@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChartNoAxesCombined, Pause, Play } from 'lucide-react'
+import { ArrowUpRight, ChartNoAxesCombined, Pause, Play, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Exercise } from '../types'
@@ -10,6 +10,8 @@ type Props = {
   phoneControls: boolean
   playing: boolean
   onTogglePlay: () => void
+  favorite: boolean
+  onToggleFavorite: () => void
 }
 
 // Phones use one explicit Play selection; desktop keeps automatic and hover previews.
@@ -20,6 +22,8 @@ export default function ExerciseCard({
   phoneControls,
   playing,
   onTogglePlay,
+  favorite,
+  onToggleFavorite,
 }: Props) {
   const [manual, setManual] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -89,21 +93,35 @@ export default function ExerciseCard({
       }}
       className="bg-panel ring-border flex h-full w-full flex-col overflow-hidden rounded-lg text-left shadow-lg ring-2"
     >
-      <div className={`flex w-full flex-col gap-2 ${compact ? 'h-32 shrink-0 p-3' : 'p-4'}`}>
-        <span className="bg-accent/15 text-accent inline-flex min-h-10 w-fit max-w-full items-center rounded-full px-3 py-1 text-sm leading-5 font-normal break-words">
-          {exercise.group}
-        </span>
-        <h3
-          className={`text-text leading-snug font-normal break-words ${compact ? 'line-clamp-2 min-h-12 text-base' : 'text-lg'}`}
-        >
-          <button
-            type="button"
-            onClick={onOpen}
-            className="focus-visible:outline-accent min-h-11 w-full text-left focus-visible:outline-2"
+      <div className={`flex w-full gap-2 ${compact ? 'h-32 shrink-0 p-3' : 'p-4'}`}>
+        <div className="min-w-0 flex-1">
+          <span className="bg-accent/15 text-accent inline-flex min-h-10 w-fit max-w-full items-center rounded-full px-3 py-1 text-sm leading-5 font-normal break-words">
+            {exercise.group}
+          </span>
+          <h3
+            className={`text-text mt-2 leading-snug font-normal break-words ${compact ? 'line-clamp-2 min-h-12 text-base' : 'text-lg'}`}
           >
-            {exercise.name}
-          </button>
-        </h3>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="focus-visible:outline-accent min-h-11 w-full text-left focus-visible:outline-2"
+            >
+              {exercise.name}
+            </button>
+          </h3>
+        </div>
+        <button
+          type="button"
+          onClick={onToggleFavorite}
+          aria-label={`${favorite ? 'Remove' : 'Add'} ${exercise.name} ${favorite ? 'from' : 'to'} favourites`}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${favorite ? 'bg-accent/15 text-accent' : 'text-muted'}`}
+        >
+          <Star
+            className={`size-[1.35rem] ${favorite ? 'fill-current' : ''}`}
+            strokeWidth={2.4}
+            aria-hidden
+          />
+        </button>
       </div>
       {hasPhoto && (
         <div ref={photo} className="relative aspect-[3/2] w-full shrink-0 overflow-hidden bg-white">

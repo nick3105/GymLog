@@ -123,6 +123,7 @@ export type WeightGoal = { kg: number; mode: 'lose' | 'gain' }
 
 export type Journal = {
   exercises: Exercise[]
+  favoriteExerciseIds: string[]
   templates: Template[]
   sessions: Session[]
   weights: Weight[]

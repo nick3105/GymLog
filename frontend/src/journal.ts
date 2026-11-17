@@ -53,6 +53,7 @@ export type JournalContext = {
 
 export const emptyJournal: JournalData = {
   exercises: [],
+  favoriteExerciseIds: [],
   templates: [],
   sessions: [],
   weights: [],

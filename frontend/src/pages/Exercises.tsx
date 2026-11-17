@@ -1,19 +1,19 @@
-import { ChevronRight, LayoutGrid, List, Rows2, Search } from 'lucide-react'
+import { ChevronRight, LayoutGrid, List, Rows2, Search, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { api } from '../api'
 import { filterExerciseLibrary } from '../equipment'
-import type { Equipment } from '../types'
-
 import { groupExercises } from '../exerciseLibrary'
 import { useJournal } from '../journal'
+import type { Equipment } from '../types'
 import { input } from '../ui'
 import ExerciseCard from '../components/ExerciseCard'
 import EquipmentFilter from '../components/EquipmentFilter'
 
 // NAV-04: every exercise, searchable and by muscle. A tap opens its guide and progress.
 export default function Exercises() {
-  const { journal } = useJournal()
+  const { journal, setJournal } = useJournal()
   const [, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState('')
@@ -32,6 +32,7 @@ export default function Exercises() {
     return () => media.removeEventListener('change', update)
   }, [])
   const [layout, setLayout] = useState<'list' | 'cards' | 'grid'>('list')
+  const [problem, setProblem] = useState('')
   // Groups in the order the API sends them — no hard-coded list here.
   const groups = [...new Set(journal.exercises.map((exercise) => exercise.group))]
   const filtering = query.trim() !== '' || group !== '' || equipment !== ''
@@ -43,6 +44,24 @@ export default function Exercises() {
     setPlayingId(null)
     // The sheet is a URL parameter, so the phone's back gesture closes it (as ExerciseLink does).
     setSearchParams({ exercise: exerciseId }, { preventScrollReset: true })
+  }
+
+  async function toggleFavorite(exerciseId: string) {
+    setProblem('')
+    try {
+      const result = await api<{ exerciseId: string; favorite: boolean }>(
+        `exercises/${exerciseId}/favorite`,
+        {},
+      )
+      setJournal((current) => ({
+        ...current,
+        favoriteExerciseIds: result.favorite
+          ? [...current.favoriteExerciseIds, result.exerciseId]
+          : current.favoriteExerciseIds.filter((id) => id !== result.exerciseId),
+      }))
+    } catch (error) {
+      setProblem((error as Error).message)
+    }
   }
 
   return (
@@ -118,6 +137,11 @@ export default function Exercises() {
             : 'No exercises match these filters.'
           : `${results.length} ${results.length === 1 ? 'exercise' : 'exercises'}`}
       </p>
+      {problem && (
+        <p role="alert" className="text-danger mb-2">
+          {problem}
+        </p>
+      )}
       <div className="flex flex-col gap-4">
         {results.length > 0 &&
           blocks.map((block) => (
@@ -133,19 +157,33 @@ export default function Exercises() {
                 {block.exercises.map((exercise) => (
                   <li key={exercise.id} className="min-w-0">
                     {layout === 'list' ? (
-                      <button
-                        type="button"
-                        onClick={() => open(exercise.id)}
-                        className="bg-panel focus-visible:outline-accent flex min-h-14 w-full items-center justify-between gap-3 rounded-lg px-4 py-3 text-left focus-visible:outline-2"
-                      >
-                        <span className="min-w-0">
-                          <span className="text-text block text-base font-normal break-words">
-                            {exercise.name}
+                      <div className="bg-panel flex min-h-14 items-center rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => open(exercise.id)}
+                          className="focus-visible:outline-accent flex min-h-14 min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-2"
+                        >
+                          <span className="min-w-0">
+                            <span className="text-text block text-base font-normal break-words">
+                              {exercise.name}
+                            </span>
+                            <span className="text-accent block text-sm">{exercise.group}</span>
                           </span>
-                          <span className="text-accent block text-sm">{exercise.group}</span>
-                        </span>
-                        <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
-                      </button>
+                          <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavorite(exercise.id)}
+                          aria-label={`${journal.favoriteExerciseIds.includes(exercise.id) ? 'Remove' : 'Add'} ${exercise.name} ${journal.favoriteExerciseIds.includes(exercise.id) ? 'from' : 'to'} favourites`}
+                          className={`mr-2 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${journal.favoriteExerciseIds.includes(exercise.id) ? 'bg-accent/15 text-accent' : 'text-muted'}`}
+                        >
+                          <Star
+                            className={`size-[1.35rem] ${journal.favoriteExerciseIds.includes(exercise.id) ? 'fill-current' : ''}`}
+                            strokeWidth={2.4}
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
                     ) : (
                       <ExerciseCard
                         exercise={exercise}
@@ -156,6 +194,8 @@ export default function Exercises() {
                           setPlayingId((current) => (current === exercise.id ? null : exercise.id))
                         }
                         onOpen={() => open(exercise.id)}
+                        favorite={journal.favoriteExerciseIds.includes(exercise.id)}
+                        onToggleFavorite={() => toggleFavorite(exercise.id)}
                       />
                     )}
                   </li>

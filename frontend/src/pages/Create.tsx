@@ -248,6 +248,7 @@ export default function Create({
         <ExercisePicker
           exercises={journal.exercises}
           plannedIds={planned.map((item) => item.id)}
+          favoriteExerciseIds={coaching ? undefined : ownJournal.favoriteExerciseIds}
           onAdd={add}
           onCreate={
             coaching
