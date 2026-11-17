@@ -16,11 +16,13 @@ import { card, errorText, input, primaryButton, secondaryButton, textButton } fr
 
 // RUN-02 to RUN-10: log the actual sets of the workout in progress, then save it.
 export default function Session() {
-  const { active, setActive, setJournal } = useJournal()
+  const { active, draftStatus, setActive, discardActiveDraft, retryDraft, setJournal } =
+    useJournal()
   const navigate = useNavigate()
   const [lastTime, setLastTime] = useState<Record<string, ExerciseStats['last']>>({})
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
+  const [discarding, setDiscarding] = useState(false)
   // Set once the workout is saved, so clearing it does not bounce us to Start workout.
   const [finished, setFinished] = useState(false)
   const exerciseIds = active?.exercises.map((exercise) => exercise.id).join(',') ?? ''
@@ -115,10 +117,17 @@ export default function Session() {
     })
   }
 
-  function discard() {
+  async function discard() {
     if (!window.confirm('Discard this workout? Nothing from it will be saved.')) return
-    setActive(null)
-    navigate('/start')
+    setDiscarding(true)
+    setProblem('')
+    try {
+      await discardActiveDraft()
+      navigate('/start')
+    } catch (error) {
+      setProblem((error as Error).message)
+      setDiscarding(false)
+    }
   }
 
   async function finish(event: FormEvent) {
@@ -163,11 +172,19 @@ export default function Session() {
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h1 className="gradient-text truncate text-3xl font-bold">{workout.name}</h1>
-          <p className="text-muted">{formatDay(workout.day)} · not saved until you finish</p>
+          <p className="text-muted">
+            {formatDay(workout.day)} ·{' '}
+            {draftStatus === 'saved'
+              ? 'Progress saved'
+              : draftStatus === 'error'
+                ? 'Progress not saved'
+                : 'Saving progress…'}
+          </p>
         </div>
         <button
           type="button"
           onClick={discard}
+          disabled={discarding || saving}
           className="text-danger min-h-11 shrink-0 px-1 font-normal"
         >
           Discard
@@ -399,6 +416,18 @@ export default function Session() {
           <p role="alert" className={errorText}>
             {problem}
           </p>
+        )}
+        {draftStatus === 'error' && !problem && (
+          <div role="alert" className="flex items-center justify-between gap-2">
+            <p className={errorText}>Your latest workout changes could not be saved.</p>
+            <button
+              type="button"
+              onClick={retryDraft}
+              className="text-accent min-h-11 shrink-0 px-2 font-normal"
+            >
+              Retry save
+            </button>
+          </div>
         )}
         {!complete && (
           <p className="text-muted text-sm">

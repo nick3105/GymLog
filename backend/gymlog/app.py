@@ -451,8 +451,49 @@ def create_app(config=None):
                 return jsonify(
                     error="This session was already saved with different values. Reload your history."
                 ), 409
+            storage.delete_workout_draft(database, g.user_id)
             return jsonify(existing)
         return jsonify(storage.add_session(database, g.user_id, document)), 201
+
+    @app.get("/api/workout-draft")
+    @authenticated
+    def get_workout_draft():
+        """Restore the signed-in user's active workout draft, if present."""
+        return jsonify(draft=storage.workout_draft(database, g.user_id))
+
+    @app.post("/api/workout-draft")
+    @authenticated
+    def save_workout_draft():
+        """Save partial workout inputs without adding a completed history entry."""
+        body = request.get_json()
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("clientId"), str)
+            or not isinstance(body.get("templateId"), str)
+            or not isinstance(body.get("name"), str)
+            or not isinstance(body.get("day"), str)
+            or not isinstance(body.get("exercises"), list)
+            or not body["exercises"]
+        ):
+            raise ValueError("A complete active workout draft is required.")
+        try:
+            date.fromisoformat(body["day"])
+        except ValueError:
+            raise ValueError("The workout draft needs a valid date.") from None
+
+        existing = storage.workout_draft(database, g.user_id)
+        if existing and existing.get("clientId") != body["clientId"]:
+            return jsonify(
+                error="Discard or resume your current workout before starting another one."
+            ), 409
+        return jsonify(draft=storage.save_workout_draft(database, g.user_id, body))
+
+    @app.post("/api/workout-draft/discard")
+    @authenticated
+    def discard_workout_draft():
+        """Discard only the signed-in user's active workout draft."""
+        storage.delete_workout_draft(database, g.user_id)
+        return jsonify(ok=True)
 
     @app.get("/api/volume")
     @authenticated

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -284,7 +284,35 @@ def add_session(path, user_id, data):
             "SELECT document FROM sessions WHERE user_id=? AND client_id=?",
             (user_id, document["clientId"]),
         ).fetchone()
+        db.execute("DELETE FROM workout_drafts WHERE user_id=?", (user_id,))
     return json.loads(row["document"])
+
+
+def workout_draft(path, user_id):
+    """Return only the signed-in user's active workout draft, if one exists."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM workout_drafts WHERE user_id=?", (user_id,)
+        ).fetchone()
+    return json.loads(row["document"]) if row else None
+
+
+def save_workout_draft(path, user_id, document):
+    """Replace the one active draft owned by this user."""
+    with connect(path) as db:
+        db.execute(
+            """INSERT INTO workout_drafts (user_id, document, updated_at)
+            VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
+            document=excluded.document, updated_at=excluded.updated_at""",
+            (user_id, json.dumps(document), now()),
+        )
+    return document
+
+
+def delete_workout_draft(path, user_id):
+    """Delete only this user's active workout draft."""
+    with connect(path) as db:
+        db.execute("DELETE FROM workout_drafts WHERE user_id=?", (user_id,))
 
 
 def login_blocked(path, address):
@@ -439,7 +467,7 @@ VOLUME_PREFERENCES_SCHEMA = """CREATE TABLE IF NOT EXISTS user_preferences (
 
 
 def _upgrade_extensions(db):
-    """Install additive coaching, personal-catalogue and goal tables under one lock."""
+    """Install additive account extensions under one lock."""
     db.execute("BEGIN IMMEDIATE")
     try:
         if db.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
@@ -451,7 +479,14 @@ def _upgrade_extensions(db):
                     mode TEXT NOT NULL CHECK (mode IN ('lose', 'gain')))"""
             )
             for statement in (
-                COACHING_SCHEMA + PERSONAL_EXERCISE_SCHEMA + [VOLUME_PREFERENCES_SCHEMA]
+                COACHING_SCHEMA
+                + PERSONAL_EXERCISE_SCHEMA
+                + [
+                    VOLUME_PREFERENCES_SCHEMA,
+                    """CREATE TABLE IF NOT EXISTS workout_drafts (
+                        user_id INTEGER PRIMARY KEY REFERENCES users(id),
+                        document TEXT NOT NULL, updated_at TEXT NOT NULL)""",
+                ]
             ):
                 db.execute(statement)
             db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

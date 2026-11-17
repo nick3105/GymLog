@@ -56,6 +56,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. During an active session, users may append extra sets up to 20 total per exercise without changing the template. Extra sets are saved in that session only. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
 | RUN-11 | **Record Workout Duration** | Record when a workout starts and save it with the session. Duration is the time from start to saving; durations under 1 minute or over 4 hours are not counted. Workouts saved before this existed have no duration. |
+| RUN-12 | **Autosave Active Workout Draft** | Automatically save an in-progress workout draft to the signed-in user account as it changes. Restore it after reload, closing and reopening the browser, or signing in on another device. Keep it private to that user and separate from completed history. Clear it only after a successful finish or confirmed discard. |
 
 ## 4. Review and progress
 
@@ -92,6 +93,6 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
 - **Cross-device access:** Saved records are available after signing in to the same account on another device.
-- **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
+- **Draft behavior:** Active workout drafts are automatically saved to the signed-in user account and remain available after reload, closing and reopening the browser, or signing in on another device. Other unsaved edits remain available only during the current flow and are not guaranteed to survive a page reload.
 - **Current boundaries:** Deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.
