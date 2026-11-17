@@ -52,6 +52,7 @@ export default function Create({
   const [pairNotice, setPairNotice] = useState('')
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null)
   const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
+  const [draggedOverExerciseIndex, setDraggedOverExerciseIndex] = useState<number | null>(null)
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
@@ -237,7 +238,10 @@ export default function Create({
       : Math.min(activeExerciseIndex, Math.max(0, exerciseUnitsForBuilder.length - 1))
 
   function reorderFromOverview(targetIndex: number) {
-    if (draggedExerciseIndex === null || draggedExerciseIndex === targetIndex) return
+    if (draggedExerciseIndex === null || draggedExerciseIndex === targetIndex) {
+      setDraggedOverExerciseIndex(null)
+      return
+    }
     const reordered = moveItem(exerciseUnitsForBuilder, draggedExerciseIndex, targetIndex)
     setPlanned(reordered.flatMap((unit) => unit.exercises))
     setActiveExerciseIndex((current) => {
@@ -248,6 +252,7 @@ export default function Create({
       return current
     })
     setDraggedExerciseIndex(null)
+    setDraggedOverExerciseIndex(null)
   }
 
   return (
@@ -343,10 +348,17 @@ export default function Create({
                 key={unit.id}
                 draggable
                 onDragStart={() => setDraggedExerciseIndex(index)}
+                onDragEnter={(event) => {
+                  event.preventDefault()
+                  setDraggedOverExerciseIndex(index)
+                }}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => reorderFromOverview(index)}
-                onDragEnd={() => setDraggedExerciseIndex(null)}
-                className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''}`}
+                onDragEnd={() => {
+                  setDraggedExerciseIndex(null)
+                  setDraggedOverExerciseIndex(null)
+                }}
+                className={`flex min-h-11 shrink-0 items-center rounded-full border ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'} ${draggedExerciseIndex === index ? 'opacity-50' : ''} ${draggedOverExerciseIndex === index && draggedExerciseIndex !== index ? 'bg-accent/20 border-accent ring-accent ring-2' : ''}`}
               >
                 <GripVertical className="ml-2 size-4" aria-hidden />
                 <button
@@ -358,6 +370,9 @@ export default function Create({
                 >
                   {index + 1}. {unit.name}
                 </button>
+                {draggedOverExerciseIndex === index && draggedExerciseIndex !== index && (
+                  <span className="text-accent pr-3 text-xs font-normal">Drop here</span>
+                )}
               </div>
             ))}
           </div>
