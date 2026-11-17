@@ -477,14 +477,24 @@ export default function Create({
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeExercise(item)}
-                      aria-label={`Remove ${item.name}`}
-                      className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
-                    >
-                      <Trash2 className="size-5" aria-hidden />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveExerciseIndex(null)}
+                        className="text-muted flex min-h-11 items-center gap-1 rounded-full px-2 text-sm"
+                      >
+                        <X className="size-4" aria-hidden />
+                        Close
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(item)}
+                        aria-label={`Remove ${item.name}`}
+                        className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
+                      >
+                        <Trash2 className="size-5" aria-hidden />
+                      </button>
+                    </div>
                   </div>
                   {item.source === 'personal' && (
                     <p className="text-muted mt-2">
