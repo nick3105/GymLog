@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
+import { Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
 
@@ -53,6 +53,14 @@ export default function Create({
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number | null>(null)
   const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
   const [draggedOverExerciseIndex, setDraggedOverExerciseIndex] = useState<number | null>(null)
+  const overviewDrag = useRef<{
+    pointerId: number
+    index: number
+    startX: number
+    startY: number
+    active: boolean
+  } | null>(null)
+  const overviewDragTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
@@ -274,21 +282,17 @@ export default function Create({
     setDraggedOverExerciseIndex(null)
   }
 
-  function moveOverviewByButton(index: number, direction: number) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= exerciseUnitsForBuilder.length) return
-    const reordered = moveItem(exerciseUnitsForBuilder, index, targetIndex)
-    setPlanned(reordered.flatMap((unit) => unit.exercises))
-    setActiveExerciseIndex((current) => {
-      if (current === null) return null
-      if (current === index) return targetIndex
-      if (current === targetIndex) return index
-      return current
-    })
-  }
-
   function moveOverviewPointer(event: PointerEvent<HTMLDivElement>) {
-    if (draggedExerciseIndex === null) return
+    const current = overviewDrag.current
+    if (!current || current.pointerId !== event.pointerId) return
+    if (!current.active) {
+      if (Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 8) {
+        if (overviewDragTimer.current !== null) clearTimeout(overviewDragTimer.current)
+        overviewDragTimer.current = null
+        overviewDrag.current = null
+      }
+      return
+    }
     event.preventDefault()
     const target = document
       .elementFromPoint(event.clientX, event.clientY)
@@ -300,10 +304,30 @@ export default function Create({
   function startOverviewPointer(event: PointerEvent<HTMLDivElement>, index: number) {
     const target = event.target as HTMLElement
     if (!target.closest('[data-drag-handle]') || !event.isPrimary) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    setDraggedExerciseIndex(index)
-    setDraggedOverExerciseIndex(index)
+    overviewDrag.current = {
+      pointerId: event.pointerId,
+      index,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+    }
+    overviewDragTimer.current = setTimeout(() => {
+      const current = overviewDrag.current
+      if (!current) return
+      current.active = true
+      event.currentTarget.setPointerCapture(event.pointerId)
+      setDraggedExerciseIndex(index)
+      setDraggedOverExerciseIndex(index)
+    }, 300)
+  }
+
+  function finishOverviewPointer(event: PointerEvent<HTMLDivElement>, index: number) {
+    const current = overviewDrag.current
+    if (!current || current.pointerId !== event.pointerId) return
+    if (overviewDragTimer.current !== null) clearTimeout(overviewDragTimer.current)
+    overviewDragTimer.current = null
+    if (current.active) reorderFromOverview(draggedOverExerciseIndex ?? index)
+    overviewDrag.current = null
   }
 
   return (
@@ -401,11 +425,11 @@ export default function Create({
                 data-overview-index={index}
                 onPointerDown={(event) => startOverviewPointer(event, index)}
                 onPointerMove={moveOverviewPointer}
-                onPointerUp={(event) => {
-                  if (!event.isPrimary) return
-                  reorderFromOverview(draggedOverExerciseIndex ?? index)
-                }}
+                onPointerUp={(event) => finishOverviewPointer(event, index)}
                 onPointerCancel={() => {
+                  if (overviewDragTimer.current !== null) clearTimeout(overviewDragTimer.current)
+                  overviewDragTimer.current = null
+                  overviewDrag.current = null
                   setDraggedExerciseIndex(null)
                   setDraggedOverExerciseIndex(null)
                 }}
@@ -432,24 +456,6 @@ export default function Create({
                 {draggedOverExerciseIndex === index && draggedExerciseIndex !== index && (
                   <span className="text-accent pr-3 text-xs font-normal">Drop here</span>
                 )}
-                <button
-                  type="button"
-                  disabled={index === 0}
-                  aria-label={`Move ${unit.name} up`}
-                  onClick={() => moveOverviewByButton(index, -1)}
-                  className="text-muted flex size-11 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
-                >
-                  <ArrowUp className="size-4" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === exerciseUnitsForBuilder.length - 1}
-                  aria-label={`Move ${unit.name} down`}
-                  onClick={() => moveOverviewByButton(index, 1)}
-                  className="text-muted flex size-11 shrink-0 items-center justify-center rounded-full disabled:opacity-30"
-                >
-                  <ArrowDown className="size-4" aria-hidden />
-                </button>
                 <button
                   type="button"
                   aria-label={`Remove ${unit.name} from this workout`}
