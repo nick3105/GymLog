@@ -30,6 +30,8 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 30 | Profile and training statistics | `30-profile.md` | `feature/profile` | RUN-11, REV-11 | 7 |
 | 31 | Autosave active workout drafts | `31-autosave-active-workout-draft.md` | `feature/server-workout-draft-autosave` | RUN-12 | 1, 5, 12 |
 
+| 31 | Visual exercise library | `31-exercise-visual-cards.md` | `feature/exercise-visual-cards` | NAV-04, REV-10 | 24 |
+
 ## Who can start when
 
 Tasks 1, 2 and 3 have no dependencies — **three people start on day one**. Task 3 is backend-only

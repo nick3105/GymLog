@@ -1,6 +1,7 @@
 // The shapes the API sends and receives. The API (backend/gymlog/models.py) is the source of truth.
 
 export type Exercise = {
+  thumbnail?: string
   id: string
   name: string
   group: string
