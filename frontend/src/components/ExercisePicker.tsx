@@ -12,6 +12,7 @@ type Props = {
   plannedIds: string[]
   favoriteExerciseIds?: string[]
   onRemoveFavorite?: (exerciseId: string) => void
+  onRemove?: (exerciseId: string) => void
   onAdd: (exercise: Exercise) => void
   onCreate?: (exercise: Exercise) => void
 }
@@ -22,6 +23,7 @@ export default function ExercisePicker({
   plannedIds,
   favoriteExerciseIds,
   onRemoveFavorite,
+  onRemove,
   onAdd,
   onCreate,
 }: Props) {
@@ -83,7 +85,8 @@ export default function ExercisePicker({
                     <button
                       type="button"
                       onClick={() => {
-                        onAdd(exercise)
+                        if (inWorkout && onRemove) onRemove(exercise.id)
+                        else onAdd(exercise)
                         setFavoritesOpen(false)
                       }}
                       className={`flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-2 text-left ${inWorkout ? 'bg-accent/10' : ''}`}
@@ -157,7 +160,7 @@ export default function ExercisePicker({
           <p className="text-muted mt-3 mb-1 text-sm" aria-live="polite">
             {results.length === 0
               ? `No exercise matches "${query.trim()}".`
-              : `${results.length} ${results.length === 1 ? 'exercise' : 'exercises'} — tap to add`}
+              : `${results.length} ${results.length === 1 ? 'exercise' : 'exercises'} — tap to add or remove`}
           </p>
           {results.length > 0 && (
             <ul className="border-border max-h-80 overflow-y-auto rounded-xl border">
@@ -166,7 +169,8 @@ export default function ExercisePicker({
                   <button
                     type="button"
                     onClick={() => {
-                      onAdd(exercise)
+                      if (plannedIds.includes(exercise.id) && onRemove) onRemove(exercise.id)
+                      else onAdd(exercise)
                       setQuery('')
                     }}
                     className="flex min-h-12 w-full items-center justify-between gap-2 px-3 py-2 text-left"
