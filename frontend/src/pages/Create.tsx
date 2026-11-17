@@ -157,6 +157,11 @@ export default function Create({
     setPlanned(next)
   }
 
+  function removeExerciseById(exerciseId: string) {
+    const item = planned.find((exercise) => exercise.id === exerciseId)
+    if (item) removeExercise(item)
+  }
+
   function removeExerciseUnit(unit: (typeof exerciseUnitsForBuilder)[number]) {
     if (unit.exercises.length === 1) {
       removeExercise(unit.exercises[0])
@@ -316,6 +321,7 @@ export default function Create({
           plannedIds={planned.map((item) => item.id)}
           favoriteExerciseIds={coaching ? undefined : ownJournal.favoriteExerciseIds}
           onRemoveFavorite={coaching ? undefined : removeFavorite}
+          onRemove={removeExerciseById}
           onAdd={add}
           onCreate={
             coaching

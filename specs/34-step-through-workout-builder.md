@@ -17,8 +17,9 @@ exercises closed” when none is selected. The compact overview keeps the existi
 and arrow controls so the user can reorder exercises without opening their details.
 
 The workout name, warm-up, cool-down and Save action remain available. Existing validation rules,
-duplicate-exercise behaviour, supersets, reordering, favourites and target calculations are
-unchanged. The same interaction must work when editing an existing workout.
+supersets, reordering, favourites and target calculations are unchanged. In the exercise picker,
+tapping an unselected exercise adds it and tapping a selected exercise removes it from the plan.
+The same interaction must work when editing an existing workout.
 
 ## Out of scope
 
