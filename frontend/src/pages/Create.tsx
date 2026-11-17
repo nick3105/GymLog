@@ -49,6 +49,7 @@ export default function Create({
   const [warmup, setWarmup] = useState(original?.warmup ?? '')
   const [cooldown, setCooldown] = useState(original?.cooldown ?? '')
   const [pairNotice, setPairNotice] = useState('')
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0)
   const [planned, setPlanned] = useState<Planned[]>(
     () =>
       original?.exercises.map((exercise) => ({
@@ -97,6 +98,7 @@ export default function Create({
     setProblem('')
     // PLN-03: the same exercise again adds a set to its card.
     if (planned.some((item) => item.id === exercise.id)) {
+      setActiveExerciseIndex(planned.findIndex((item) => item.id === exercise.id))
       setPlanned(
         planned.map((item) =>
           item.id === exercise.id && item.targets.length < 20
@@ -110,6 +112,7 @@ export default function Create({
       setProblem('A workout can have up to 20 exercises.')
       return
     }
+    setActiveExerciseIndex(planned.length)
     setPlanned([...planned, { ...exercise, targets: [newTarget(), newTarget(), newTarget()] }])
   }
 
@@ -144,7 +147,9 @@ export default function Create({
   function removeExercise(item: Planned) {
     if (item.supersetId && !window.confirm(`Remove ${item.name} and unlink its superset?`)) return
     const unpaired = item.supersetId ? unlinkSuperset(planned, item.supersetId) : planned
-    setPlanned(unpaired.filter((exercise) => exercise.id !== item.id))
+    const next = unpaired.filter((exercise) => exercise.id !== item.id)
+    setActiveExerciseIndex((current) => Math.min(current, Math.max(0, next.length - 1)))
+    setPlanned(next)
   }
 
   async function save(event: FormEvent) {
@@ -221,6 +226,12 @@ export default function Create({
     )
   }
 
+  const exerciseUnitsForBuilder = exerciseUnits(planned)
+  const currentExerciseIndex = Math.min(
+    activeExerciseIndex,
+    Math.max(0, exerciseUnitsForBuilder.length - 1),
+  )
+
   return (
     <form onSubmit={save} noValidate>
       {coaching && (
@@ -292,182 +303,245 @@ export default function Create({
       <p role="status" aria-live="polite" className="sr-only">
         {pairNotice}
       </p>
+      {exerciseUnitsForBuilder.length > 0 && (
+        <div className={`${card} mb-4`}>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-muted text-sm">
+              Exercise {currentExerciseIndex + 1} of {exerciseUnitsForBuilder.length}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={currentExerciseIndex === 0}
+                onClick={() => setActiveExerciseIndex(currentExerciseIndex - 1)}
+                className={`${secondaryButton} min-h-11 disabled:opacity-40`}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={currentExerciseIndex === exerciseUnitsForBuilder.length - 1}
+                onClick={() => setActiveExerciseIndex(currentExerciseIndex + 1)}
+                className={`${secondaryButton} min-h-11 disabled:opacity-40`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {exerciseUnitsForBuilder.map((unit, index) => (
+              <button
+                key={unit.id}
+                type="button"
+                aria-label={`Open ${unit.name}`}
+                aria-current={index === currentExerciseIndex ? 'step' : undefined}
+                onClick={() => setActiveExerciseIndex(index)}
+                className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${index === currentExerciseIndex ? 'border-accent text-accent' : 'border-border text-muted'}`}
+              >
+                {index + 1}. {unit.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <ReorderList
-        items={exerciseUnits(planned)}
+        items={exerciseUnitsForBuilder}
         enabled={!saving}
         onChange={(units) => setPlanned(units.flatMap((unit) => unit.exercises))}
         onPair={(draggedId, targetId) => pair(targetId, draggedId)}
       >
-        {(unit) => (
-          <div
-            className={
-              unit.exercises.length === 2 ? 'border-accent flex flex-col gap-4 border-l-2 pl-3' : ''
-            }
-          >
-            {unit.exercises.length === 2 && (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-accent flex items-center gap-2">
-                  <Link2 className="size-5" aria-hidden />
-                  {
-                    supersetLabel(
-                      planned,
-                      planned.findIndex((exercise) => exercise.id === unit.id),
-                    )?.split(' · ')[0]
-                  }
-                </p>
-                <button
-                  type="button"
-                  disabled={saving}
-                  className={textButton}
-                  onClick={() => {
-                    setPlanned(unlinkSuperset(planned, unit.exercises[0].supersetId!))
-                    setPairNotice('Superset unlinked. Exercise targets and order are unchanged.')
-                  }}
-                >
-                  <Unlink className="mr-2 size-4" aria-hidden />
-                  Unlink superset
-                </button>
-              </div>
-            )}
-            {unit.exercises.map((item) => (
-              <section key={item.id}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <ExerciseLink id={item.id} name={item.name} measurement={item.measurement} />
-                    <p className="text-muted text-sm">{item.group}</p>
-                    {item.supersetId && (
-                      <p className="text-accent text-base">
-                        {supersetLabel(
-                          planned,
-                          planned.findIndex((exercise) => exercise.id === item.id),
-                        )}
-                      </p>
-                    )}
-                  </div>
+        {(unit, unitIndex) => {
+          if (unitIndex !== currentExerciseIndex) {
+            return (
+              <button
+                type="button"
+                onClick={() => setActiveExerciseIndex(unitIndex)}
+                className="border-border text-muted flex min-h-11 w-full items-center justify-between rounded-lg border px-3 text-left"
+              >
+                <span className="truncate">
+                  {unitIndex + 1}. {unit.name}
+                </span>
+                <span className="text-accent ml-3 shrink-0 text-sm">Open</span>
+              </button>
+            )
+          }
+          return (
+            <div
+              className={
+                unit.exercises.length === 2
+                  ? 'border-accent flex flex-col gap-4 border-l-2 pl-3'
+                  : ''
+              }
+            >
+              {unit.exercises.length === 2 && (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-accent flex items-center gap-2">
+                    <Link2 className="size-5" aria-hidden />
+                    {
+                      supersetLabel(
+                        planned,
+                        planned.findIndex((exercise) => exercise.id === unit.id),
+                      )?.split(' · ')[0]
+                    }
+                  </p>
                   <button
                     type="button"
-                    onClick={() => removeExercise(item)}
-                    aria-label={`Remove ${item.name}`}
-                    className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
+                    disabled={saving}
+                    className={textButton}
+                    onClick={() => {
+                      setPlanned(unlinkSuperset(planned, unit.exercises[0].supersetId!))
+                      setPairNotice('Superset unlinked. Exercise targets and order are unchanged.')
+                    }}
                   >
-                    <Trash2 className="size-5" aria-hidden />
+                    <Unlink className="mr-2 size-4" aria-hidden />
+                    Unlink superset
                   </button>
                 </div>
-                {item.source === 'personal' && (
-                  <p className="text-muted mt-2">
-                    Personal exercise — excluded from weekly volume estimates
-                  </p>
-                )}
-                <NoteInput
-                  label={`${item.name} exercise note`}
-                  maximum={500}
-                  value={item.note ?? ''}
-                  onChange={(value) =>
-                    setPlanned(
-                      planned.map((exercise) =>
-                        exercise.id === item.id ? { ...exercise, note: value } : exercise,
-                      ),
-                    )
-                  }
-                  disabled={saving}
-                />
-                <div
-                  className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
-                  aria-hidden
-                >
-                  <span>Set</span>
-                  {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                    (field) => (
-                      <span key={field.key}>{field.label}</span>
-                    ),
-                  )}
-                </div>
-                {item.targets.map((target, setIndex) => (
-                  <div
-                    key={setIndex}
-                    className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
-                  >
-                    <span className="text-muted text-center font-normal">{setIndex + 1}</span>
-                    {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                      ({ key, label: fieldLabel, mode }) => (
-                        <input
-                          key={key}
-                          type="text"
-                          inputMode={mode}
-                          aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
-                          placeholder={
-                            key === 'durationSeconds' ? 'seconds' : key === 'reps' ? 'reps' : 'opt.'
-                          }
-                          value={target[key]}
-                          onChange={(event) =>
-                            changeTargets(
-                              item.id,
-                              item.targets.map((row, j) =>
-                                j === setIndex
-                                  ? { ...row, [key]: event.target.value.replace(',', '.') }
-                                  : row,
-                              ),
-                            )
-                          }
-                          className={`${input} text-center`}
-                        />
-                      ),
-                    )}
+              )}
+              {unit.exercises.map((item) => (
+                <section key={item.id}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <ExerciseLink id={item.id} name={item.name} measurement={item.measurement} />
+                      <p className="text-muted text-sm">{item.group}</p>
+                      {item.supersetId && (
+                        <p className="text-accent text-base">
+                          {supersetLabel(
+                            planned,
+                            planned.findIndex((exercise) => exercise.id === item.id),
+                          )}
+                        </p>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      disabled={item.targets.length === 1}
-                      onClick={() =>
-                        changeTargets(
-                          item.id,
-                          item.targets.filter((_, j) => j !== setIndex),
-                        )
-                      }
-                      aria-label={`Remove set ${setIndex + 1} of ${item.name}`}
-                      className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                      onClick={() => removeExercise(item)}
+                      aria-label={`Remove ${item.name}`}
+                      className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
                     >
-                      <X className="size-5" aria-hidden />
+                      <Trash2 className="size-5" aria-hidden />
                     </button>
                   </div>
-                ))}
-                <button
-                  type="button"
-                  disabled={item.targets.length >= 20}
-                  onClick={() => changeTargets(item.id, [...item.targets, newTarget()])}
-                  className={`${textButton} mt-2`}
-                >
-                  + Add set
-                </button>
-                {!item.supersetId &&
-                  planned.some((exercise) => exercise.id !== item.id && !exercise.supersetId) && (
-                    <details className="mt-2">
-                      <summary className="text-accent flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 font-normal">
-                        <Link2 className="size-4" aria-hidden />
-                        Link as superset
-                      </summary>
-                      <select
-                        value=""
-                        disabled={saving}
-                        className={`${input} mt-1`}
-                        aria-label={`Link ${item.name} as superset`}
-                        onChange={(event) => {
-                          if (event.target.value) pair(item.id, event.target.value)
-                        }}
-                      >
-                        <option value="">Choose another exercise</option>
-                        {planned
-                          .filter((exercise) => exercise.id !== item.id && !exercise.supersetId)
-                          .map((exercise) => (
-                            <option key={exercise.id} value={exercise.id}>
-                              {exercise.name}
-                            </option>
-                          ))}
-                      </select>
-                    </details>
+                  {item.source === 'personal' && (
+                    <p className="text-muted mt-2">
+                      Personal exercise — excluded from weekly volume estimates
+                    </p>
                   )}
-              </section>
-            ))}
-          </div>
-        )}
+                  <NoteInput
+                    label={`${item.name} exercise note`}
+                    maximum={500}
+                    value={item.note ?? ''}
+                    onChange={(value) =>
+                      setPlanned(
+                        planned.map((exercise) =>
+                          exercise.id === item.id ? { ...exercise, note: value } : exercise,
+                        ),
+                      )
+                    }
+                    disabled={saving}
+                  />
+                  <div
+                    className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
+                    aria-hidden
+                  >
+                    <span>Set</span>
+                    {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                      (field) => (
+                        <span key={field.key}>{field.label}</span>
+                      ),
+                    )}
+                  </div>
+                  {item.targets.map((target, setIndex) => (
+                    <div
+                      key={setIndex}
+                      className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
+                    >
+                      <span className="text-muted text-center font-normal">{setIndex + 1}</span>
+                      {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
+                        ({ key, label: fieldLabel, mode }) => (
+                          <input
+                            key={key}
+                            type="text"
+                            inputMode={mode}
+                            aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
+                            placeholder={
+                              key === 'durationSeconds'
+                                ? 'seconds'
+                                : key === 'reps'
+                                  ? 'reps'
+                                  : 'opt.'
+                            }
+                            value={target[key]}
+                            onChange={(event) =>
+                              changeTargets(
+                                item.id,
+                                item.targets.map((row, j) =>
+                                  j === setIndex
+                                    ? { ...row, [key]: event.target.value.replace(',', '.') }
+                                    : row,
+                                ),
+                              )
+                            }
+                            className={`${input} text-center`}
+                          />
+                        ),
+                      )}
+                      <button
+                        type="button"
+                        disabled={item.targets.length === 1}
+                        onClick={() =>
+                          changeTargets(
+                            item.id,
+                            item.targets.filter((_, j) => j !== setIndex),
+                          )
+                        }
+                        aria-label={`Remove set ${setIndex + 1} of ${item.name}`}
+                        className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-30"
+                      >
+                        <X className="size-5" aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={item.targets.length >= 20}
+                    onClick={() => changeTargets(item.id, [...item.targets, newTarget()])}
+                    className={`${textButton} mt-2`}
+                  >
+                    + Add set
+                  </button>
+                  {!item.supersetId &&
+                    planned.some((exercise) => exercise.id !== item.id && !exercise.supersetId) && (
+                      <details className="mt-2">
+                        <summary className="text-accent flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 font-normal">
+                          <Link2 className="size-4" aria-hidden />
+                          Link as superset
+                        </summary>
+                        <select
+                          value=""
+                          disabled={saving}
+                          className={`${input} mt-1`}
+                          aria-label={`Link ${item.name} as superset`}
+                          onChange={(event) => {
+                            if (event.target.value) pair(item.id, event.target.value)
+                          }}
+                        >
+                          <option value="">Choose another exercise</option>
+                          {planned
+                            .filter((exercise) => exercise.id !== item.id && !exercise.supersetId)
+                            .map((exercise) => (
+                              <option key={exercise.id} value={exercise.id}>
+                                {exercise.name}
+                              </option>
+                            ))}
+                        </select>
+                      </details>
+                    )}
+                </section>
+              ))}
+            </div>
+          )
+        }}
       </ReorderList>
 
       <p className="text-muted mt-4 text-sm">
