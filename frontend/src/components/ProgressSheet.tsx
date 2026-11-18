@@ -1,35 +1,67 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 
-import { api } from '../api'
+import { api, ApiError } from '../api'
 import { formatDay, formatNumber, formatSet } from '../format'
 import { useJournal } from '../journal'
 import type { ExerciseStats } from '../types'
-import { card } from '../ui'
+import { card, secondaryButton } from '../ui'
+import ExerciseGuide from './ExerciseGuide'
 import LineChart from './LineChart'
 
-// Full-screen exercise progress (REV-03 to REV-06), drawn over whatever page opened it.
-export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
-  const { journal } = useJournal()
+// Full-screen exercise sheet, drawn over whatever page opened it: how the exercise is done
+// (REV-10), then its progress (REV-03 to REV-06).
+export default function ProgressSheet({
+  exerciseId,
+  coacheeId,
+}: {
+  exerciseId: string
+  coacheeId?: string
+}) {
+  const { journal, setJournal } = useJournal()
   const navigate = useNavigate()
   const location = useLocation()
-  const [, setSearchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [stats, setStats] = useState<ExerciseStats | null>(null)
+  const [metric, setMetric] = useState<'estimated1rm' | 'averageWeight'>('estimated1rm')
   const [problem, setProblem] = useState('')
   const exercise = journal.exercises.find((item) => item.id === exerciseId)
-  const name = exercise?.name ?? 'Exercise'
-  const timed = exercise?.measurement === 'duration'
+  const name = coacheeId
+    ? (searchParams.get('exerciseName') ?? 'Exercise')
+    : (exercise?.name ?? searchParams.get('exerciseName') ?? 'Exercise')
+  const timed = coacheeId
+    ? searchParams.get('measurement') === 'duration'
+    : (exercise?.measurement ?? searchParams.get('measurement')) === 'duration'
 
   useEffect(() => {
     let current = true
-    api<ExerciseStats>(`exercises/${encodeURIComponent(exerciseId)}/stats`)
+    const prefix = coacheeId ? `coachees/${coacheeId}/` : ''
+    api<ExerciseStats>(
+      `${prefix}exercises/${encodeURIComponent(exerciseId)}/stats?include=average-weight`,
+    )
       .then((result) => current && setStats(result))
-      .catch((error: Error) => current && setProblem(error.message))
+      .catch((error: Error) => {
+        if (current) {
+          setStats(null)
+          setProblem(error.message)
+          if (coacheeId && error instanceof ApiError && error.status === 404) {
+            window.dispatchEvent(new Event('gymlog-coachee-unavailable'))
+          }
+        }
+      })
     return () => {
       current = false
     }
-  }, [exerciseId, journal.sessions])
+  }, [exerciseId, journal.sessions, coacheeId])
+
+  const average = metric === 'averageWeight'
+  const metricLabel = average ? 'average weight' : 'estimated 1RM'
+  const best = average ? stats?.averageWeight?.best : stats?.best
+  const latest = average ? stats?.averageWeight?.latest : stats?.latest
+  const points = average
+    ? (stats?.averageWeight?.points ?? []).map((point) => ({ day: point.day, value: point.weight }))
+    : (stats?.points ?? []).map((point) => ({ day: point.day, value: point.estimate }))
 
   function close() {
     // Opened from inside the app: go back, exactly like the phone's back gesture.
@@ -43,6 +75,25 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
         },
         { replace: true },
       )
+  }
+
+  async function toggleFavorite() {
+    if (!exercise) return
+    setProblem('')
+    try {
+      const result = await api<{ exerciseId: string; favorite: boolean }>(
+        `exercises/${exercise.id}/favorite`,
+        {},
+      )
+      setJournal((current) => ({
+        ...current,
+        favoriteExerciseIds: result.favorite
+          ? [...current.favoriteExerciseIds, result.exerciseId]
+          : current.favoriteExerciseIds.filter((id) => id !== result.exerciseId),
+      }))
+    } catch (error) {
+      setProblem((error as Error).message)
+    }
   }
 
   return (
@@ -61,43 +112,74 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
           <ArrowLeft className="size-5" aria-hidden />
           Back
         </button>
-        <div>
-          <p className="text-label text-xs font-normal tracking-widest uppercase">
-            Exercise progress
-          </p>
-          <h2 id="progress-title" className="text-2xl font-light">
-            {name}
-          </h2>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-label text-xs font-normal tracking-widest uppercase">Exercise</p>
+            <h2 id="progress-title" className="text-2xl font-light">
+              {name}
+            </h2>
+          </div>
+          {!coacheeId && exercise && (
+            <button
+              type="button"
+              onClick={toggleFavorite}
+              aria-label={`${journal.favoriteExerciseIds.includes(exercise.id) ? 'Remove' : 'Add'} ${exercise.name} ${journal.favoriteExerciseIds.includes(exercise.id) ? 'from' : 'to'} favourites`}
+              className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${journal.favoriteExerciseIds.includes(exercise.id) ? 'bg-accent/15 text-accent' : 'border-border bg-panel text-muted border'}`}
+            >
+              <Star
+                className={`size-[1.35rem] ${journal.favoriteExerciseIds.includes(exercise.id) ? 'fill-current' : ''}`}
+                strokeWidth={2.4}
+                aria-hidden
+              />
+            </button>
+          )}
         </div>
+        <ExerciseGuide exerciseId={exerciseId} name={name} />
+        <h3 className="text-label mt-2 text-xs font-normal tracking-widest uppercase">Progress</h3>
         {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
         {!stats && !problem && <p className="text-muted">Loading…</p>}
         {stats && (
           <>
             {!timed && (
               <>
+                <div role="group" aria-label="Chart metric" className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={!average}
+                    onClick={() => setMetric('estimated1rm')}
+                    className={`${secondaryButton} aria-pressed:bg-accent/20 aria-pressed:ring-accent aria-pressed:ring-2`}
+                  >
+                    Estimated 1RM
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={average}
+                    onClick={() => setMetric('averageWeight')}
+                    className={`${secondaryButton} aria-pressed:bg-accent/20 aria-pressed:ring-accent aria-pressed:ring-2`}
+                  >
+                    Average weight
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className={card}>
-                    <p className="text-muted text-sm">Best estimated 1RM</p>
+                    <p className="text-muted text-sm">Best {metricLabel}</p>
                     <p className="font-mono text-2xl">
-                      {stats.best === null ? '–' : `${formatNumber(stats.best)} kg`}
+                      {best == null ? '–' : `${formatNumber(best)} kg`}
                     </p>
                   </div>
                   <div className={card}>
-                    <p className="text-muted text-sm">Latest estimated 1RM</p>
+                    <p className="text-muted text-sm">Latest {metricLabel}</p>
                     <p className="font-mono text-2xl">
-                      {stats.latest === null ? '–' : `${formatNumber(stats.latest)} kg`}
+                      {latest == null ? '–' : `${formatNumber(latest)} kg`}
                     </p>
                   </div>
                 </div>
                 <div className={card}>
                   <LineChart
-                    title={`${name}: estimated 1RM`}
-                    points={stats.points.map((point) => ({
-                      day: point.day,
-                      value: point.estimate,
-                    }))}
+                    title={`${name}: ${metricLabel}`}
+                    points={points}
                     unit="kg"
-                    emptyMessage="No estimates yet."
+                    emptyMessage={average ? 'No recorded weights yet.' : 'No estimates yet.'}
                   />
                 </div>
               </>
@@ -109,6 +191,11 @@ export default function ProgressSheet({ exerciseId }: { exerciseId: string }) {
             )}
             {timed ? (
               <p className="text-muted text-sm">Holds are recorded in seconds.</p>
+            ) : average ? (
+              <p className="text-muted text-sm">
+                Each point is the average external weight per performed set in one workout. Zero-kg
+                sets count; skipped sets and timed holds are excluded.
+              </p>
             ) : (
               <p className="text-muted text-sm">
                 Estimates use sets of 1–10 reps with weight. With RPE, the reps you had left (10 −

@@ -17,14 +17,23 @@ from . import assistant, storage
 from .models import (
     assistant_messages,
     best_1rm,
+    body_load,
     exercise_stats,
     number,
+    profile_stats,
     validate_assistant_reply,
     validate_assistant_request,
+    validate_coach_request,
+    validate_coaching_transition,
+    validate_new_coaching,
+    validate_personal_exercise,
     validate_registration,
     validate_session,
     validate_session_edit,
     validate_template,
+    validate_volume_preferences,
+    validate_weight_goal,
+    weekly_volume,
 )
 
 ROOT = Path(__file__).resolve().parent
@@ -59,6 +68,9 @@ def create_app(config=None):
         raise RuntimeError("Run `uv run python setup_secret.py` before starting GymLog.")
     database = app.config["DATABASE"]
     storage.initialize(database, app.config["OWNER_PASSWORD_HASH"])
+    volume_registry = json.loads(
+        (ROOT.parents[1] / "docs" / "VOLUME_COEFFICIENTS_DRAFT.json").read_text(encoding="utf-8")
+    )
     catalogue = json.loads((ROOT / "exercises.json").read_text(encoding="utf-8"))
     if (
         not isinstance(catalogue, list)
@@ -67,6 +79,13 @@ def create_app(config=None):
     ):
         raise RuntimeError("exercises.json must contain unique exercise IDs.")
     catalogue_by_id = {e["id"]: e for e in catalogue}
+    # Steps per exercise; the photos are in frontend/public/exercise-images (spec 24).
+    guides = json.loads((ROOT / "exercise_guides.json").read_text(encoding="utf-8"))
+
+    def catalogue_for(user_id):
+        """Combine built-ins with only the selected journal owner's personal exercises."""
+        personal = storage.personal_exercises(database, user_id)
+        return {**catalogue_by_id, **{exercise["id"]: exercise for exercise in personal}}
 
     def version(digest):
         # Stored in the cookie so that changing a password signs out other devices.
@@ -210,14 +229,109 @@ def create_app(config=None):
         session.clear()
         return jsonify(ok=True)
 
+    @app.get("/api/coaching")
+    @authenticated
+    def coaching():
+        """List only this account's requests and accepted relationships."""
+        return jsonify(userId=g.user_id, relationships=storage.coaching_state(database, g.user_id))
+
+    @app.post("/api/coaching/request")
+    @authenticated
+    def assign_coach():
+        """Send a request only after explicit coachee sharing consent."""
+        username = validate_coach_request(request.get_json())
+        result = storage.request_coach(database, g.user_id, username, validate_new_coaching)
+        if result is None:
+            return jsonify(error="That coach username could not be found."), 404
+        return jsonify(result), 201
+
+    @app.post("/api/coaching/<relationship_id>/<action>")
+    @authenticated
+    def coaching_action(relationship_id, action):
+        """Accept, decline, cancel or end only a participant's relationship."""
+        result = storage.change_coaching(
+            database, relationship_id, g.user_id, action, validate_coaching_transition
+        )
+        if result is None:
+            return jsonify(error="That coaching relationship could not be found."), 404
+        return jsonify(result)
+
+    @app.get("/api/coachees/<int:coachee_id>")
+    @authenticated
+    def coachee_state(coachee_id):
+        """Share only the training journal covered by an accepted relationship."""
+        result = storage.coachee_journal(database, g.user_id, coachee_id)
+        if result is None:
+            return jsonify(
+                error="This coachee is no longer available. Check your relationships."
+            ), 404
+        result["exercises"] = [
+            exercise
+            for exercise in {
+                **catalogue_by_id,
+                **{item["id"]: item for item in result.pop("personalExercises")},
+            }.values()
+            if not exercise.get("retired")
+        ]
+        return jsonify(result)
+
+    @app.get("/api/coachees/<int:coachee_id>/exercises/<exercise_id>/stats")
+    @authenticated
+    def coachee_stats(coachee_id, exercise_id):
+        """Read exercise progress only inside an accepted coaching workspace."""
+        journal = storage.coachee_journal(database, g.user_id, coachee_id)
+        if journal is None:
+            return jsonify(error="That coachee exercise could not be found."), 404
+        shared_catalogue = {
+            **catalogue_by_id,
+            **{item["id"]: item for item in journal["personalExercises"]},
+        }
+        if exercise_id not in shared_catalogue:
+            return jsonify(error="That coachee exercise could not be found."), 404
+        return jsonify(
+            exercise_stats(
+                journal["sessions"],
+                exercise_id,
+                include_average_weight=request.args.get("include") == "average-weight",
+            )
+        )
+
+    @app.post("/api/coachees/<int:coachee_id>/templates", defaults={"template_id": None})
+    @app.post("/api/coachees/<int:coachee_id>/templates/<template_id>")
+    @authenticated
+    def save_coachee_template(coachee_id, template_id):
+        """Create or edit a coach-authored plan under an atomic relationship check."""
+        if storage.coachee_journal(database, g.user_id, coachee_id) is None:
+            return jsonify(
+                error="This coachee is no longer available. Check your relationships."
+            ), 404
+        data = validate_template(request.get_json(), catalogue_for(coachee_id))
+        result = storage.save_coached_template(database, g.user_id, coachee_id, data, template_id)
+        if result is None:
+            return jsonify(error="You can edit only your own plans for an accepted coachee."), 404
+        return jsonify(result), 200 if template_id else 201
+
     @app.get("/api/state")
     @authenticated
     def state():
         return jsonify(
-            exercises=[exercise for exercise in catalogue if not exercise.get("retired")],
+            exercises=[
+                {
+                    **exercise,
+                    **(
+                        {"thumbnail": f"/exercise-images/{exercise['id']}/0.jpg"}
+                        if exercise["id"] in guides
+                        else {}
+                    ),
+                }
+                for exercise in catalogue_for(g.user_id).values()
+                if not exercise.get("retired")
+            ],
             templates=storage.documents(database, g.user_id, "templates"),
             sessions=storage.documents(database, g.user_id, "sessions"),
             weights=storage.weights(database, g.user_id),
+            weightGoal=storage.weight_goal(database, g.user_id),
+            favoriteExerciseIds=storage.favorite_exercise_ids(database, g.user_id),
         )
 
     @app.get("/api/assistant/status")
@@ -233,13 +347,14 @@ def create_app(config=None):
     @authenticated
     def chat_with_assistant():
         """Read owned workout context, call the provider and validate its suggestions."""
-        messages, draft = validate_assistant_request(request.get_json(), catalogue_by_id)
+        own_catalogue = catalogue_for(g.user_id)
+        messages, draft = validate_assistant_request(request.get_json(), own_catalogue)
         if not app.config["AI_ENABLED"]:
             return jsonify(error="Enable the local assistant with GYMLOG_AI_ENABLED=1."), 503
         if not app.config["REQUESTY_API_KEY"]:
             return jsonify(error="Set REQUESTY_API_KEY on the server to use the assistant."), 503
         templates = storage.documents(database, g.user_id, "templates")
-        context = assistant_messages(messages, draft, templates, catalogue_by_id)
+        context = assistant_messages(messages, draft, templates, own_catalogue)
         try:
             content = assistant.complete(
                 app.config["REQUESTY_API_KEY"], app.config["REQUESTY_MODEL"], context
@@ -247,25 +362,83 @@ def create_app(config=None):
         except assistant.AssistantUnavailable as error:
             return jsonify(error=str(error)), error.status
         try:
-            result = validate_assistant_reply(content, catalogue_by_id)
+            result = validate_assistant_reply(content, own_catalogue)
         except ValueError:
             return jsonify(
                 error="The AI returned an unusable answer or plan. Please try again."
             ), 502
         return jsonify(result)
 
+    @app.post("/api/exercises/<exercise_id>/favorite")
+    @authenticated
+    def toggle_favorite_exercise(exercise_id):
+        """Add or remove one exercise from the signed-in user's favourites."""
+        if exercise_id not in catalogue_for(g.user_id):
+            return jsonify(error="That exercise is not in your catalogue."), 404
+        return jsonify(
+            exerciseId=exercise_id,
+            favorite=storage.toggle_favorite_exercise(database, g.user_id, exercise_id),
+        )
+
+    @app.post("/api/exercises/personal")
+    @authenticated
+    def create_personal_exercise():
+        """Create an authenticated user's private exercise with retry-safe identity."""
+        data = validate_personal_exercise(request.get_json())
+        return jsonify(storage.add_personal_exercise(database, g.user_id, data)), 201
+
     @app.get("/api/exercises/<exercise_id>/stats")
     @authenticated
     def stats(exercise_id):
-        if exercise_id not in catalogue_by_id:
+        if exercise_id not in catalogue_for(g.user_id):
             return jsonify(error="That exercise is not in the catalogue."), 404
         sessions = storage.documents(database, g.user_id, "sessions")
-        return jsonify(exercise_stats(sessions, exercise_id))
+        return jsonify(
+            exercise_stats(
+                sessions,
+                exercise_id,
+                include_average_weight=request.args.get("include") == "average-weight",
+            )
+        )
+
+    @app.get("/api/exercises/<exercise_id>/guide")
+    @authenticated
+    def guide(exercise_id):
+        """How an exercise is done: numbered steps and its start and end photos (REV-10)."""
+        if exercise_id not in catalogue_for(g.user_id):
+            return jsonify(error="That exercise is not in the catalogue."), 404
+        if exercise_id not in guides:
+            return jsonify(steps=[], images=[])
+        return jsonify(
+            steps=guides[exercise_id]["steps"],
+            images=[f"/exercise-images/{exercise_id}/{number}.jpg" for number in (0, 1)],
+        )
+
+    @app.get("/api/body-load")
+    @authenticated
+    def body_load_report():
+        """Sets, volume and seconds per muscle group for the chosen period (REV-09)."""
+        sessions = storage.documents(database, g.user_id, "sessions")
+        return jsonify(
+            body_load(
+                sessions, catalogue_by_id, request.args.get("today"), request.args.get("days")
+            )
+        )
+
+    @app.get("/api/profile")
+    @authenticated
+    def profile():
+        """The signed-in user's level and training statistics (REV-11)."""
+        sessions = storage.documents(database, g.user_id, "sessions")
+        weights = storage.weights(database, g.user_id)
+        return jsonify(
+            profile_stats(sessions, weights, catalogue_for(g.user_id), request.args.get("today"))
+        )
 
     @app.post("/api/templates")
     @authenticated
     def create_template():
-        document = validate_template(request.get_json(), catalogue_by_id)
+        document = validate_template(request.get_json(), catalogue_for(g.user_id))
         return jsonify(storage.add_template(database, g.user_id, document)), 201
 
     @app.post("/api/templates/<template_id>")
@@ -275,7 +448,7 @@ def create_app(config=None):
         template = storage.get_template(database, g.user_id, template_id)
         if template is None:
             return jsonify(error="That workout template could not be found."), 404
-        changes = validate_template(request.get_json(), catalogue_by_id)
+        changes = validate_template(request.get_json(), catalogue_for(g.user_id))
         document = storage.update_template(database, g.user_id, {**template, **changes})
         return jsonify(document)
 
@@ -294,8 +467,24 @@ def create_app(config=None):
         saved = storage.get_session(database, g.user_id, session_id)
         if saved is None:
             return jsonify(error="That completed workout could not be found."), 404
-        document = validate_session_edit(request.get_json(), saved)
-        updated = storage.update_session(database, g.user_id, document)
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("A session object is required.")
+        entries = body.get("exercises")
+        has_notes = "note" in body or any(
+            isinstance(exercise, dict) and "note" in exercise
+            for exercise in (entries if isinstance(entries, list) else [])
+        )
+        if has_notes and "revision" not in body:
+            return jsonify(error="Reload this workout before editing notes."), 409
+        revision = body.get("revision", saved.get("revision", 0))
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+            raise ValueError("A valid workout revision is required.")
+        document = validate_session_edit(body, saved)
+        try:
+            updated = storage.update_session(database, g.user_id, document, revision)
+        except ValueError as error:
+            return jsonify(error=str(error)), 409
         if updated is None:
             return jsonify(error="That completed workout could not be found."), 404
         return jsonify(updated)
@@ -322,8 +511,84 @@ def create_app(config=None):
                 return jsonify(
                     error="This session was already saved with different values. Reload your history."
                 ), 409
+            storage.delete_workout_draft(database, g.user_id)
             return jsonify(existing)
         return jsonify(storage.add_session(database, g.user_id, document)), 201
+
+    @app.get("/api/workout-draft")
+    @authenticated
+    def get_workout_draft():
+        """Restore the signed-in user's active workout draft, if present."""
+        return jsonify(draft=storage.workout_draft(database, g.user_id))
+
+    @app.post("/api/workout-draft")
+    @authenticated
+    def save_workout_draft():
+        """Save partial workout inputs without adding a completed history entry."""
+        body = request.get_json()
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("clientId"), str)
+            or not isinstance(body.get("templateId"), str)
+            or not isinstance(body.get("name"), str)
+            or not isinstance(body.get("day"), str)
+            or not isinstance(body.get("exercises"), list)
+            or not body["exercises"]
+        ):
+            raise ValueError("A complete active workout draft is required.")
+        try:
+            date.fromisoformat(body["day"])
+        except ValueError:
+            raise ValueError("The workout draft needs a valid date.") from None
+
+        existing = storage.workout_draft(database, g.user_id)
+        if existing and existing.get("clientId") != body["clientId"]:
+            return jsonify(
+                error="Discard or resume your current workout before starting another one."
+            ), 409
+        return jsonify(draft=storage.save_workout_draft(database, g.user_id, body))
+
+    @app.post("/api/workout-draft/discard")
+    @authenticated
+    def discard_workout_draft():
+        """Discard only the signed-in user's active workout draft."""
+        storage.delete_workout_draft(database, g.user_id)
+        return jsonify(ok=True)
+
+    @app.get("/api/volume")
+    @authenticated
+    def volume():
+        """Show only the signed-in user's saved weekly set exposure."""
+        preferences = storage.volume_preferences(database, g.user_id)
+        result = weekly_volume(
+            storage.documents(database, g.user_id, "sessions"),
+            request.args.get("week", date.today().isoformat()),
+            volume_registry,
+            preferences,
+            app.config.get("VOLUME_DRAFT_PREVIEW", False),
+        )
+        return jsonify(result)
+
+    @app.post("/api/volume/preferences")
+    @authenticated
+    def update_volume_preferences():
+        """Save the owner's editable goals with a revision check."""
+        body = request.get_json()
+        if isinstance(body, dict) and "profile" not in body:
+            body = {
+                **body,
+                "profile": storage.volume_preferences(database, g.user_id).get("profile", {}),
+            }
+        document = validate_volume_preferences(
+            body, {row["id"] for row in volume_registry["taxonomy"]}
+        )
+        revision = body.get("revision")
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ValueError("Reload weekly volume before saving your goals.")
+        saved = storage.save_volume_preferences(database, g.user_id, document, revision)
+        if saved is None:
+            return jsonify(error="Your goals changed on another device. Reload before saving."), 409
+        return jsonify(saved)
 
     @app.post("/api/weights")
     @authenticated
@@ -337,5 +602,14 @@ def create_app(config=None):
             raise ValueError("Choose a valid date.") from None
         kg = number(body.get("kg"), "Body weight", 1, 700)
         return jsonify(storage.save_weight(database, g.user_id, day, kg))
+
+    @app.post("/api/weight-goal")
+    @authenticated
+    def set_weight_goal():
+        body = request.get_json()
+        entries = storage.weights(database, g.user_id)
+        latest_weight = entries[-1]["kg"] if entries else None
+        goal = validate_weight_goal(body, latest_weight)
+        return jsonify(weightGoal=storage.save_weight_goal(database, g.user_id, goal))
 
     return app

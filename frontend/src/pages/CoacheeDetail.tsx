@@ -1,0 +1,194 @@
+import { Link2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
+
+import { api } from '../api'
+import type { CoacheeJournal, CoachingState } from '../coaching'
+import WorkoutReminder from '../components/WorkoutReminder'
+import { supersetLabel } from '../supersets'
+import { formatDay, formatSet } from '../format'
+import { card, errorText, secondaryButton } from '../ui'
+
+export default function CoacheeDetail() {
+  const { coacheeId } = useParams()
+  const [, setSearchParams] = useSearchParams()
+  const [loadedJournal, setJournal] = useState<CoacheeJournal | null>(null)
+  const [actorId, setActorId] = useState<number | null>(null)
+  const [problem, setProblem] = useState('')
+  const journal = loadedJournal?.owner.id === Number(coacheeId) ? loadedJournal : null
+  useEffect(() => {
+    let current = true
+    Promise.all([api<CoacheeJournal>(`coachees/${coacheeId}`), api<CoachingState>('coaching')])
+      .then(([result, actor]) => {
+        if (current) {
+          setJournal(result)
+          setProblem('')
+          setActorId(actor.userId)
+        }
+      })
+      .catch((error: Error) => {
+        if (current) {
+          setJournal(null)
+          setProblem(error.message)
+        }
+      })
+    return () => {
+      current = false
+    }
+  }, [coacheeId])
+
+  useEffect(() => {
+    function unavailable() {
+      setJournal(null)
+      setProblem('This coachee is no longer available. Check your relationships.')
+    }
+    window.addEventListener('gymlog-coachee-unavailable', unavailable)
+    return () => window.removeEventListener('gymlog-coachee-unavailable', unavailable)
+  }, [])
+
+  function openExercise(id: string, name: string, measurement?: string) {
+    setSearchParams({
+      exercise: id,
+      exerciseName: name,
+      ...(measurement === 'duration' ? { measurement: 'duration' } : {}),
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Link to="/coachees" className={secondaryButton}>
+        All coachees
+      </Link>
+      <h1 className="gradient-text text-3xl font-bold break-words">
+        {journal ? `Coaching ${journal.owner.username}` : 'Coaching workspace'}
+      </h1>
+      {problem && (
+        <p role="alert" className={errorText}>
+          {problem}
+        </p>
+      )}
+      {!journal && !problem && <p>Loading training journal…</p>}
+      {journal && (
+        <>
+          <Link to={`/coachees/${coacheeId}/create`} className={secondaryButton}>
+            Create workout for {journal.owner.username}
+          </Link>
+          <h2 className="text-xl font-normal">Saved workout plans</h2>
+          {journal.templates.length === 0 && <p className="text-muted">No saved plans yet.</p>}
+          {journal.templates.map((template) => (
+            <section key={template.id} className={card}>
+              <h3 className="mb-2 text-lg font-normal break-words">{template.name}</h3>
+              <p className="text-muted mb-2">
+                Created by {template.createdBy?.username ?? journal.owner.username}
+              </p>
+              {(template as { note?: string }).note && (
+                <p className="mb-3 break-words whitespace-pre-wrap">
+                  {(template as { note?: string }).note}
+                </p>
+              )}
+              {template.warmup && (
+                <div className="mb-3">
+                  <h4 className="font-normal">Warmup</h4>
+                  <p className="break-words whitespace-pre-wrap">{template.warmup}</p>
+                </div>
+              )}
+              <ul className="mb-3 flex flex-col gap-2">
+                {template.exercises.map((exercise, exerciseIndex) => (
+                  <li
+                    key={exercise.id}
+                    className={exercise.supersetId ? 'border-accent border-l-2 pl-3' : ''}
+                  >
+                    {exercise.supersetId && (
+                      <p className="text-accent flex items-center gap-2">
+                        <Link2 className="size-5" aria-hidden />
+                        {supersetLabel(template.exercises, exerciseIndex)}
+                      </p>
+                    )}
+                    <button
+                      className="text-accent min-h-11 text-left font-normal"
+                      onClick={() => openExercise(exercise.id, exercise.name, exercise.measurement)}
+                    >
+                      {exercise.name} · {exercise.sets} sets
+                    </button>
+                    {(exercise as { note?: string }).note && (
+                      <p className="break-words whitespace-pre-wrap">
+                        {(exercise as { note?: string }).note}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {template.cooldown && (
+                <div className="mb-3">
+                  <h4 className="font-normal">Cooldown</h4>
+                  <p className="break-words whitespace-pre-wrap">{template.cooldown}</p>
+                </div>
+              )}
+              {template.createdBy?.id === actorId && (
+                <Link
+                  to={`/coachees/${coacheeId}/workouts/${template.id}/edit`}
+                  className={secondaryButton}
+                >
+                  Edit your plan
+                </Link>
+              )}
+            </section>
+          ))}
+          <h2 className="text-xl font-normal">Completed training</h2>
+          {journal.sessions.length === 0 && (
+            <p className="text-muted">No completed training yet.</p>
+          )}
+          {journal.sessions.map((session) => (
+            <details key={session.id} className={card}>
+              <summary className="min-h-11 cursor-pointer font-normal break-words">
+                {formatDay(session.day)} · {session.name}
+              </summary>
+              {(session as { note?: string }).note && (
+                <p className="my-3 break-words whitespace-pre-wrap">
+                  {(session as { note?: string }).note}
+                </p>
+              )}
+              <WorkoutReminder title="Warmup" text={session.warmup} done={session.warmupDone} />
+              {session.exercises.map((exercise, exerciseIndex) => (
+                <section
+                  key={exercise.id}
+                  className={`py-3 ${exercise.supersetId ? 'border-accent border-l-2 pl-3' : 'border-border border-t'}`}
+                >
+                  {exercise.supersetId && (
+                    <p className="text-accent flex items-center gap-2">
+                      <Link2 className="size-5" aria-hidden />
+                      {supersetLabel(session.exercises, exerciseIndex)}
+                    </p>
+                  )}
+                  <button
+                    className="text-accent min-h-11 text-left font-normal"
+                    onClick={() => openExercise(exercise.id, exercise.name, exercise.measurement)}
+                  >
+                    {exercise.name}
+                  </button>
+                  {(exercise as { note?: string }).note && (
+                    <p className="mb-2 break-words whitespace-pre-wrap">
+                      {(exercise as { note?: string }).note}
+                    </p>
+                  )}
+                  <ol>
+                    {exercise.sets.map((set, index) => (
+                      <li key={index} className="py-1">
+                        Set {index + 1} · {formatSet(set)}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+              <WorkoutReminder
+                title="Cooldown"
+                text={session.cooldown}
+                done={session.cooldownDone}
+              />
+            </details>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}

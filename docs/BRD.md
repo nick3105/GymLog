@@ -18,6 +18,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | NAV-01 | **View Home** | Provide four starting points: **Start workout**, **Create workout**, **Review workouts**, and **Weight Tracker**. |
 | NAV-02 | **Navigate from Sidebar** | Make Home and all four main functions accessible from the sidebar. |
 | NAV-03 | **Refresh Journal** | Reload the signed-in user's saved data without interrupting an active workout. |
+| NAV-04 | **Open Exercise Library** | From Home and the sidebar, open a searchable list of every catalogue exercise, filterable by muscle group. Selecting one opens its guide. |
 
 ## 2. Workout planning
 
@@ -54,6 +55,8 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | RUN-08 | **View Live Estimated 1RM** | Update the best eligible estimated 1RM for an exercise as actual set results are entered. |
 | RUN-09 | **Finish and Save Workout** | Require actual weight and reps for each performed set, or explicitly mark a planned set as skipped. During an active session, users may append extra sets up to 20 total per exercise without changing the template. Extra sets are saved in that session only. At least one set in the session must be performed. Skipping an exercise entirely is allowed if another exercise has a performed set. Save the completed session separately from its template and confirm success. Keep inputs available for retry if saving fails and prevent duplicate session records on retry. |
 | RUN-10 | **Discard Active Workout** | Let the user abandon an unsaved session after confirming. |
+| RUN-11 | **Record Workout Duration** | Record when a workout starts and save it with the session. Duration is the time from start to saving; durations under 1 minute or over 4 hours are not counted. Workouts saved before this existed have no duration. |
+| RUN-12 | **Autosave Active Workout Draft** | Automatically save an in-progress workout draft to the signed-in user account as it changes. Restore it after reload, closing and reopening the browser, or signing in on another device. Keep it private to that user and separate from completed history. Clear it only after a successful finish or confirmed discard. |
 
 ## 4. Review and progress
 
@@ -67,6 +70,9 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | REV-06 | **View Estimated 1RM Trend** | Plot eligible estimates over time in a line chart. Identify the exercise and units, and show an empty state when no estimates exist. |
 | REV-08 | **Correct Completed Workout** | From Review, correct the date (today or past) and existing performed sets’ weight, reps and optional RPE. Preserve skipped rows, exercise snapshots and the saved routine; update history and progress. |
 | REV-07 | **Return to Workout** | Close the dashboard and return to the same builder, session, or review view. Preserve any unsaved inputs. |
+| REV-09 | **View Body Load** | From Review, show how many completed sets, kg of volume and seconds each muscle group received in the last 7 days, 28 days or all time, as a body map and a list with each group's exercises. Name the groups that were not trained. Each exercise counts for its catalogue group only. |
+| REV-10 | **View Exercise Guide** | Wherever an exercise's name opens its progress (builder, active session, review, library), show how the exercise is done first: start and end photos and numbered steps, or a plain note when no guide exists. Preserve unsaved inputs (REV-07). |
+| REV-11 | **View Profile and Statistics** | From the username in the top bar, show the user's level (Bronze, Silver, Gold, Platinum by completed workouts) and statistics computed from their own journal: totals, weekly streaks, duration, averages, records, favourites and body-weight change. |
 
 **Estimated 1RM rule:** Use actual sets of 1–10 reps with positive weight. Without actual RPE, use the completed reps. With actual RPE, add estimated reps in reserve (`10 − RPE`) and cap the effective rep count at 10. Apply Epley (`weight × (1 + effective reps / 30)`); for one effective rep, use the actual weight. The exercise estimate is the highest eligible set estimate. Target RPE does not affect the calculation. Skipped sets are excluded; an entirely skipped exercise does not replace its previous actual performance.
 
@@ -80,13 +86,14 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | WGT-04 | **View Latest Body Weight** | Display the most recent measurement and its date. |
 | WGT-05 | **View Body Weight Trend** | Display saved measurements in a line chart ordered by date. |
 | WGT-06 | **View Measurement History** | Expand a list of saved dates and weights. |
-| WGT-07 | **Set a Weight-Loss Goal** | Let a signed-in user save one private goal weight in kg, show the latest weight and remaining kg to lose, and keep the goal available across devices. |
+| WGT-07 | **Set a Weight-Change Goal** | Let a signed-in user choose to lose or gain weight, save one private goal weight in kg, and keep it available across devices. A losing goal must be below the latest weight; a gaining goal must be above it. Show the remaining kg in the selected direction, a prominent reached-goal message, and the goal on the chart's right edge. |
+| WGT-08 | **Remind About Today's Weight Entry** | When a signed-in user opens GymLog and has not saved a body-weight measurement for their current local date, show a dismissible, non-blocking reminder with a direct link to the Weight Tracker. Do not show it if a measurement already exists for today. |
 
 ## 6. Data and scope requirements
 
 - **Private journals:** Users can access only their own templates, completed sessions, and body weight records. Hosting credentials and personal records must stay out of the public repository.
 - **Cross-device access:** Saved records are available after signing in to the same account on another device.
-- **Draft behavior:** Unsaved edits remain available during the current flow, including when opening exercise progress. They are not synchronized across devices or guaranteed to survive a page reload.
+- **Draft behavior:** Active workout drafts are automatically saved to the signed-in user account and remain available after reload, closing and reopening the browser, or signing in on another device. Other unsaved edits remain available only during the current flow and are not guaranteed to survive a page reload.
 - **Current boundaries:** Deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.
 

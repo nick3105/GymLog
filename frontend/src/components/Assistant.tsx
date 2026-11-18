@@ -4,14 +4,14 @@ import { useLocation } from 'react-router'
 
 import { api } from '../api'
 import { conversationFor, type AssistantReply, type ChatMessage } from '../assistant'
-import { useJournal } from '../journal'
+import { useAssistantDraft } from '../journal'
 import { input, secondaryButton, textButton } from '../ui'
 import AssistantWorkout from './AssistantWorkout'
 
 type Setup = { enabled: boolean; configured: boolean }
 
 export default function Assistant() {
-  const { assistantDraft } = useJournal()
+  const { draft: assistantDraft } = useAssistantDraft()
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [consent, setConsent] = useState(false)

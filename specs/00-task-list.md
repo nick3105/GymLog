@@ -20,10 +20,19 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 11 | A real exercise catalogue | `11-exercise-catalogue.md` | `feature/exercise-catalogue` | PLN-02, PLN-12 | — |
 | 12 | Move production to a real database | `12-real-database.md` | `feature/real-database` | — | 8 |
 | 16 | Edit a body-weight measurement | `16-edit-weight-measurement.md` | `feature/edit-weight-measurement` | WGT-03, WGT-06 | 6 |
-| 17 | Set a body-weight goal | `17-weight-goal.md` | `feature/weight-goal` | WGT-07 | 6 |
+| 17 | Set a body-weight goal | `17-weight-goal.md` | `feature/weight-goal-v2` | WGT-07 | 6 |
+| 18 | Daily body-weight entry reminder | `18-weight-entry-reminder.md` | `feature/weight-entry-reminder` | WGT-08 | 6 |
 | 19 | Restyle after ultrasound.money | `19-ultrasound-look.md` | `feature/ultrasound-look` | — | — |
 | 20 | Correct a completed workout | `20-edit-completed-workout.md` | `feature/edit-completed-workout` | REV-08 | 7 |
 | 22 | Local training assistant | `22-ai-assistant.md` | `feature/ai-assistant` | AI-01-06 | 4, 10 |
+| 22 | Body load analysis | `22-body-load.md` | `feature/body-load` | REV-09 | 7, 21 |
+| 23 | Demo data for local testing | `23-demo-data.md` | `feature/demo-data` | — | — |
+| 24 | Exercise library and how-to guides | `24-exercise-library.md` | `feature/exercise-library` | NAV-04, REV-10 | 11 |
+| 30 | Profile and training statistics | `30-profile.md` | `feature/profile` | RUN-11, REV-11 | 7 |
+| 31 | Autosave active workout drafts | `31-autosave-active-workout-draft.md` | `feature/server-workout-draft-autosave` | RUN-12 | 1, 5, 12 |
+| 31 | Visual exercise library | `31-exercise-visual-cards.md` | `feature/exercise-visual-cards` | NAV-04, REV-10 | 24 |
+| 32 | Filter exercises by equipment | `32-exercise-equipment-filter.md` | `feature/exercise-equipment-filter` | NAV-04, PLN-02 | 31 |
+| 33 | Favourite exercises in the workout builder | `33-favorite-exercises.md` | `feature/favorite-exercises` | PLN-02 | 11 |
 
 ## Who can start when
 

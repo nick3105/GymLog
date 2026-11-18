@@ -65,6 +65,13 @@ changing workouts, persistent chat storage, accessing completed sessions or body
 - Run all backend/frontend checks and provide their output. A live provider smoke test is
   possible only after the user supplies their own key in their local environment.
 
+## Integration with current main
+- The assistant uses the signed-in owner's combined built-in/personal exercise catalogue for
+  draft validation, outgoing context and reply validation. Another user's private IDs stay invalid.
+- Coaching builders must not publish a coachee's draft into the coach's own assistant context.
+- Assistant draft state has its own React context inside JournalProvider; existing journal
+  consumers and autosave behaviour keep their existing contract.
+
 ## Local environment note
-Git metadata is read-only in this session: creating feature/ai-assistant was denied. File
-changes are prepared without commits; claiming commit/branch must be completed before merging.
+Branch feature/ai-assistant and draft PR #41 were created with the user's terminal. Git
+metadata remains read-only to this session; the user must record and push the prepared merge.

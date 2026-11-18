@@ -8,20 +8,37 @@ import { api, ApiError } from '../api'
 import Notice from '../components/Notice'
 import { today } from '../format'
 import { useJournal } from '../journal'
+import { startTime } from '../profile'
 import { newId } from '../newId'
 import { targetsFor } from '../targets'
 import type { Template } from '../types'
-import { card, secondaryButton, textButton } from '../ui'
+import { card, errorText, secondaryButton, textButton } from '../ui'
 
 // RUN-01 and RUN-02: pick a saved workout and start it.
 export default function Start() {
-  const { journal, active, setActive, setJournal } = useJournal()
+  const { journal, active, draftStatus, setActive, discardActiveDraft, retryDraft, setJournal } =
+    useJournal()
   const navigate = useNavigate()
   const [deleting, setDeleting] = useState<Template | null>(null)
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState('')
   const [notice, setNotice] = useState('')
   const trashButton = useRef<HTMLButtonElement | null>(null)
+
+  async function discardCurrentWorkout() {
+    if (!active || saving) return
+    if (!window.confirm(`Discard your unfinished "${active.name}" workout?`)) return
+    setSaving(true)
+    setProblem('')
+    try {
+      await discardActiveDraft()
+      setNotice('Unfinished workout discarded. You can start a new one now.')
+    } catch (error) {
+      setProblem((error as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function cancelDeletion() {
     setDeleting(null)
@@ -58,17 +75,26 @@ export default function Start() {
   }
 
   function start(template: Template) {
-    if (active && !window.confirm(`Replace your unfinished "${active.name}" with a new workout?`))
-      return
+    if (active) return
     setActive({
       clientId: newId(),
+      startedAt: startTime(),
       templateId: template.id,
       name: template.name,
+      note: template.note ?? '',
       day: today(),
+      warmup: template.warmup ?? '',
+      cooldown: template.cooldown ?? '',
+      warmupDone: false,
+      cooldownDone: false,
       exercises: template.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        note: exercise.note ?? '',
+        source: exercise.source,
+        volumeEligible: exercise.volumeEligible,
         measurement: exercise.measurement,
+        supersetId: exercise.supersetId,
         targets: targetsFor(exercise),
         sets: Array.from({ length: exercise.sets }, () => ({
           weight: '',
@@ -87,6 +113,31 @@ export default function Start() {
       {notice && (
         <p role="status" className="text-muted mb-4">
           {notice}
+        </p>
+      )}
+      {active && (
+        <div className="mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={discardCurrentWorkout}
+            disabled={saving}
+            className="text-danger min-h-11 px-3 font-normal disabled:opacity-50"
+          >
+            Discard workout
+          </button>
+        </div>
+      )}
+      {problem && (
+        <p role="alert" className={`${errorText} mb-4`}>
+          {problem}
+        </p>
+      )}
+      {draftStatus === 'error' && (
+        <p role="alert" className={`${errorText} mb-4`}>
+          Your saved workout could not be checked. Check again before starting another workout.
+          <button type="button" onClick={retryDraft} className="text-accent ml-2 min-h-11 px-2">
+            Check again
+          </button>
         </p>
       )}
       {deleting && (
@@ -156,7 +207,8 @@ export default function Start() {
               <button
                 type="button"
                 onClick={() => start(template)}
-                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-normal"
+                disabled={Boolean(active) || draftStatus === 'error'}
+                className="gradient-border text-accent inline-flex h-12 w-full items-center justify-center gap-2 rounded-full font-normal disabled:opacity-40"
               >
                 <Play className="size-5" aria-hidden />
                 Start

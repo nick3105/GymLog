@@ -1,9 +1,11 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 
+import BodyLoadCard from '../components/BodyLoadCard'
 import EmptyState from '../components/EmptyState'
 import { formatDay } from '../format'
 import { useJournal } from '../journal'
+import { secondaryButton } from '../ui'
 import type { Session } from '../types'
 
 // Newest training day first; two sessions on one day by the time they were saved.
@@ -20,40 +22,55 @@ export default function Review() {
   return (
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Review workouts</h1>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link to="/review/volume" className={secondaryButton}>
+          Weekly volume
+        </Link>
+        <Link to="/review/progress" className={secondaryButton}>
+          Exercise Progress
+        </Link>
+      </div>
       {journal.sessions.length === 0 ? (
-        <EmptyState
-          title="Your first session is waiting."
-          text="Finish a workout and your sets, reps and effort appear here."
-          to="/start"
-          action="Start workout"
-        />
+        journal.templates.length > 0 ? (
+          <EmptyState
+            title="Your first session is waiting."
+            text="Finish a workout and your sets, reps and effort appear here."
+            to="/start"
+            action="Start workout"
+          />
+        ) : (
+          <p className="text-muted">Create a workout plan to start logging your training.</p>
+        )
       ) : (
-        <ul className="flex flex-col gap-3">
-          {newestFirst(journal.sessions).map((session) => {
-            const sets = session.exercises.flatMap((exercise) => exercise.sets)
-            const completedCount = sets.filter((set) => !set.skipped).length
-            const skippedCount = sets.length - completedCount
-            return (
-              <li key={session.id}>
-                <Link
-                  to={`/review/${session.id}`}
-                  className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="text-muted block text-sm">{formatDay(session.day)}</span>
-                    <span className="block truncate text-lg font-normal">{session.name}</span>
-                    <span className="text-muted block text-sm">
-                      {session.exercises.length} exercises · {completedCount} completed{' '}
-                      {completedCount === 1 ? 'set' : 'sets'}
-                      {skippedCount > 0 && <> · {skippedCount} skipped</>}
+        <>
+          <BodyLoadCard />
+          <ul className="flex flex-col gap-3">
+            {newestFirst(journal.sessions).map((session) => {
+              const sets = session.exercises.flatMap((exercise) => exercise.sets)
+              const completedCount = sets.filter((set) => !set.skipped).length
+              const skippedCount = sets.length - completedCount
+              return (
+                <li key={session.id}>
+                  <Link
+                    to={`/review/${session.id}`}
+                    className="bg-panel flex min-h-16 items-center gap-3 rounded-lg p-4"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="text-muted block text-sm">{formatDay(session.day)}</span>
+                      <span className="block truncate text-lg font-normal">{session.name}</span>
+                      <span className="text-muted block text-sm">
+                        {session.exercises.length} exercises · {completedCount} completed{' '}
+                        {completedCount === 1 ? 'set' : 'sets'}
+                        {skippedCount > 0 && <> · {skippedCount} skipped</>}
+                      </span>
                     </span>
-                  </span>
-                  <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+                    <ChevronRight className="text-muted size-5 shrink-0" aria-hidden />
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
     </>
   )

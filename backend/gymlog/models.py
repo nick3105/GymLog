@@ -1,5 +1,6 @@
 """Validation and calculations, independent of Flask and SQLite."""
 
+import hashlib
 import json
 import math
 import re
@@ -234,6 +235,22 @@ def number(value, label, minimum, maximum, integer=False, optional=False):
     return int(result) if integer else result
 
 
+def validate_weight_goal(body, latest_weight):
+    """Validate one optional goal and its direction against the latest measurement."""
+    if not isinstance(body, dict) or "kg" not in body:
+        raise ValueError("Enter a goal weight.")
+    mode = body.get("mode")
+    if not isinstance(mode, str) or mode not in {"lose", "gain"}:
+        raise ValueError("Choose whether you want to lose or gain weight.")
+    kg = number(body["kg"], "Goal weight", 1, 700, optional=True)
+    if kg is not None and latest_weight is not None:
+        if mode == "lose" and kg >= latest_weight:
+            raise ValueError("A weight-loss goal must be below your latest weight.")
+        if mode == "gain" and kg <= latest_weight:
+            raise ValueError("A weight-gain goal must be above your latest weight.")
+    return {"kg": kg, "mode": mode}
+
+
 USERNAME = re.compile(r"[a-z0-9_-]{3,30}")
 
 
@@ -247,6 +264,54 @@ def validate_registration(body):
     if not isinstance(password, str) or not 12 <= len(password) <= 1024:
         raise ValueError("Choose a password of at least 12 characters.")
     return username.strip().lower(), password
+
+
+PERSONAL_GROUPS = {
+    "Chest",
+    "Shoulders",
+    "Triceps",
+    "Back",
+    "Biceps",
+    "Forearms",
+    "Quads",
+    "Hamstrings & glutes",
+    "Calves",
+    "Core",
+}
+
+
+def validate_personal_exercise(body):
+    """Validate an owner-private exercise without accepting visibility or muscle metadata."""
+    if not isinstance(body, dict):
+        raise ValueError("Enter a personal exercise.")
+    if set(body) - {"requestId", "name", "group", "measurement"}:
+        raise ValueError("Personal exercises accept only a name, group and measurement.")
+    name = body.get("name")
+    if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80:
+        raise ValueError("Exercise name must contain 1–80 characters.")
+    group = body.get("group")
+    if not isinstance(group, str) or group not in PERSONAL_GROUPS:
+        raise ValueError("Choose a muscle group from the exercise catalogue.")
+    measurement = body.get("measurement", "repetitions")
+    if measurement not in ("repetitions", "duration"):
+        raise ValueError("Choose repetitions or seconds.")
+    try:
+        request_id = str(UUID(str(body.get("requestId"))))
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("A valid creation request ID is required.") from None
+    return {
+        "requestId": request_id,
+        "name": name.strip(),
+        "group": group,
+        "measurement": measurement,
+    }
+
+
+def note(value, maximum, label):
+    """Validate optional plain-text notes using Unicode code-point limits."""
+    if not isinstance(value, str) or len(value) > maximum:
+        raise ValueError(f"{label} must be text with at most {maximum} characters.")
+    return value
 
 
 def estimated_1rm(weight, reps, rpe=None):
@@ -271,11 +336,12 @@ def best_1rm(sets):
     return max((value for value in estimates if value is not None), default=None)
 
 
-def exercise_stats(sessions, exercise_id):
+def exercise_stats(sessions, exercise_id, include_average_weight=False):
     """Last performance and the estimated 1RM trend of one exercise, from any template."""
     ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
     last = None
     points = []
+    weight_points = []
     for session in ordered:
         for exercise in session["exercises"]:
             if exercise["id"] != exercise_id:
@@ -284,15 +350,369 @@ def exercise_stats(sessions, exercise_id):
             if not performed:
                 continue
             last = {"day": session["day"], "sets": performed}
+            if include_average_weight:
+                weights = [row["weight"] for row in performed if "durationSeconds" not in row]
+                if weights:
+                    average = math.floor(sum(weights) / len(weights) * 10 + 0.5) / 10
+                    weight_points.append({"day": session["day"], "weight": average})
             estimate = best_1rm(exercise["sets"])
             if estimate is not None:
                 points.append({"day": session["day"], "estimate": estimate})
     estimates = [point["estimate"] for point in points]
-    return {
+    result = {
         "last": last,
         "points": points,
         "best": max(estimates, default=None),
         "latest": estimates[-1] if estimates else None,
+    }
+    if include_average_weight:
+        averages = [point["weight"] for point in weight_points]
+        result["averageWeight"] = {
+            "points": weight_points,
+            "best": max(averages, default=None),
+            "latest": averages[-1] if averages else None,
+        }
+    return result
+
+
+def validate_instructions(body, source=None, completed=False):
+    """Normalize reminder text and optional completion flags without creating set records."""
+    source = source or {}
+    result = {}
+    for field in ("warmup", "cooldown"):
+        value = body.get(field, source.get(field, ""))
+        if not isinstance(value, str) or len(value) > 100:
+            raise ValueError(f"{field.capitalize()} must contain at most 100 characters.")
+        value = value.strip()
+        if value or (not completed and field in body):
+            result[field] = value
+        if completed:
+            done = body.get(f"{field}Done", source.get(f"{field}Done", False))
+            if not isinstance(done, bool):
+                raise ValueError(f"{field.capitalize()} Done must be true or false.")
+            if value:
+                result[f"{field}Done"] = done
+    return result
+
+
+def validate_supersets(exercises):
+    """Require each superset to contain exactly two adjacent exercises."""
+    groups = {}
+    for position, exercise in enumerate(exercises):
+        group = exercise.get("supersetId")
+        if group is None or group == "":
+            continue
+        if not isinstance(group, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,60}", group):
+            raise ValueError("A superset ID must contain 1–60 letters, numbers, - or _.")
+        groups.setdefault(group, []).append(position)
+    for positions in groups.values():
+        if len(positions) != 2 or positions[1] != positions[0] + 1:
+            raise ValueError("A superset must contain exactly two adjacent exercises.")
+
+
+def first_day_of_period(today, days):
+    """The first date a body-load period counts, or None for all time."""
+    try:
+        last_day = date.fromisoformat(today)
+    except (ValueError, TypeError):
+        raise ValueError("Send today's date as YYYY-MM-DD.") from None
+    if days == "all":
+        return None
+    if days not in ("7", "28"):
+        raise ValueError("Choose a period of 7 days, 28 days or all.")
+    return last_day - timedelta(days=int(days) - 1)
+
+
+def body_load(sessions, catalogue, today, days):
+    """Completed sets, kg volume and seconds per muscle group in a period (REV-09)."""
+    first_day = first_day_of_period(today, days)
+    last_day = date.fromisoformat(today)
+    groups = {}
+    for exercise in catalogue.values():
+        groups[exercise["group"]] = {
+            "sets": 0,
+            "volumeKg": 0.0,
+            "durationSeconds": 0,
+            "exercises": {},
+        }
+
+    ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
+    for session in ordered:
+        day = date.fromisoformat(session["day"])
+        if day > last_day or (first_day is not None and day < first_day):
+            continue
+        for exercise in session["exercises"]:
+            group = groups[catalogue[exercise["id"]]["group"]]
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            totals = group["exercises"].setdefault(
+                exercise["id"],
+                {"id": exercise["id"], "sets": 0, "volumeKg": 0.0, "durationSeconds": 0},
+            )
+            # The newest session's snapshot names the exercise, as it was when trained.
+            totals["name"] = exercise["name"]
+            for row in performed:
+                volume = row.get("weight", 0) * row.get("reps", 0)
+                seconds = row.get("durationSeconds", 0)
+                for counted in (group, totals):
+                    counted["sets"] += 1
+                    counted["volumeKg"] += volume
+                    counted["durationSeconds"] += seconds
+
+    most_sets = max(group["sets"] for group in groups.values())
+    result = []
+    for name, group in groups.items():
+        exercises = []
+        for totals in group["exercises"].values():
+            totals["volumeKg"] = round(totals["volumeKg"], 1)
+            exercises.append(totals)
+        exercises.sort(key=lambda totals: (-totals["sets"], totals["name"]))
+        level = 0
+        if group["sets"] > 0:
+            level = math.ceil(3 * group["sets"] / most_sets)
+        result.append(
+            {
+                "group": name,
+                "sets": group["sets"],
+                "volumeKg": round(group["volumeKg"], 1),
+                "durationSeconds": group["durationSeconds"],
+                "level": level,
+                "exercises": exercises,
+            }
+        )
+    result.sort(key=lambda group: (-group["sets"], group["group"]))
+    return {"groups": result}
+
+
+# (level, completed workouts needed), lowest first (REV-11).
+LEVELS = [("Bronze", 0), ("Silver", 10), ("Gold", 50), ("Platinum", 150)]
+# Shorter is a test, longer is a workout left open (RUN-11).
+SHORTEST_WORKOUT_SECONDS = 60
+LONGEST_WORKOUT_SECONDS = 4 * 60 * 60
+
+
+def level_for(workouts):
+    """The level reached with this many workouts, and how many are left to the next one."""
+    for index in range(len(LEVELS) - 1, -1, -1):
+        name, needed = LEVELS[index]
+        if workouts >= needed:
+            if index == len(LEVELS) - 1:
+                return {"name": name, "next": None, "toNextLevel": None}
+            next_name, next_needed = LEVELS[index + 1]
+            return {"name": name, "next": next_name, "toNextLevel": next_needed - workouts}
+
+
+def week_start(day):
+    """The Monday of the week a date is in."""
+    return day - timedelta(days=day.weekday())
+
+
+def average(total, count):
+    """Total ÷ count to one decimal, or None when there is nothing to average."""
+    return round(total / count, 1) if count else None
+
+
+def workout_seconds(session):
+    """How long a workout took, or None if unknown or outside 1 minute to 4 hours (RUN-11)."""
+    if "startedAt" not in session:
+        return None
+    started = datetime.fromisoformat(session["startedAt"])
+    completed = datetime.fromisoformat(session["completedAt"])
+    seconds = (completed - started).total_seconds()
+    if not SHORTEST_WORKOUT_SECONDS <= seconds <= LONGEST_WORKOUT_SECONDS:
+        return None
+    return round(seconds)
+
+
+def streaks(trained_weeks, this_week):
+    """Weeks in a row with a workout: the current run and the longest run."""
+    current = 0
+    # Until this week has a workout, the streak runs up to last week.
+    week = this_week if this_week in trained_weeks else this_week - timedelta(days=7)
+    while week in trained_weeks:
+        current += 1
+        week -= timedelta(days=7)
+    longest = 0
+    run = 0
+    previous = None
+    for week in sorted(trained_weeks):
+        if previous is not None and week - previous == timedelta(days=7):
+            run += 1
+        else:
+            run = 1
+        longest = max(longest, run)
+        previous = week
+    return current, longest
+
+
+def profile_stats(sessions, weights, catalogue, today):
+    """Level and statistics of one user's journal, for the profile (REV-11)."""
+    try:
+        today = date.fromisoformat(today)
+    except (ValueError, TypeError):
+        raise ValueError("Send today's date as YYYY-MM-DD.") from None
+    ordered = sorted(sessions, key=lambda session: (session["day"], session["completedAt"]))
+
+    sets = 0
+    reps = 0
+    lifted = 0.0
+    held = 0
+    weighted_total = 0.0
+    weighted_sets = 0
+    rpe_total = 0.0
+    rpe_sets = 0
+    sets_by_exercise = {}
+    exercise_names = {}
+    sets_by_group = {}
+    workouts_by_name = {}
+    heaviest = None
+    best_estimate = None
+    most_reps = None
+    biggest = None
+    durations = []
+    recorded_since = None
+
+    for session in ordered:
+        workouts_by_name[session["name"]] = workouts_by_name.get(session["name"], 0) + 1
+        if recorded_since is None and "startedAt" in session:
+            recorded_since = session["day"]
+        seconds = workout_seconds(session)
+        if seconds is not None:
+            durations.append(seconds)
+        session_lifted = 0.0
+        for exercise in session["exercises"]:
+            name = exercise["name"]
+            for row in exercise["sets"]:
+                if row.get("skipped", False):
+                    continue
+                sets += 1
+                sets_by_exercise[exercise["id"]] = sets_by_exercise.get(exercise["id"], 0) + 1
+                exercise_names[exercise["id"]] = name
+                group = catalogue.get(exercise["id"], {}).get("group")
+                if group:
+                    sets_by_group[group] = sets_by_group.get(group, 0) + 1
+                if row.get("rpe") is not None:
+                    rpe_total += row["rpe"]
+                    rpe_sets += 1
+                if "durationSeconds" in row:
+                    held += row["durationSeconds"]
+                    continue
+                weight = row["weight"]
+                reps += row["reps"]
+                session_lifted += weight * row["reps"]
+                if weight > 0:
+                    weighted_total += weight
+                    weighted_sets += 1
+                # Strictly better only, so on a tie the earlier day keeps the record.
+                if weight > 0 and (
+                    heaviest is None
+                    or weight > heaviest["weight"]
+                    or (weight == heaviest["weight"] and row["reps"] > heaviest["reps"])
+                ):
+                    heaviest = {
+                        "weight": weight,
+                        "reps": row["reps"],
+                        "exercise": name,
+                        "day": session["day"],
+                    }
+                estimate = estimated_1rm(weight, row["reps"], row.get("rpe"))
+                if estimate is not None and (
+                    best_estimate is None or estimate > best_estimate["estimate"]
+                ):
+                    best_estimate = {"estimate": estimate, "exercise": name, "day": session["day"]}
+                if most_reps is None or row["reps"] > most_reps["reps"]:
+                    most_reps = {"reps": row["reps"], "exercise": name, "day": session["day"]}
+        lifted += session_lifted
+        if session_lifted > 0 and (biggest is None or session_lifted > biggest["liftedKg"]):
+            biggest = {
+                "liftedKg": round(session_lifted, 1),
+                "name": session["name"],
+                "day": session["day"],
+            }
+
+    days = [date.fromisoformat(session["day"]) for session in ordered]
+    this_week = week_start(today)
+    current_streak, longest_streak = streaks({week_start(day) for day in days}, this_week)
+    per_week = None
+    if days:
+        weeks = (this_week - week_start(days[0])).days // 7 + 1
+        per_week = round(len(days) / weeks, 1)
+    this_week_count = 0
+    this_month_count = 0
+    recent_days = set()
+    for day in days:
+        if week_start(day) == this_week:
+            this_week_count += 1
+        if (day.year, day.month) == (today.year, today.month):
+            this_month_count += 1
+        if today - timedelta(days=29) <= day <= today:
+            recent_days.add(day)
+
+    favourite_exercise = None
+    for exercise_id, count in sets_by_exercise.items():
+        if favourite_exercise is None or count > favourite_exercise["sets"]:
+            favourite_exercise = {"name": exercise_names[exercise_id], "sets": count}
+    favourite_workout = None
+    for name, count in workouts_by_name.items():
+        if favourite_workout is None or count > favourite_workout["count"]:
+            favourite_workout = {"name": name, "count": count}
+    favourite_group = None
+    for name, count in sets_by_group.items():
+        if favourite_group is None or count > favourite_group["sets"]:
+            favourite_group = {"name": name, "sets": count}
+
+    by_day = sorted(weights, key=lambda entry: entry["day"])
+    body_weight = {"latest": None, "change": None, "since": None}
+    if by_day:
+        body_weight = {
+            "latest": by_day[-1],
+            "change": round(by_day[-1]["kg"] - by_day[0]["kg"], 1),
+            "since": by_day[0]["day"],
+        }
+
+    return {
+        "level": level_for(len(ordered)),
+        "overview": {
+            "workouts": len(ordered),
+            "sets": sets,
+            "reps": reps,
+            "liftedKg": round(lifted, 1),
+            "heldSeconds": held,
+            "exercises": len(sets_by_exercise),
+        },
+        "consistency": {
+            "currentStreakWeeks": current_streak,
+            "longestStreakWeeks": longest_streak,
+            "thisWeek": this_week_count,
+            "thisMonth": this_month_count,
+            "perWeek": per_week,
+            "trainingDaysLast30": len(recent_days),
+        },
+        "duration": {
+            "recordedSince": recorded_since,
+            "count": len(durations),
+            "averageSeconds": round(sum(durations) / len(durations)) if durations else None,
+            "totalSeconds": sum(durations),
+            "longestSeconds": max(durations, default=None),
+        },
+        "averages": {
+            "setsPerWorkout": average(sets, len(ordered)),
+            "weightPerSet": average(weighted_total, weighted_sets),
+            "rpe": average(rpe_total, rpe_sets),
+        },
+        "records": {
+            "heaviestSet": heaviest,
+            "best1rm": best_estimate,
+            "biggestWorkout": biggest,
+            "mostReps": most_reps,
+        },
+        "favourites": {
+            "exercise": favourite_exercise,
+            "workout": favourite_workout,
+            "group": favourite_group,
+        },
+        "bodyWeight": body_weight,
     }
 
 
@@ -318,6 +738,13 @@ def validate_template(body, catalogue):
             raise ValueError("Each exercise may appear only once in a workout.")
         seen.add(exercise_id)
         item = {"id": exercise_id, "name": catalogue[exercise_id]["name"]}
+        if "note" in entry:
+            item["note"] = note(entry["note"], 500, "Exercise note")
+        if catalogue[exercise_id].get("source") == "personal":
+            item.update(source="personal", volumeEligible=False)
+        if entry.get("supersetId") is not None and entry.get("supersetId") != "":
+            item["supersetId"] = entry["supersetId"]
+
         timed = catalogue[exercise_id].get("measurement") == "duration"
         if timed:
             item["measurement"] = "duration"
@@ -363,7 +790,12 @@ def validate_template(body, catalogue):
                 ),
             )
         result.append(item)
-    return {"name": name.strip(), "exercises": result}
+    document = {"name": name.strip(), "exercises": result}
+    if "note" in body:
+        document["note"] = note(body["note"], 1000, "Workout note")
+    validate_supersets(result)
+    document.update(validate_instructions(body))
+    return document
 
 
 def validate_session(body, template):
@@ -384,6 +816,8 @@ def validate_session(body, template):
     for actual, planned in zip(entries, template["exercises"], strict=True):
         if not isinstance(actual, dict) or actual.get("id") != planned["id"]:
             raise ValueError("Session exercises must match the selected workout.")
+        if "supersetId" in actual and actual["supersetId"] != planned.get("supersetId"):
+            raise ValueError("Session superset groups must match the selected workout.")
         rows = actual.get("sets")
         if not isinstance(rows, list) or not planned["sets"] <= len(rows) <= 20:
             raise ValueError(
@@ -418,9 +852,14 @@ def validate_session(body, template):
                     "rpe": rpe,
                 }
             )
+        snapshot = dict(planned)
+        if "note" in actual or "note" in planned:
+            snapshot["note"] = note(
+                actual.get("note", planned.get("note", "")), 500, "Exercise note"
+            )
         completed.append(
             {
-                **planned,
+                **snapshot,
                 "plannedSets": planned["sets"],
                 "sets": sets,
                 "estimated1rm": best_1rm(sets),
@@ -428,13 +867,31 @@ def validate_session(body, template):
         )
     if not any(not row.get("skipped", False) for exercise in completed for row in exercise["sets"]):
         raise ValueError("Complete at least one set before saving, or discard this workout.")
-    return {
+    document = {
         "clientId": client_id,
         "templateId": template["id"],
         "name": template["name"],
         "day": day,
         "exercises": completed,
+        **validate_instructions(body, template, completed=True),
     }
+    if "note" in body or "note" in template:
+        document["note"] = note(body.get("note", template.get("note", "")), 1000, "Workout note")
+    # Workouts started before RUN-11 have no start time and save as before.
+    if body.get("startedAt") is not None:
+        document["startedAt"] = validate_start_time(body["startedAt"])
+    return document
+
+
+def validate_start_time(value):
+    """A workout's start: a date and time with a time zone, as the phone sends it (RUN-11)."""
+    try:
+        moment = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        raise ValueError("The workout start time is not valid.") from None
+    if moment.tzinfo is None:
+        raise ValueError("The workout start time is not valid.")
+    return value
 
 
 def validate_session_edit(body, saved):
@@ -466,8 +923,17 @@ def validate_session_edit(body, saved):
                 raise ValueError("Keep skipped sets unchanged when correcting a workout.")
         planned.append({**original, "sets": len(original["sets"])})
     corrected = validate_session(
-        {**body, "clientId": saved["clientId"]},
-        {"id": saved["templateId"], "name": saved["name"], "exercises": planned},
+        {
+            **body,
+            "clientId": saved["clientId"],
+            "warmup": saved.get("warmup", ""),
+            "cooldown": saved.get("cooldown", ""),
+            "warmupDone": body.get("warmupDone", saved.get("warmupDone", False)),
+            "cooldownDone": body.get("cooldownDone", saved.get("cooldownDone", False)),
+            # A correction never moves the start time.
+            "startedAt": saved.get("startedAt"),
+        },
+        {**saved, "id": saved["templateId"], "exercises": planned},
     )
     for exercise, original in zip(corrected["exercises"], saved["exercises"], strict=True):
         if "plannedSets" in original:
@@ -475,3 +941,161 @@ def validate_session_edit(body, saved):
         else:
             exercise.pop("plannedSets", None)
     return {**saved, **corrected}
+
+
+def validate_volume_preferences(body, muscles):
+    """Validate editable goals and optional evidence context without prescribing volume."""
+    if not isinstance(body, dict) or not isinstance(body.get("goals", {}), dict):
+        raise ValueError("Enter muscle goals as an object.")
+    goals = {}
+    for muscle, value in body.get("goals", {}).items():
+        if muscle not in muscles:
+            raise ValueError("Choose a muscle from the volume list.")
+        goals[muscle] = number(value, "Weekly set goal", 0, 1000)
+    profile = body.get("profile", {})
+    if not isinstance(profile, dict):
+        raise ValueError("Enter your profile as an object.")
+    choices = {
+        "ageBand": ("", "under18", "18-39", "40-64", "65+"),
+        "experience": ("", "under1", "1-3", "3+"),
+        "gender": ("", "woman", "man", "nonbinary", "self-described", "prefer-not-to-say"),
+    }
+    result = {}
+    for field, options in choices.items():
+        value = profile.get(field, "")
+        if value not in options:
+            raise ValueError("Choose one of the listed profile options.")
+        result[field] = value
+    return {"goals": goals, "profile": result}
+
+
+def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
+    """Count reviewed or explicitly enabled local-preview set credits for one calendar week."""
+    try:
+        start = date.fromisoformat(week)
+    except (ValueError, TypeError):
+        raise ValueError("Choose a valid week date.") from None
+    start -= timedelta(days=start.weekday())
+    try:
+        end = start + timedelta(days=6)
+    except OverflowError:
+        raise ValueError("Choose a week within the supported date range.") from None
+    profiles = {row["exerciseId"]: row for row in registry["exercises"]}
+    starting_goal = 10
+    muscles = {
+        muscle["id"]: {
+            "muscle": muscle["id"],
+            "direct": 0.0,
+            "indirect": 0.0,
+            "total": 0.0,
+            "goal": preferences.get("goals", {}).get(muscle["id"], starting_goal),
+            "goalSource": "saved" if muscle["id"] in preferences.get("goals", {}) else "starter",
+            "exercises": [],
+        }
+        for muscle in registry["taxonomy"]
+    }
+    excluded = {}
+    counted_sets = 0
+    for session in sessions:
+        day = date.fromisoformat(session["day"])
+        if not start <= day <= end:
+            continue
+        for exercise in session["exercises"]:
+            performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
+            if not performed:
+                continue
+            profile = profiles.get(exercise["id"])
+            reason = None
+            if exercise.get("source") == "personal" or exercise["id"].startswith("custom-"):
+                reason = "Personal exercise"
+            elif exercise.get("measurement") == "duration":
+                reason = "Timed holds"
+            elif profile is None:
+                reason = "No muscle mapping"
+            elif not profile.get("coefficients"):
+                reason = "Mapping needs review"
+            elif not profile.get("eligibleForProductionCounting", False) and not allow_draft:
+                reason = "Draft mapping disabled"
+            if reason is not None:
+                excluded[reason] = excluded.get(reason, 0) + len(performed)
+                continue
+            count = sum("durationSeconds" not in row for row in performed)
+            timed_count = len(performed) - count
+            if timed_count:
+                excluded["Timed holds"] = excluded.get("Timed holds", 0) + timed_count
+            counted_sets += count
+            for muscle, coefficient in profile["coefficients"].items():
+                if coefficient <= 0 or not count:
+                    continue
+                contribution = count * coefficient
+                kind = "direct" if muscle in profile["directMuscles"] else "indirect"
+                muscles[muscle][kind] += contribution
+                muscles[muscle]["total"] += contribution
+                muscles[muscle]["exercises"].append(
+                    {
+                        "id": exercise["id"],
+                        "name": exercise["name"],
+                        "day": session["day"],
+                        "sets": count,
+                        "coefficient": coefficient,
+                        "contribution": contribution,
+                    }
+                )
+    return {
+        "weekStart": start.isoformat(),
+        "weekEnd": end.isoformat(),
+        "muscles": list(muscles.values()),
+        "excluded": excluded,
+        "countedSets": counted_sets,
+        "draftPreview": allow_draft,
+        "startingGoal": starting_goal,
+        "mappingVersion": hashlib.sha256(
+            json.dumps(registry, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
+        "profile": preferences.get("profile", {}),
+        "goals": preferences.get("goals", {}),
+        "revision": preferences.get("revision", 0),
+    }
+
+
+def validate_coach_request(body):
+    """Require explicit sharing consent and a normalized existing username lookup."""
+    if not isinstance(body, dict) or body.get("consent") is not True:
+        raise ValueError("Confirm that you want to share saved workouts and notes with this coach.")
+    username = body.get("username")
+    if not isinstance(username, str) or not USERNAME.fullmatch(username.strip().lower()):
+        raise ValueError("Enter the coach's username.")
+    return username.strip().lower()
+
+
+def validate_new_coaching(coachee_id, coach_id, existing):
+    """Permit one current coach request per coachee and safe retries of the same request."""
+    if coachee_id == coach_id:
+        raise ValueError("Choose another person as your coach.")
+    if existing and existing["coach_id"] != coach_id:
+        raise ValueError(
+            "End your current coach relationship or request before assigning another coach."
+        )
+
+
+def validate_coaching_transition(relationship, actor_id, action):
+    """Return an authorized relationship state without reviving cancelled requests."""
+    state = relationship["state"]
+    if action in ("accept", "decline"):
+        if relationship["coach_id"] != actor_id:
+            raise ValueError("Only the requested coach can accept or decline this request.")
+        target = "accepted" if action == "accept" else "declined"
+        if state not in ("pending", target):
+            raise ValueError("This coaching request is no longer pending.")
+        return target
+    if action == "cancel":
+        if relationship["coachee_id"] != actor_id or state not in ("pending", "cancelled"):
+            raise ValueError("Only the coachee can cancel a pending request.")
+        return "cancelled"
+    if action == "revoke":
+        if actor_id not in (relationship["coachee_id"], relationship["coach_id"]):
+            raise ValueError("This coaching relationship is not yours.")
+        if state not in ("accepted", "revoked"):
+            raise ValueError("Only an accepted coaching relationship can be ended.")
+        return "revoked"
+    raise ValueError("Choose accept, decline, cancel or revoke.")

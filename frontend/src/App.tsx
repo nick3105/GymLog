@@ -5,13 +5,21 @@ import AuthForm from './components/AuthForm'
 import Layout from './components/Layout'
 import { useJournal } from './journal'
 import Create from './pages/Create'
+import Settings from './pages/Settings'
+import Coachees from './pages/Coachees'
+import CoacheeDetail from './pages/CoacheeDetail'
+import CoacheeBuilder from './pages/CoacheeBuilder'
 import Home from './pages/Home'
 import EditSession from './pages/EditSession'
+import Exercises from './pages/Exercises'
+import Profile from './pages/Profile'
 import Review from './pages/Review'
 import ReviewDetail from './pages/ReviewDetail'
 import Session from './pages/Session'
 import Start from './pages/Start'
 import Weight from './pages/Weight'
+import WeeklyVolume from './pages/WeeklyVolume'
+import ExerciseProgress from './pages/ExerciseProgress'
 
 // Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
 function SignedIn({ children }: { children: ReactNode }) {
@@ -57,11 +65,22 @@ const router = createBrowserRouter([
       { path: 'start', element: <Start /> },
       { path: 'session', element: <Session /> },
       { path: 'create', element: <Create key="new" /> },
+      { path: 'review/create', element: <Navigate to="/create" replace /> },
       { path: 'workouts/:id/edit', element: <Create key="edit" /> },
       { path: 'review', element: <Review /> },
       { path: 'review/:id', element: <ReviewDetail /> },
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
+      { path: 'exercises', element: <Exercises /> },
+      { path: 'profile', element: <Profile /> },
+      { path: 'review/volume', element: <WeeklyVolume /> },
+      { path: 'review/progress', element: <ExerciseProgress /> },
+      { path: 'settings', element: <Settings /> },
+      { path: 'coachees', element: <Coachees /> },
+      { path: 'coachees/:coacheeId', element: <CoacheeDetail /> },
+      { path: 'coachees/:coacheeId/create', element: <CoacheeBuilder /> },
+      { path: 'coachees/:coacheeId/workouts/:id/edit', element: <CoacheeBuilder /> },
+
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
