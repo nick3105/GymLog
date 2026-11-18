@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { api, setCsrf } from './api'
+import type { AssistantDraft } from './assistant'
 import { emptyJournal, JournalStore, type ActiveWorkout, type JournalContext } from './journal'
 import type { Journal as JournalData } from './types'
 
@@ -27,6 +28,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
   const [journal, setJournalState] = useState<JournalData>(emptyJournal)
   const [active, setActiveState] = useState<ActiveWorkout | null>(null)
   const [builderDirty, setBuilderDirty] = useState(false)
+  const [assistantDraft, setAssistantDraft] = useState<AssistantDraft | null>(null)
 
   const enter = useCallback(async (name: string) => {
     const data = await api<JournalData>('state')
@@ -85,6 +87,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
         await api('logout', {})
         setActive(null)
         setBuilderDirty(false)
+        setAssistantDraft(null)
         setJournalState(emptyJournal)
         setUsername('')
         setStatus('signed-out')
@@ -92,8 +95,10 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
       active,
       setActive,
       setBuilderDirty,
+      assistantDraft,
+      setAssistantDraft,
     }),
-    [status, username, journal, active, builderDirty, enter, setActive],
+    [status, username, journal, active, builderDirty, assistantDraft, enter, setActive],
   )
 
   return <JournalStore value={value}>{children}</JournalStore>

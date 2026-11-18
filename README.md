@@ -37,6 +37,9 @@ On a phone on the same Wi-Fi: run `npm run dev -- --host` and open the Network a
 
 ## Checks
 
+The optional local training assistant is available from the star bubble. Setup, sharing,
+free-model limits and verification: [AI assistant](docs/AI_ASSISTANT.md).
+
 The same commands run in GitHub Actions on every pull request.
 
 ```sh

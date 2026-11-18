@@ -29,7 +29,7 @@ const durationTargetFields: typeof targetFields = [
 
 // PLN-01 to PLN-11: plan a workout once, with targets for every set.
 export default function Create() {
-  const { journal, setJournal, setBuilderDirty, active } = useJournal()
+  const { journal, setJournal, setBuilderDirty, setAssistantDraft, active } = useJournal()
   const navigate = useNavigate()
   const { id } = useParams()
   const original = journal.templates.find((template) => template.id === id)
@@ -60,6 +60,25 @@ export default function Create() {
     setBuilderDirty(dirty)
     return () => setBuilderDirty(false)
   }, [dirty, setBuilderDirty])
+
+  useEffect(() => {
+    setAssistantDraft(
+      planned.length
+        ? {
+            name: name.trim() || 'Unsaved workout',
+            exercises: planned.map((item) => ({
+              id: item.id,
+              targets: item.targets.map((target) =>
+                item.measurement === 'duration'
+                  ? { durationSeconds: target.durationSeconds, rpe: target.rpe }
+                  : { reps: target.reps, weight: target.weight, rpe: target.rpe },
+              ),
+            })),
+          }
+        : null,
+    )
+    return () => setAssistantDraft(null)
+  }, [name, planned, setAssistantDraft])
 
   // PLN-11: leaving with something typed asks first. Opening exercise progress stays on this
   // page (only ?exercise= changes), so it never asks.
