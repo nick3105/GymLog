@@ -13,13 +13,16 @@ from flask import Flask, g, jsonify, redirect, request, send_from_directory, ses
 from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import storage
+from . import assistant, storage
 from .models import (
+    assistant_messages,
     best_1rm,
     body_load,
     exercise_stats,
     number,
     profile_stats,
+    validate_assistant_reply,
+    validate_assistant_request,
     validate_coach_request,
     validate_coaching_transition,
     validate_new_coaching,
@@ -55,6 +58,9 @@ def create_app(config=None):
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
         MAX_CONTENT_LENGTH=128 * 1024,
         FRONTEND_DIST=FRONTEND_DIST,
+        AI_ENABLED=os.environ.get("GYMLOG_AI_ENABLED") == "1",
+        REQUESTY_API_KEY=os.environ.get("REQUESTY_API_KEY", ""),
+        REQUESTY_MODEL=os.environ.get("REQUESTY_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b"),
     )
     if config:
         app.config.update(config)
@@ -327,6 +333,41 @@ def create_app(config=None):
             weightGoal=storage.weight_goal(database, g.user_id),
             favoriteExerciseIds=storage.favorite_exercise_ids(database, g.user_id),
         )
+
+    @app.get("/api/assistant/status")
+    @authenticated
+    def assistant_status():
+        """Explain local setup without exposing credentials or contacting Requesty."""
+        return jsonify(
+            enabled=bool(app.config["AI_ENABLED"]),
+            configured=bool(app.config["REQUESTY_API_KEY"]),
+        )
+
+    @app.post("/api/assistant")
+    @authenticated
+    def chat_with_assistant():
+        """Read owned workout context, call the provider and validate its suggestions."""
+        own_catalogue = catalogue_for(g.user_id)
+        messages, draft = validate_assistant_request(request.get_json(), own_catalogue)
+        if not app.config["AI_ENABLED"]:
+            return jsonify(error="Enable the local assistant with GYMLOG_AI_ENABLED=1."), 503
+        if not app.config["REQUESTY_API_KEY"]:
+            return jsonify(error="Set REQUESTY_API_KEY on the server to use the assistant."), 503
+        templates = storage.documents(database, g.user_id, "templates")
+        context = assistant_messages(messages, draft, templates, own_catalogue)
+        try:
+            content = assistant.complete(
+                app.config["REQUESTY_API_KEY"], app.config["REQUESTY_MODEL"], context
+            )
+        except assistant.AssistantUnavailable as error:
+            return jsonify(error=str(error)), error.status
+        try:
+            result = validate_assistant_reply(content, own_catalogue)
+        except ValueError:
+            return jsonify(
+                error="The AI returned an unusable answer or plan. Please try again."
+            ), 502
+        return jsonify(result)
 
     @app.post("/api/exercises/<exercise_id>/favorite")
     @authenticated

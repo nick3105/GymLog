@@ -19,6 +19,7 @@ import type { CoachingState } from '../coaching'
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-router'
 
 import { useJournal } from '../journal'
+import Assistant from './Assistant'
 import ProgressSheet from './ProgressSheet'
 
 const pages: { to: string; label: string; icon: LucideIcon }[] = [
@@ -219,6 +220,7 @@ export default function Layout() {
           coacheeId={coacheeId}
         />
       )}
+      <Assistant key={username} />
     </div>
   )
 }

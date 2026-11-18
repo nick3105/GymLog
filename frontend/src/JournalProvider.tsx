@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { api, setCsrf } from './api'
+import type { AssistantDraft } from './assistant'
 import {
+  AssistantDraftStore,
   emptyJournal,
   JournalStore,
   type ActiveWorkout,
@@ -20,6 +22,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
   const [active, setActiveState] = useState<ActiveWorkout | null>(null)
   const [draftStatus, setDraftStatus] = useState<DraftStatus>('loading')
   const [builderDirty, setBuilderDirty] = useState(false)
+  const [assistantDraft, setAssistantDraft] = useState<AssistantDraft | null>(null)
   const latestDraft = useRef<ActiveWorkout | null>(null)
   const draftTimer = useRef<number | null>(null)
   const draftRevision = useRef(0)
@@ -204,6 +207,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
         setActiveState(null)
         setDraftStatus('idle')
         setBuilderDirty(false)
+        setAssistantDraft(null)
         setJournalState(emptyJournal)
         setWeightReminderDismissed(false)
         setUsername('')
@@ -231,5 +235,11 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
     ],
   )
 
-  return <JournalStore value={value}>{children}</JournalStore>
+  return (
+    <JournalStore value={value}>
+      <AssistantDraftStore value={{ draft: assistantDraft, setDraft: setAssistantDraft }}>
+        {children}
+      </AssistantDraftStore>
+    </JournalStore>
+  )
 }

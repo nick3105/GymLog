@@ -1,5 +1,6 @@
 // What every page can read: who is signed in, their journal, and the workout in progress.
 import { createContext, useContext } from 'react'
+import type { AssistantDraft } from './assistant'
 
 import type { SetInput } from './oneRepMax'
 import type { Journal as JournalData, Target } from './types'
@@ -49,6 +50,17 @@ export type JournalContext = {
   retryDraft: () => void
   // The workout builder reports unsaved typing here, so signing out can warn first.
   setBuilderDirty: (dirty: boolean) => void
+}
+
+export const AssistantDraftStore = createContext<{
+  draft: AssistantDraft | null
+  setDraft: (draft: AssistantDraft | null) => void
+} | null>(null)
+
+export function useAssistantDraft() {
+  const context = useContext(AssistantDraftStore)
+  if (context === null) throw new Error('useAssistantDraft must be used inside JournalProvider.')
+  return context
 }
 
 export const emptyJournal: JournalData = {

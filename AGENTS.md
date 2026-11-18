@@ -45,6 +45,7 @@ to this table in the same pull request. "It is a small library" is not an except
 | Checks | | `pytest`, `ruff` (Python); `vitest`, `oxlint`, `prettier` + Tailwind plugin, `tsc` (TypeScript) |
 | Tools | | `uv` for Python (never `pip` or `venv`), `npm` for the UI, GitHub Actions for CI and the build |
 | Hosting | | PythonAnywhere |
+| AI assistant (local opt-in) | Python standard library HTTP | Requesty free models only; no paid fallback (task 22, approved by nick3105) |
 
 - **Every screen is React** (`frontend/src/`). No HTML pages, templates or JavaScript in
   `backend/` — Flask only serves the API and the built app.

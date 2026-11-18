@@ -24,6 +24,7 @@ concrete values in the checks. Read `AGENTS.md` first — especially **Mobile fi
 | 18 | Daily body-weight entry reminder | `18-weight-entry-reminder.md` | `feature/weight-entry-reminder` | WGT-08 | 6 |
 | 19 | Restyle after ultrasound.money | `19-ultrasound-look.md` | `feature/ultrasound-look` | — | — |
 | 20 | Correct a completed workout | `20-edit-completed-workout.md` | `feature/edit-completed-workout` | REV-08 | 7 |
+| 22 | Local training assistant | `22-ai-assistant.md` | `feature/ai-assistant` | AI-01-06 | 4, 10 |
 | 22 | Body load analysis | `22-body-load.md` | `feature/body-load` | REV-09 | 7, 21 |
 | 23 | Demo data for local testing | `23-demo-data.md` | `feature/demo-data` | — | — |
 | 24 | Exercise library and how-to guides | `24-exercise-library.md` | `feature/exercise-library` | NAV-04, REV-10 | 11 |

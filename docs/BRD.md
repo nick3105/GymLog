@@ -96,3 +96,19 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 - **Draft behavior:** Active workout drafts are automatically saved to the signed-in user account and remain available after reload, closing and reopening the browser, or signing in on another device. Other unsaved edits remain available only during the current flow and are not guaranteed to survive a page reload.
 - **Current boundaries:** Deleting completed sessions, offline use, and data export are outside this baseline. Catalogue maintenance is a repository task; it is not an in-app exercise editor.
 - **Release acceptance:** Verify account isolation, top and back-off set planning, workout logging without RPE, progress navigation without losing inputs, and same-date weight updates.
+
+## 7. Local training assistant (task 22)
+
+| ID | Function | Requirement |
+|---|---|---|
+| AI-01 | **Open Assistant** | A star bubble on every signed-in page opens a phone-friendly chat without losing the builder or active workout. |
+| AI-02 | **Build a Weekly Routine** | Ask about session length, weekly frequency, priorities, experience, equipment, limitations and other weekly training. Keep questions and replies short. Propose catalogue-based workout cards for the training days. Regular multi-exercise AI routines require at least two work sets per exercise; normally mix three sets for main lifts and two for accessories, fitting the requested time with warm-up, rest and weekly recovery considered (issue 003). |
+| AI-03 | **Review a Plan** | Give brief feedback using the whole training week; ask which saved workouts are actually used and about other sports. Include an unsaved builder only when the user chooses to share it. |
+| AI-04 | **Review Before Saving** | Validate suggested workouts with existing planning rules. Save each as a new template only after the user taps Save workout; never change saved plans automatically. |
+| AI-05 | **Use Free AI Locally** | Use Requesty's free models, server-only credentials and explicit local enablement. Refuse unknown/non-zero prices and show readable setup, quota or connection errors. No paid fallback. |
+| AI-06 | **Control Shared Data** | Obtain agreement before sharing chat and the user's saved templates with Requesty and its model host. Exclude account data, completed sessions and body-weight history. Clear chat on sign-out. |
+
+**Release acceptance:** With fake model responses, test questions/plans, rejected suggestions,
+authentication, CSRF, consent, user isolation, missing setup, prices and provider failures. At
+375 x 667 check opening/closing, focus, draft preservation, plan cards and explicit saving.
+Check a real phone and a live free-model conversation with the team's key before merging.

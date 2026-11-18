@@ -12,7 +12,7 @@ import WorkoutInstructions from '../components/WorkoutInstructions'
 import { exerciseUnits, linkExercises, unlinkSuperset, supersetLabel } from '../supersets'
 import { moveItem } from '../reorder'
 import { newId } from '../newId'
-import { useJournal } from '../journal'
+import { useAssistantDraft, useJournal } from '../journal'
 import { targetsFor } from '../targets'
 import type { Exercise, Template } from '../types'
 import { card, errorText, input, label, primaryButton, secondaryButton, textButton } from '../ui'
@@ -40,6 +40,7 @@ export default function Create({
   coaching?: { journal: CoacheeJournal; onUnavailable: (message: string) => void }
 }) {
   const { journal: ownJournal, setJournal, setBuilderDirty, active } = useJournal()
+  const { setDraft: setAssistantDraft } = useAssistantDraft()
   const journal = coaching ? { ...ownJournal, ...coaching.journal } : ownJournal
   const returnPath = coaching ? `/coachees/${coaching.journal.owner.id}` : '/start'
   const navigate = useNavigate()
@@ -92,6 +93,25 @@ export default function Create({
     setBuilderDirty(dirty)
     return () => setBuilderDirty(false)
   }, [dirty, setBuilderDirty])
+
+  useEffect(() => {
+    setAssistantDraft(
+      !coaching && planned.length
+        ? {
+            name: name.trim() || 'Unsaved workout',
+            exercises: planned.map((item) => ({
+              id: item.id,
+              targets: item.targets.map((target) =>
+                item.measurement === 'duration'
+                  ? { durationSeconds: target.durationSeconds, rpe: target.rpe }
+                  : { reps: target.reps, weight: target.weight, rpe: target.rpe },
+              ),
+            })),
+          }
+        : null,
+    )
+    return () => setAssistantDraft(null)
+  }, [coaching, name, planned, setAssistantDraft])
 
   // PLN-11: leaving with something typed asks first. Opening exercise progress stays on this
   // page (only ?exercise= changes), so it never asks.
