@@ -1,11 +1,35 @@
 """PythonAnywhere WSGI wrapper for signed GitHub push deliveries."""
 
-import fcntl
 import hashlib
 import hmac
 import json
+import os
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
+
+
+@contextmanager
+def deployment_lock(path):
+    """Hold an exclusive deployment lock using the operating system's standard library."""
+    with Path(path).open("a") as lock:
+        lock.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def wrap(application, repo, wsgi_file, secret_file):
@@ -49,8 +73,7 @@ def wrap(application, repo, wsgi_file, secret_file):
             return respond("200 OK", "No deployment requested")
 
         try:
-            with Path(secret_file).with_suffix(".lock").open("a") as lock:
-                fcntl.flock(lock, fcntl.LOCK_EX)
+            with deployment_lock(Path(secret_file).with_suffix(".lock")):
                 # `deploy` is rebuilt from main with the React build on every merge
                 # (.github/workflows/deploy.yml), so take it as it is instead of pulling.
                 subprocess.run(
