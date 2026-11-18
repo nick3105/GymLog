@@ -93,6 +93,7 @@ export default function Start() {
         note: exercise.note ?? '',
         source: exercise.source,
         volumeEligible: exercise.volumeEligible,
+        volumeMuscle: exercise.volumeMuscle,
         measurement: exercise.measurement,
         supersetId: exercise.supersetId,
         targets: targetsFor(exercise),

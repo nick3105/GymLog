@@ -429,7 +429,9 @@ def personal_exercises(path, user_id):
 def add_personal_exercise(path, user_id, data):
     """Create a private exercise once per owner request, preserving retry identity."""
     request_id = data["requestId"]
-    fields = {key: data[key] for key in ("name", "group", "measurement")}
+    fields = {key: data[key] for key in ("name", "group", "measurement", "volumeEligible")}
+    if "volumeMuscle" in data:
+        fields["volumeMuscle"] = data["volumeMuscle"]
     with connect(path) as db:
         db.execute("BEGIN IMMEDIATE")
         existing = db.execute(
@@ -452,7 +454,6 @@ def add_personal_exercise(path, user_id, data):
             "id": f"custom-{uuid4()}",
             **fields,
             "source": "personal",
-            "volumeEligible": False,
         }
         db.execute(
             "INSERT INTO personal_exercises VALUES (?, ?, ?, ?, ?, ?)",

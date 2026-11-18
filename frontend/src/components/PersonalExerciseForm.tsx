@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { api } from '../api'
 import { newId } from '../newId'
@@ -20,11 +20,20 @@ export default function PersonalExerciseForm({
 }: Props) {
   const [requestId] = useState(newId)
   const [name, setName] = useState(initialName)
-  const [group, setGroup] = useState('Core')
+  const [primaryMuscle, setPrimaryMuscle] = useState('none')
+  const [muscles, setMuscles] = useState<{ id: string; label: string }[]>([])
   const [measurement, setMeasurement] = useState('repetitions')
   const [problem, setProblem] = useState('')
   const [saving, setSaving] = useState(false)
-  const groups = [...new Set(exercises.map((exercise) => exercise.group))]
+  useEffect(() => {
+    let current = true
+    api<{ muscles: { id: string; label: string }[] }>('exercises/personal/muscles')
+      .then((result) => current && setMuscles(result.muscles))
+      .catch((error: Error) => current && setProblem(error.message))
+    return () => {
+      current = false
+    }
+  }, [])
 
   async function save() {
     if (saving) return
@@ -43,7 +52,7 @@ export default function PersonalExerciseForm({
       const exercise = await api<Exercise>('exercises/personal', {
         requestId,
         name,
-        group,
+        primaryMuscle,
         measurement,
       })
       onCreated(exercise)
@@ -59,7 +68,13 @@ export default function PersonalExerciseForm({
       aria-label="Create personal exercise"
       className="border-border mt-3 rounded-lg border p-3"
     >
-      <p className="mb-3">Personal exercise — excluded from weekly volume estimates</p>
+      <p className="mb-3">
+        {primaryMuscle === 'none'
+          ? 'This exercise will not count towards volume.'
+          : measurement === 'duration'
+            ? 'Timed holds do not count towards weekly volume. Body load shows their seconds.'
+            : 'Each completed set counts as 1 for your selected muscle, with no indirect contribution.'}
+      </p>
       <label className="mb-3 block">
         Exercise name
         <input
@@ -71,15 +86,18 @@ export default function PersonalExerciseForm({
         />
       </label>
       <label className="mb-3 block">
-        Muscle group
+        Primary muscle
         <select
-          value={group}
-          onChange={(event) => setGroup(event.target.value)}
+          value={primaryMuscle}
+          onChange={(event) => setPrimaryMuscle(event.target.value)}
           className={input}
-          disabled={saving}
+          disabled={saving || muscles.length === 0}
         >
-          {groups.map((item) => (
-            <option key={item}>{item}</option>
+          {muscles.length === 0 && <option value="none">Loading muscle groups...</option>}
+          {muscles.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
           ))}
         </select>
       </label>
@@ -101,7 +119,12 @@ export default function PersonalExerciseForm({
         </p>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={save} disabled={saving} className={secondaryButton}>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || muscles.length === 0}
+          className={secondaryButton}
+        >
           {saving ? 'Creating…' : 'Create & add exercise'}
         </button>
         <button type="button" onClick={onCancel} disabled={saving} className={secondaryButton}>

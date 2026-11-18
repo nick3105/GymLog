@@ -11,7 +11,8 @@ export type Exercise = {
   group: string
   measurement?: 'duration' | 'repetitions'
   source?: 'personal'
-  volumeEligible?: false
+  volumeEligible?: boolean
+  volumeMuscle?: string | null
 }
 
 export type Target = (
@@ -22,7 +23,8 @@ export type Target = (
 export type TemplateExercise = {
   note?: string
   source?: 'personal'
-  volumeEligible?: false
+  volumeEligible?: boolean
+  volumeMuscle?: string | null
   supersetId?: string
   measurement?: 'duration'
   id: string
@@ -68,7 +70,8 @@ export type Session = {
     name: string
     note?: string
     source?: 'personal'
-    volumeEligible?: false
+    volumeEligible?: boolean
+    volumeMuscle?: string | null
     sets: LoggedSet[]
     measurement?: 'duration'
     supersetId?: string

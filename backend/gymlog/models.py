@@ -280,18 +280,50 @@ PERSONAL_GROUPS = {
 }
 
 
+PERSONAL_MUSCLES = {
+    "abdominals": "Abdominals",
+    "abductors": "Abductors",
+    "adductors": "Adductors",
+    "biceps": "Biceps",
+    "calves": "Calves",
+    "chest": "Chest",
+    "forearms": "Forearms",
+    "glutes": "Glutes",
+    "hamstrings": "Hamstrings",
+    "lats": "Lats",
+    "lower_back": "Lower back",
+    "middle_back": "Middle back",
+    "neck": "Neck",
+    "quadriceps": "Quadriceps",
+    "shoulders": "Shoulders",
+    "traps": "Traps",
+    "triceps": "Triceps",
+}
+
+
 def validate_personal_exercise(body):
-    """Validate an owner-private exercise without accepting visibility or muscle metadata."""
+    """Validate a private exercise and derive volume metadata from its primary muscle."""
     if not isinstance(body, dict):
         raise ValueError("Enter a personal exercise.")
-    if set(body) - {"requestId", "name", "group", "measurement"}:
-        raise ValueError("Personal exercises accept only a name, group and measurement.")
+    if set(body) - {"requestId", "name", "group", "measurement", "primaryMuscle"}:
+        raise ValueError("Personal exercises accept only a name, muscle choice and measurement.")
     name = body.get("name")
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80:
         raise ValueError("Exercise name must contain 1–80 characters.")
-    group = body.get("group")
-    if not isinstance(group, str) or group not in PERSONAL_GROUPS:
-        raise ValueError("Choose a muscle group from the exercise catalogue.")
+    muscle_metadata = {}
+    if "primaryMuscle" in body:
+        muscle = body["primaryMuscle"]
+        if not isinstance(muscle, str) or muscle not in (*PERSONAL_MUSCLES, "none"):
+            raise ValueError("Choose a primary muscle or None.")
+        if "group" in body:
+            raise ValueError("Choose a primary muscle without supplying a separate group.")
+        group = PERSONAL_MUSCLES.get(muscle, "None")
+        muscle_metadata["volumeMuscle"] = None if muscle == "none" else muscle
+    else:
+        # Older clients use broad groups; keep their original exclusion policy.
+        group = body.get("group")
+        if not isinstance(group, str) or group not in PERSONAL_GROUPS:
+            raise ValueError("Choose a muscle group from the exercise catalogue.")
     measurement = body.get("measurement", "repetitions")
     if measurement not in ("repetitions", "duration"):
         raise ValueError("Choose repetitions or seconds.")
@@ -304,6 +336,8 @@ def validate_personal_exercise(body):
         "name": name.strip(),
         "group": group,
         "measurement": measurement,
+        **muscle_metadata,
+        "volumeEligible": bool(muscle_metadata.get("volumeMuscle")) and measurement != "duration",
     }
 
 
@@ -429,6 +463,8 @@ def body_load(sessions, catalogue, today, days):
     last_day = date.fromisoformat(today)
     groups = {}
     for exercise in catalogue.values():
+        if exercise["group"] == "None":
+            continue
         groups[exercise["group"]] = {
             "sets": 0,
             "volumeKg": 0.0,
@@ -442,7 +478,10 @@ def body_load(sessions, catalogue, today, days):
         if day > last_day or (first_day is not None and day < first_day):
             continue
         for exercise in session["exercises"]:
-            group = groups[catalogue[exercise["id"]]["group"]]
+            catalogue_exercise = catalogue.get(exercise["id"])
+            if catalogue_exercise is None or catalogue_exercise["group"] == "None":
+                continue
+            group = groups[catalogue_exercise["group"]]
             performed = [row for row in exercise["sets"] if not row.get("skipped", False)]
             if not performed:
                 continue
@@ -741,7 +780,10 @@ def validate_template(body, catalogue):
         if "note" in entry:
             item["note"] = note(entry["note"], 500, "Exercise note")
         if catalogue[exercise_id].get("source") == "personal":
-            item.update(source="personal", volumeEligible=False)
+            personal = catalogue[exercise_id]
+            item.update(source="personal", volumeEligible=personal.get("volumeEligible", False))
+            if "volumeMuscle" in personal:
+                item["volumeMuscle"] = personal["volumeMuscle"]
         if entry.get("supersetId") is not None and entry.get("supersetId") != "":
             item["supersetId"] = entry["supersetId"]
 
@@ -1007,7 +1049,17 @@ def weekly_volume(sessions, week, registry, preferences, allow_draft=False):
             profile = profiles.get(exercise["id"])
             reason = None
             if exercise.get("source") == "personal" or exercise["id"].startswith("custom-"):
-                reason = "Personal exercise"
+                muscle = exercise.get("volumeMuscle")
+                if "volumeMuscle" not in exercise:
+                    reason = "Personal exercise"
+                elif muscle is None:
+                    reason = "No muscle selected"
+                elif exercise.get("measurement") == "duration":
+                    reason = "Timed holds"
+                elif muscle not in muscles or not exercise.get("volumeEligible", False):
+                    reason = "No muscle mapping"
+                else:
+                    profile = {"coefficients": {muscle: 1}, "directMuscles": [muscle]}
             elif exercise.get("measurement") == "duration":
                 reason = "Timed holds"
             elif profile is None:

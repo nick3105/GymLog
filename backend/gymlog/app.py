@@ -15,6 +15,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import assistant, storage
 from .models import (
+    PERSONAL_MUSCLES,
     assistant_messages,
     best_1rm,
     body_load,
@@ -387,6 +388,15 @@ def create_app(config=None):
         data = validate_personal_exercise(request.get_json())
         return jsonify(storage.add_personal_exercise(database, g.user_id, data)), 201
 
+    @app.get("/api/exercises/personal/muscles")
+    @authenticated
+    def personal_muscles():
+        """List the supported personal volume choices from the server's accounting rules."""
+        return jsonify(
+            muscles=[{"id": key, "label": value} for key, value in PERSONAL_MUSCLES.items()]
+            + [{"id": "none", "label": "None - Don't count towards volume"}]
+        )
+
     @app.get("/api/exercises/<exercise_id>/stats")
     @authenticated
     def stats(exercise_id):
@@ -421,7 +431,10 @@ def create_app(config=None):
         sessions = storage.documents(database, g.user_id, "sessions")
         return jsonify(
             body_load(
-                sessions, catalogue_by_id, request.args.get("today"), request.args.get("days")
+                sessions,
+                catalogue_for(g.user_id),
+                request.args.get("today"),
+                request.args.get("days"),
             )
         )
 

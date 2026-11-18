@@ -273,8 +273,8 @@ export default function WeeklyVolume() {
                 </ul>
               )}
               <p className="text-muted mt-2">
-                Personal exercises and timed holds do not contribute to these totals.
-                Warmup/cooldown text has no sets.
+                Personal exercises count as 1 set for their selected primary muscle. None, older
+                personal exercises and timed holds are excluded. Warmup/cooldown text has no sets.
               </p>
             </section>
             <div className="bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-lg p-3 backdrop-blur md:bottom-4">

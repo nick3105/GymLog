@@ -1,3 +1,4 @@
+import { personalVolumeDescription } from '../personalVolume'
 import { Check, Link2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
@@ -264,9 +265,7 @@ export default function Session() {
                 )}
               </div>
               {exercise.source === 'personal' && (
-                <p className="text-muted mt-2">
-                  Personal exercise — excluded from weekly volume estimates
-                </p>
+                <p className="text-muted mt-2">{personalVolumeDescription(exercise)}</p>
               )}
               <NoteInput
                 label={`${exercise.name} exercise note`}
