@@ -3,6 +3,7 @@
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from copy import deepcopy
 from pathlib import Path
 from uuid import uuid4
@@ -229,11 +230,13 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(phone.get("/api/state").json["weights"], [weight])
 
     def test_password_change_signs_out_other_devices(self):
-        with sqlite3.connect(self.config["DATABASE"]) as db:
-            db.execute(
-                "UPDATE users SET password_hash=? WHERE username='nick'",
-                (generate_password_hash("a-brand-new-password"),),
-            )
+        # SQLite's own context commits the change; closing also releases the Windows file handle.
+        with closing(sqlite3.connect(self.config["DATABASE"])) as db:
+            with db:
+                db.execute(
+                    "UPDATE users SET password_hash=? WHERE username='nick'",
+                    (generate_password_hash("a-brand-new-password"),),
+                )
         self.assertEqual(self.client.get("/api/state").status_code, 401)
 
     def test_per_set_targets_and_optional_rpe(self):
