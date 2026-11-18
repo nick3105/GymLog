@@ -8,7 +8,9 @@ type Props = { levels: Record<string, number>; label: string }
 
 export default function BodyMap({ levels, label }: Props) {
   // Groups missing from the report (e.g. while loading) are drawn as untrained.
-  const fill = (group: string) => levelFill[levels[group] ?? 0]
+  // The picture combines detailed muscles into broad regions; the list keeps them separate.
+  const fill = (...groups: string[]) =>
+    levelFill[Math.max(...groups.map((group) => levels[group] ?? 0))]
 
   return (
     <figure className="flex flex-col items-center gap-2">
@@ -16,7 +18,7 @@ export default function BodyMap({ levels, label }: Props) {
         {/* Front: chest, shoulders, biceps, forearms, core, quads, calves. */}
         <g>
           <circle cx="50" cy="13" r="10" className="fill-ink" />
-          <rect x="45" y="22" width="10" height="8" className="fill-ink" />
+          <rect x="45" y="22" width="10" height="8" className={fill('Neck')} />
           <ellipse cx="31" cy="37" rx="8" ry="7" className={fill('Shoulders')} />
           <ellipse cx="69" cy="37" rx="8" ry="7" className={fill('Shoulders')} />
           <rect x="36" y="31" width="13.5" height="17" rx="4" className={fill('Chest')} />
@@ -27,10 +29,31 @@ export default function BodyMap({ levels, label }: Props) {
           <ellipse cx="76" cy="77" rx="4.5" ry="11" className={fill('Forearms')} />
           <circle cx="22" cy="92" r="4" className="fill-ink" />
           <circle cx="78" cy="92" r="4" className="fill-ink" />
-          <rect x="38" y="50" width="24" height="33" rx="5" className={fill('Core')} />
+          <rect
+            x="38"
+            y="50"
+            width="24"
+            height="33"
+            rx="5"
+            className={fill('Core', 'Abdominals')}
+          />
           <rect x="37" y="84" width="26" height="10" rx="4" className="fill-ink" />
-          <rect x="37" y="95" width="12" height="40" rx="6" className={fill('Quads')} />
-          <rect x="51" y="95" width="12" height="40" rx="6" className={fill('Quads')} />
+          <rect
+            x="37"
+            y="95"
+            width="12"
+            height="40"
+            rx="6"
+            className={fill('Quads', 'Quadriceps', 'Abductors', 'Adductors')}
+          />
+          <rect
+            x="51"
+            y="95"
+            width="12"
+            height="40"
+            rx="6"
+            className={fill('Quads', 'Quadriceps', 'Abductors', 'Adductors')}
+          />
           <ellipse cx="43" cy="150" rx="5" ry="12" className={fill('Calves')} />
           <ellipse cx="57" cy="150" rx="5" ry="12" className={fill('Calves')} />
           <ellipse cx="42" cy="167" rx="5" ry="3" className="fill-ink" />
@@ -39,10 +62,17 @@ export default function BodyMap({ levels, label }: Props) {
         {/* Back: shoulders, back, triceps, forearms, hamstrings and glutes, calves. */}
         <g>
           <circle cx="150" cy="13" r="10" className="fill-ink" />
-          <rect x="145" y="22" width="10" height="8" className="fill-ink" />
+          <rect x="145" y="22" width="10" height="8" className={fill('Neck')} />
           <ellipse cx="131" cy="37" rx="8" ry="7" className={fill('Shoulders')} />
           <ellipse cx="169" cy="37" rx="8" ry="7" className={fill('Shoulders')} />
-          <rect x="136" y="31" width="28" height="52" rx="6" className={fill('Back')} />
+          <rect
+            x="136"
+            y="31"
+            width="28"
+            height="52"
+            rx="6"
+            className={fill('Back', 'Lats', 'Lower back', 'Middle back', 'Traps')}
+          />
           <ellipse cx="127" cy="55" rx="5" ry="10" className={fill('Triceps')} />
           <ellipse cx="173" cy="55" rx="5" ry="10" className={fill('Triceps')} />
           <ellipse cx="124" cy="77" rx="4.5" ry="11" className={fill('Forearms')} />
@@ -55,7 +85,7 @@ export default function BodyMap({ levels, label }: Props) {
             width="26"
             height="14"
             rx="6"
-            className={fill('Hamstrings & glutes')}
+            className={fill('Hamstrings & glutes', 'Glutes')}
           />
           <rect
             x="137"
@@ -63,7 +93,7 @@ export default function BodyMap({ levels, label }: Props) {
             width="12"
             height="36"
             rx="6"
-            className={fill('Hamstrings & glutes')}
+            className={fill('Hamstrings & glutes', 'Hamstrings')}
           />
           <rect
             x="151"
@@ -71,7 +101,7 @@ export default function BodyMap({ levels, label }: Props) {
             width="12"
             height="36"
             rx="6"
-            className={fill('Hamstrings & glutes')}
+            className={fill('Hamstrings & glutes', 'Hamstrings')}
           />
           <ellipse cx="143" cy="150" rx="5" ry="12" className={fill('Calves')} />
           <ellipse cx="157" cy="150" rx="5" ry="12" className={fill('Calves')} />

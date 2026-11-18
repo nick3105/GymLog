@@ -23,7 +23,8 @@ export type ActiveWorkout = {
     name: string
     note?: string
     source?: 'personal'
-    volumeEligible?: false
+    volumeEligible?: boolean
+    volumeMuscle?: string | null
     measurement?: 'duration'
     supersetId?: string
     targets: Target[]

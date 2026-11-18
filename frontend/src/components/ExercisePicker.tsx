@@ -1,3 +1,4 @@
+import { personalVolumeDescription } from '../personalVolume'
 import { Check, Search, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -179,7 +180,7 @@ export default function ExercisePicker({
                       {exercise.name}
                       {exercise.source === 'personal' && (
                         <span className="text-muted block text-sm">
-                          Personal — excluded from volume estimates
+                          {personalVolumeDescription(exercise)}
                         </span>
                       )}
                     </span>

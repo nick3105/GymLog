@@ -1,3 +1,4 @@
+import { personalVolumeDescription } from '../personalVolume'
 import { Check, GripVertical, Link2, Unlink, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router'
@@ -70,6 +71,7 @@ export default function Create({
         note: exercise.note ?? '',
         source: exercise.source,
         volumeEligible: exercise.volumeEligible,
+        volumeMuscle: exercise.volumeMuscle,
         measurement: exercise.measurement,
         supersetId: exercise.supersetId,
         group: journal.exercises.find((item) => item.id === exercise.id)?.group ?? '',
@@ -578,9 +580,7 @@ export default function Create({
                     </div>
                   </div>
                   {item.source === 'personal' && (
-                    <p className="text-muted mt-2">
-                      Personal exercise — excluded from weekly volume estimates
-                    </p>
+                    <p className="text-muted mt-2">{personalVolumeDescription(item)}</p>
                   )}
                   <NoteInput
                     label={`${item.name} exercise note`}

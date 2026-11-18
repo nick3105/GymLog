@@ -1,3 +1,4 @@
+import { personalVolumeDescription } from '../personalVolume'
 import { ArrowLeft, Link2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 
@@ -80,9 +81,7 @@ export default function ReviewDetail() {
               <p className="mt-3 break-words whitespace-pre-wrap">{exercise.note}</p>
             )}
             {exercise.source === 'personal' && (
-              <p className="text-muted mt-2">
-                Personal exercise — excluded from weekly volume estimates
-              </p>
+              <p className="text-muted mt-2">{personalVolumeDescription(exercise)}</p>
             )}
             <ol className="mt-2 flex flex-col gap-1">
               {exercise.sets.map((set, index) => (
