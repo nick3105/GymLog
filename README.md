@@ -4,6 +4,13 @@ Plan strength workouts, log every set, follow your estimated 1RM and body weight
 personal weight-loss or weight-gain goal — from a phone
 or a computer. Requirements: [docs/BRD.md](docs/BRD.md).
 
+## Team
+
+- Gaia Bandini — 83690
+- Nick Scharkopf — 83445
+- Martin Zvelebil — 83519
+- Anna Lisa Heigle — 83452
+
 **Live journal:** https://nickkkk3105.pythonanywhere.com/ (the old GitHub Pages address redirects
 there via the root `index.html`). Hosting, backup and renewal: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
