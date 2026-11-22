@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Scale,
   Settings as SettingsIcon,
+  UserRoundPlus,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -125,7 +126,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <nav className="border-border bg-panel fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 border-r p-4 md:flex">
+      <nav className="border-border bg-panel fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 overflow-y-auto border-r p-4 md:flex">
         <Link to="/" className="mb-6 flex min-h-11 items-center gap-2 px-2 text-xl font-light">
           <Dumbbell className="text-accent size-6" aria-hidden />
           gymlog<span className="text-accent">.</span>
@@ -152,6 +153,15 @@ export default function Layout() {
         >
           <BookOpen className="size-5" aria-hidden />
           Exercises
+        </NavLink>
+        <NavLink
+          to="/friends"
+          className={({ isActive }) =>
+            `flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-3 font-normal ${isActive ? 'bg-accent/10 text-accent' : 'text-muted'}`
+          }
+        >
+          <UserRoundPlus className="size-5" aria-hidden />
+          Friends
         </NavLink>
         <NavLink
           to="/profile"

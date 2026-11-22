@@ -12,6 +12,7 @@ import CoacheeBuilder from './pages/CoacheeBuilder'
 import Home from './pages/Home'
 import EditSession from './pages/EditSession'
 import Exercises from './pages/Exercises'
+import Friends from './pages/Friends'
 import Profile from './pages/Profile'
 import Review from './pages/Review'
 import ReviewDetail from './pages/ReviewDetail'
@@ -72,6 +73,7 @@ const router = createBrowserRouter([
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
       { path: 'exercises', element: <Exercises /> },
+      { path: 'friends', element: <Friends /> },
       { path: 'profile', element: <Profile /> },
       { path: 'review/volume', element: <WeeklyVolume /> },
       { path: 'review/progress', element: <ExerciseProgress /> },
