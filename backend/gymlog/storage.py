@@ -573,6 +573,15 @@ def profile_bio(path, user_id):
         return json.loads(row["document"]).get("bio", "") if row else ""
 
 
+def profile_avatar(path, user_id):
+    """Return the signed-in user's optional avatar data URL."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        return json.loads(row["document"]).get("avatar") if row else None
+
+
 def save_profile_bio(path, user_id, bio):
     """Save only the signed-in user's short profile bio."""
     with connect(path) as db:
@@ -588,6 +597,24 @@ def save_profile_bio(path, user_id, bio):
             (user_id, json.dumps(document), now()),
         )
         return bio
+
+
+def save_profile(path, user_id, bio, avatar):
+    """Save the signed-in user's bio and optional avatar together."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        document = json.loads(row["document"]) if row else {"revision": 0}
+        document["bio"] = bio
+        document["avatar"] = avatar
+        db.execute(
+            "INSERT INTO user_preferences VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET "
+            "document=excluded.document, updated_at=excluded.updated_at",
+            (user_id, json.dumps(document), now()),
+        )
+        return {"bio": bio, "avatar": avatar}
 
 
 def coaching_state(path, user_id):

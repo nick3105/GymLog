@@ -396,6 +396,7 @@ def create_app(config=None):
                     sessions, weights, catalogue_for(g.user_id), request.args.get("today")
                 ),
                 "bio": storage.profile_bio(database, g.user_id),
+                "avatar": storage.profile_avatar(database, g.user_id),
             }
         )
 
@@ -405,11 +406,20 @@ def create_app(config=None):
         """Save the signed-in user's short profile bio."""
         body = request.get_json()
         bio = body.get("bio") if isinstance(body, dict) else None
+        avatar = body.get("avatar") if isinstance(body, dict) else None
         if not isinstance(bio, str):
             return jsonify(error="Enter a short bio."), 400
         if len(bio) > 160:
             return jsonify(error="Your bio must be 160 characters or fewer."), 400
-        return jsonify(bio=storage.save_profile_bio(database, g.user_id, bio.strip()))
+        if avatar is not None and (
+            not isinstance(avatar, str)
+            or not avatar.startswith(
+                ("data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,")
+            )
+            or len(avatar) > 1_500_000
+        ):
+            return jsonify(error="Choose a JPG, PNG or WebP image smaller than 1 MB."), 400
+        return jsonify(storage.save_profile(database, g.user_id, bio.strip(), avatar))
 
     @app.post("/api/templates")
     @authenticated

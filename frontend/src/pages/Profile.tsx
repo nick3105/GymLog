@@ -33,6 +33,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [problem, setProblem] = useState('')
   const [bio, setBio] = useState('')
+  const [avatar, setAvatar] = useState<string | null>(null)
   const [editingBio, setEditingBio] = useState(false)
   const [savingBio, setSavingBio] = useState(false)
 
@@ -43,6 +44,7 @@ export default function Profile() {
         if (!current) return
         setProfile(result)
         setBio(result.bio)
+        setAvatar(result.avatar)
       })
       .catch((error: Error) => current && setProblem(error.message))
     return () => {
@@ -55,9 +57,12 @@ export default function Profile() {
     setSavingBio(true)
     setProblem('')
     try {
-      const result = await api<{ bio: string }>('profile', { bio })
+      const result = await api<{ bio: string; avatar: string | null }>('profile', { bio, avatar })
       setBio(result.bio)
-      setProfile((current) => (current ? { ...current, bio: result.bio } : current))
+      setAvatar(result.avatar)
+      setProfile((current) =>
+        current ? { ...current, bio: result.bio, avatar: result.avatar } : current,
+      )
       setEditingBio(false)
     } catch (error) {
       setProblem((error as Error).message)
@@ -70,12 +75,16 @@ export default function Profile() {
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Your profile</h1>
       <div className="mb-4 flex flex-col items-center gap-2 text-center">
-        <span
-          className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
-          aria-hidden
-        >
-          {username.charAt(0)}
-        </span>
+        {avatar ? (
+          <img src={avatar} alt="" className="size-24 rounded-full object-cover" />
+        ) : (
+          <span
+            className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
+            aria-hidden
+          >
+            {username.charAt(0)}
+          </span>
+        )}
         <p className="text-xl font-normal">{username}</p>
         {profile && (
           <>
@@ -101,6 +110,33 @@ export default function Profile() {
           >
             {editingBio ? 'Cancel' : 'Edit bio'}
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className={textButton}>
+            {avatar ? 'Change photo' : 'Add photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  if (typeof reader.result === 'string') {
+                    setAvatar(reader.result)
+                    setEditingBio(true)
+                  }
+                }
+                reader.readAsDataURL(file)
+              }}
+            />
+          </label>
+          {avatar && (
+            <button type="button" className={textButton} onClick={() => setAvatar(null)}>
+              Remove photo
+            </button>
+          )}
         </div>
         {!editingBio ? (
           <p className="text-muted mt-3 break-words">
