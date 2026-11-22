@@ -12,7 +12,7 @@ function isoDay(year: number, month: number, day: number): string {
 
 export default function Calendar() {
   const { journal } = useJournal()
-  const today = new Date()
+  const [today] = useState(() => new Date())
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const year = month.getFullYear()
