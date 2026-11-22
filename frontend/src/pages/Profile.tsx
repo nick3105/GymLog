@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
 import { api } from '../api'
 import StatTile from '../components/StatTile'
@@ -6,7 +6,7 @@ import { formatDay, formatNumber, today } from '../format'
 import { useJournal } from '../journal'
 import { formatDuration, formatLifted } from '../profile'
 import type { Profile as ProfileData } from '../types'
-import { card } from '../ui'
+import { card, input, primaryButton } from '../ui'
 
 // A titled card of numbers, two per row on a phone.
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -32,16 +32,37 @@ export default function Profile() {
   const { username, journal } = useJournal()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [problem, setProblem] = useState('')
+  const [bio, setBio] = useState('')
+  const [savingBio, setSavingBio] = useState(false)
 
   useEffect(() => {
     let current = true
     api<ProfileData>(`profile?today=${today()}`)
-      .then((result) => current && setProfile(result))
+      .then((result) => {
+        if (!current) return
+        setProfile(result)
+        setBio(result.bio)
+      })
       .catch((error: Error) => current && setProblem(error.message))
     return () => {
       current = false
     }
   }, [journal.sessions, journal.weights])
+
+  async function saveBio(event: FormEvent) {
+    event.preventDefault()
+    setSavingBio(true)
+    setProblem('')
+    try {
+      const result = await api<{ bio: string }>('profile', { bio })
+      setBio(result.bio)
+      setProfile((current) => (current ? { ...current, bio: result.bio } : current))
+    } catch (error) {
+      setProblem((error as Error).message)
+    } finally {
+      setSavingBio(false)
+    }
+  }
 
   return (
     <>
@@ -68,6 +89,26 @@ export default function Profile() {
         )}
       </div>
       {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
+      <section className={`${card} mb-4`} aria-label="About you">
+        <h2 className="mb-3 font-normal">About you</h2>
+        <form onSubmit={saveBio} className="flex flex-col gap-3">
+          <label htmlFor="profile-bio" className="text-muted text-sm">
+            Short bio
+          </label>
+          <textarea
+            id="profile-bio"
+            maxLength={160}
+            value={bio}
+            onChange={(event) => setBio(event.target.value)}
+            className={`${input} min-h-24 resize-y rounded-2xl`}
+            placeholder="e.g. Training for my first half marathon"
+          />
+          <p className="text-muted text-right text-sm">{bio.length}/160</p>
+          <button type="submit" disabled={savingBio} className={primaryButton}>
+            {savingBio ? 'Saving…' : 'Save bio'}
+          </button>
+        </form>
+      </section>
       {!profile && !problem && <p className="text-muted">Loading…</p>}
       {profile && (
         <div className="flex flex-col gap-4">

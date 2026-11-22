@@ -564,6 +564,32 @@ def save_volume_preferences(path, user_id, document, revision):
         return document
 
 
+def profile_bio(path, user_id):
+    """Return the signed-in user's short profile bio."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        return json.loads(row["document"]).get("bio", "") if row else ""
+
+
+def save_profile_bio(path, user_id, bio):
+    """Save only the signed-in user's short profile bio."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        document = json.loads(row["document"]) if row else {"revision": 0}
+        document["bio"] = bio
+        db.execute(
+            "INSERT INTO user_preferences VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET "
+            "document=excluded.document, updated_at=excluded.updated_at",
+            (user_id, json.dumps(document), now()),
+        )
+        return bio
+
+
 def coaching_state(path, user_id):
     """Read only relationships in which this user is a participant."""
     with connect(path) as db:

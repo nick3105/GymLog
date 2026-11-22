@@ -81,6 +81,7 @@ export type Weight = { day: string; kg: number }
 
 // GET /api/profile (REV-11). Each record or favourite is null until there is data for it.
 export type Profile = {
+  bio: string
   level: { name: string; next: string | null; toNextLevel: number | null }
   overview: {
     workouts: number
