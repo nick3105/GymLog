@@ -6,7 +6,7 @@ import { formatDay, formatNumber, today } from '../format'
 import { useJournal } from '../journal'
 import { formatDuration, formatLifted } from '../profile'
 import type { Profile as ProfileData } from '../types'
-import { card, input, primaryButton } from '../ui'
+import { card, primaryButton, textButton } from '../ui'
 
 // A titled card of numbers, two per row on a phone.
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -33,6 +33,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [problem, setProblem] = useState('')
   const [bio, setBio] = useState('')
+  const [editingBio, setEditingBio] = useState(false)
   const [savingBio, setSavingBio] = useState(false)
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function Profile() {
       const result = await api<{ bio: string }>('profile', { bio })
       setBio(result.bio)
       setProfile((current) => (current ? { ...current, bio: result.bio } : current))
+      setEditingBio(false)
     } catch (error) {
       setProblem((error as Error).message)
     } finally {
@@ -90,24 +92,39 @@ export default function Profile() {
       </div>
       {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
       <section className={`${card} mb-4`} aria-label="About you">
-        <h2 className="mb-3 font-normal">About you</h2>
-        <form onSubmit={saveBio} className="flex flex-col gap-3">
-          <label htmlFor="profile-bio" className="text-muted text-sm">
-            Short bio
-          </label>
-          <textarea
-            id="profile-bio"
-            maxLength={160}
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-            className={`${input} min-h-24 resize-y rounded-2xl`}
-            placeholder="e.g. Training for my first half marathon"
-          />
-          <p className="text-muted text-right text-sm">{bio.length}/160</p>
-          <button type="submit" disabled={savingBio} className={primaryButton}>
-            {savingBio ? 'Saving…' : 'Save bio'}
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-normal">About you</h2>
+          <button
+            type="button"
+            onClick={() => setEditingBio((current) => !current)}
+            className={textButton}
+          >
+            {editingBio ? 'Cancel' : 'Edit bio'}
           </button>
-        </form>
+        </div>
+        {!editingBio ? (
+          <p className="text-muted mt-3 break-words">
+            {bio || 'Add a short bio about your training.'}
+          </p>
+        ) : (
+          <form onSubmit={saveBio} className="mt-3 flex flex-col gap-3">
+            <label htmlFor="profile-bio" className="text-muted text-sm">
+              Short bio
+            </label>
+            <textarea
+              id="profile-bio"
+              maxLength={160}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              className="border-border bg-ink text-text placeholder:text-muted/70 focus:border-accent min-h-24 w-full resize-y rounded-2xl border p-3 text-base focus:outline-none"
+              placeholder="e.g. Training for my first half marathon"
+            />
+            <p className="text-muted text-right text-sm">{bio.length}/160</p>
+            <button type="submit" disabled={savingBio} className={primaryButton}>
+              {savingBio ? 'Saving…' : 'Save bio'}
+            </button>
+          </form>
+        )}
       </section>
       {!profile && !problem && <p className="text-muted">Loading…</p>}
       {profile && (
