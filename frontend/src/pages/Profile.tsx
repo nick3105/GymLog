@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 
 import { api } from '../api'
 import StatTile from '../components/StatTile'
@@ -6,7 +6,7 @@ import { formatDay, formatNumber, today } from '../format'
 import { useJournal } from '../journal'
 import { formatDuration, formatLifted } from '../profile'
 import type { Profile as ProfileData } from '../types'
-import { card } from '../ui'
+import { card, primaryButton, textButton } from '../ui'
 
 // A titled card of numbers, two per row on a phone.
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -32,27 +32,59 @@ export default function Profile() {
   const { username, journal } = useJournal()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [problem, setProblem] = useState('')
+  const [bio, setBio] = useState('')
+  const [avatar, setAvatar] = useState<string | null>(null)
+  const [editingBio, setEditingBio] = useState(false)
+  const [savingBio, setSavingBio] = useState(false)
 
   useEffect(() => {
     let current = true
     api<ProfileData>(`profile?today=${today()}`)
-      .then((result) => current && setProfile(result))
+      .then((result) => {
+        if (!current) return
+        setProfile(result)
+        setBio(result.bio)
+        setAvatar(result.avatar)
+      })
       .catch((error: Error) => current && setProblem(error.message))
     return () => {
       current = false
     }
   }, [journal.sessions, journal.weights])
 
+  async function saveBio(event: FormEvent) {
+    event.preventDefault()
+    setSavingBio(true)
+    setProblem('')
+    try {
+      const result = await api<{ bio: string; avatar: string | null }>('profile', { bio, avatar })
+      setBio(result.bio)
+      setAvatar(result.avatar)
+      setProfile((current) =>
+        current ? { ...current, bio: result.bio, avatar: result.avatar } : current,
+      )
+      setEditingBio(false)
+    } catch (error) {
+      setProblem((error as Error).message)
+    } finally {
+      setSavingBio(false)
+    }
+  }
+
   return (
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Your profile</h1>
       <div className="mb-4 flex flex-col items-center gap-2 text-center">
-        <span
-          className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
-          aria-hidden
-        >
-          {username.charAt(0)}
-        </span>
+        {avatar ? (
+          <img src={avatar} alt="" className="size-24 rounded-full object-cover" />
+        ) : (
+          <span
+            className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
+            aria-hidden
+          >
+            {username.charAt(0)}
+          </span>
+        )}
         <p className="text-xl font-normal">{username}</p>
         {profile && (
           <>
@@ -68,6 +100,68 @@ export default function Profile() {
         )}
       </div>
       {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
+      <section className={`${card} mb-4`} aria-label="About you">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-normal">About you</h2>
+          <button
+            type="button"
+            onClick={() => setEditingBio((current) => !current)}
+            className={textButton}
+          >
+            {editingBio ? 'Cancel' : 'Edit bio'}
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className={textButton}>
+            {avatar ? 'Change photo' : 'Add photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  if (typeof reader.result === 'string') {
+                    setAvatar(reader.result)
+                    setEditingBio(true)
+                  }
+                }
+                reader.readAsDataURL(file)
+              }}
+            />
+          </label>
+          {avatar && (
+            <button type="button" className={textButton} onClick={() => setAvatar(null)}>
+              Remove photo
+            </button>
+          )}
+        </div>
+        {!editingBio ? (
+          <p className="text-muted mt-3 break-words">
+            {bio || 'Add a short bio about your training.'}
+          </p>
+        ) : (
+          <form onSubmit={saveBio} className="mt-3 flex flex-col gap-3">
+            <label htmlFor="profile-bio" className="text-muted text-sm">
+              Short bio
+            </label>
+            <textarea
+              id="profile-bio"
+              maxLength={160}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              className="border-border bg-ink text-text placeholder:text-muted/70 focus:border-accent min-h-24 w-full resize-y rounded-2xl border p-3 text-base focus:outline-none"
+              placeholder="e.g. Training for my first half marathon"
+            />
+            <p className="text-muted text-right text-sm">{bio.length}/160</p>
+            <button type="submit" disabled={savingBio} className={primaryButton}>
+              {savingBio ? 'Saving…' : 'Save bio'}
+            </button>
+          </form>
+        )}
+      </section>
       {!profile && !problem && <p className="text-muted">Loading…</p>}
       {profile && (
         <div className="flex flex-col gap-4">
