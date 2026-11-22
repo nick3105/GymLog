@@ -451,6 +451,7 @@ def create_app(config=None):
                 ),
                 "bio": storage.profile_bio(database, g.user_id),
                 "avatar": storage.profile_avatar(database, g.user_id),
+                "avatarZoom": storage.profile_avatar_zoom(database, g.user_id),
             }
         )
 
@@ -461,6 +462,7 @@ def create_app(config=None):
         body = request.get_json()
         bio = body.get("bio") if isinstance(body, dict) else None
         avatar = body.get("avatar") if isinstance(body, dict) else None
+        avatar_zoom = body.get("avatarZoom", 1) if isinstance(body, dict) else 1
         if not isinstance(bio, str):
             return jsonify(error="Enter a short bio."), 400
         if len(bio) > 160:
@@ -473,7 +475,9 @@ def create_app(config=None):
             or len(avatar) > 1_500_000
         ):
             return jsonify(error="Choose a JPG, PNG or WebP image smaller than 1 MB."), 400
-        return jsonify(storage.save_profile(database, g.user_id, bio.strip(), avatar))
+        if not isinstance(avatar_zoom, (int, float)) or not 1 <= avatar_zoom <= 2:
+            return jsonify(error="Avatar zoom must be between 1 and 2."), 400
+        return jsonify(storage.save_profile(database, g.user_id, bio.strip(), avatar, avatar_zoom))
 
     @app.post("/api/templates")
     @authenticated

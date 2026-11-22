@@ -583,6 +583,15 @@ def profile_avatar(path, user_id):
         return json.loads(row["document"]).get("avatar") if row else None
 
 
+def profile_avatar_zoom(path, user_id):
+    """Return the signed-in user's avatar zoom, defaulting to a centered crop."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM user_preferences WHERE user_id=?", (user_id,)
+        ).fetchone()
+        return float(json.loads(row["document"]).get("avatarZoom", 1)) if row else 1
+
+
 def save_profile_bio(path, user_id, bio):
     """Save only the signed-in user's short profile bio."""
     with connect(path) as db:
@@ -600,8 +609,8 @@ def save_profile_bio(path, user_id, bio):
         return bio
 
 
-def save_profile(path, user_id, bio, avatar):
-    """Save the signed-in user's bio and optional avatar together."""
+def save_profile(path, user_id, bio, avatar, avatar_zoom=1):
+    """Save the signed-in user's bio, avatar, and centered crop together."""
     with connect(path) as db:
         db.execute("BEGIN IMMEDIATE")
         row = db.execute(
@@ -610,12 +619,13 @@ def save_profile(path, user_id, bio, avatar):
         document = json.loads(row["document"]) if row else {"revision": 0}
         document["bio"] = bio
         document["avatar"] = avatar
+        document["avatarZoom"] = avatar_zoom
         db.execute(
             "INSERT INTO user_preferences VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET "
             "document=excluded.document, updated_at=excluded.updated_at",
             (user_id, json.dumps(document), now()),
         )
-        return {"bio": bio, "avatar": avatar}
+        return {"bio": bio, "avatar": avatar, "avatarZoom": avatar_zoom}
 
 
 def coaching_state(path, user_id):
