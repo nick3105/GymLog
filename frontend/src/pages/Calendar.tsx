@@ -50,7 +50,8 @@ export default function Calendar() {
               {month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
             </h2>
             <p className="text-muted text-sm">
-              {monthSessions.length} {monthSessions.length === 1 ? 'workout' : 'workouts'} this month
+              {monthSessions.length} {monthSessions.length === 1 ? 'workout' : 'workouts'} this
+              month
             </p>
           </div>
           <button
@@ -85,7 +86,9 @@ export default function Calendar() {
                 aria-label={`${index + 1}${hasSession ? ', workout logged' : ''}`}
               >
                 {index + 1}
-                {hasSession && <span className="mx-auto mt-1 block size-1.5 rounded-full bg-current" />}
+                {hasSession && (
+                  <span className="mx-auto mt-1 block size-1.5 rounded-full bg-current" />
+                )}
               </button>
             )
           })}
@@ -99,7 +102,11 @@ export default function Calendar() {
           ) : (
             <div className="flex flex-col gap-2">
               {selectedSessions.map((session) => (
-                <Link key={session.id} to={`/review/${session.id}`} className="bg-ink rounded-lg p-3">
+                <Link
+                  key={session.id}
+                  to={`/review/${session.id}`}
+                  className="bg-ink rounded-lg p-3"
+                >
                   {session.name}
                 </Link>
               ))}
