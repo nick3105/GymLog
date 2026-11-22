@@ -5,11 +5,14 @@ import {
   Play,
   Plus,
   Scale,
+  UserRoundPlus,
   X,
   type LucideIcon,
 } from 'lucide-react'
-import { Link } from 'react-router'
+import { useEffect } from 'react'
+import { Link, useLocation } from 'react-router'
 
+import FriendRequestNotice from '../components/FriendRequestNotice'
 import Notice from '../components/Notice'
 import { formatDay, today } from '../format'
 import { primaryButton } from '../ui'
@@ -51,6 +54,16 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
 
 // NAV-01: the main starting points, and a short summary of the journal.
 export default function Home() {
+  const { key } = useLocation()
+
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 48rem)').matches) return
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [key])
+
   const {
     username,
     journal,
@@ -71,6 +84,7 @@ export default function Home() {
       <Notice />
       <h1 className="gradient-text mb-1 text-3xl font-bold">Hi, {username}.</h1>
       <p className="text-muted mb-6">Make your next session count.</p>
+      <FriendRequestNotice key={username} username={username} />
       {journal.templates.length === 0 && journal.sessions.length === 0 && (
         <Link to="/create" className={`${primaryButton} mb-4 h-auto min-h-12 py-3 text-center`}>
           Create your first workout here
@@ -140,6 +154,17 @@ export default function Home() {
             <ChevronRight className="size-5 shrink-0" aria-hidden />
           </Link>
         ))}
+        <Link
+          to="/friends"
+          className="bg-panel flex min-h-20 items-center gap-4 rounded-lg p-4 md:hidden"
+        >
+          <UserRoundPlus className="size-7 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-normal">Friends</span>
+            <span className="text-muted block text-sm">Requests and shared workouts.</span>
+          </span>
+          <ChevronRight className="size-5 shrink-0" aria-hidden />
+        </Link>
       </div>
       <dl className="mt-6 grid grid-cols-3 gap-3 text-center">
         <div className="bg-panel rounded-lg p-3">

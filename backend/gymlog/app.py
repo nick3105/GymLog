@@ -22,10 +22,14 @@ from .models import (
     exercise_stats,
     number,
     profile_stats,
+    shared_workout,
     validate_assistant_reply,
     validate_assistant_request,
     validate_coach_request,
     validate_coaching_transition,
+    validate_friend_pair,
+    validate_friend_request,
+    validate_friend_transition,
     validate_new_coaching,
     validate_personal_exercise,
     validate_registration,
@@ -34,6 +38,8 @@ from .models import (
     validate_template,
     validate_volume_preferences,
     validate_weight_goal,
+    validate_workout_audience,
+    validate_workout_comment,
     weekly_volume,
 )
 
@@ -228,6 +234,123 @@ def create_app(config=None):
     @app.post("/api/logout")
     def logout():
         session.clear()
+        return jsonify(ok=True)
+
+    @app.get("/api/friends")
+    @authenticated
+    def friends():
+        """Return the signed-in account's active friendships and activity."""
+        milestones, congratulations = storage.goal_milestone_activity(database, g.user_id)
+        return jsonify(
+            milestones=milestones,
+            congratulations=congratulations,
+            relationships=storage.friendships(database, g.user_id),
+            commentActivity=storage.received_workout_comments(database, g.user_id),
+            activity=[
+                shared_workout(row) for row in storage.received_workouts(database, g.user_id)
+            ],
+        )
+
+    @app.post("/api/weight-goal/milestone")
+    @authenticated
+    def share_reached_goal():
+        """Share an explicitly chosen milestone without exposing weight data."""
+        recipients = validate_workout_audience(request.get_json())
+        storage.share_goal_milestone(database, g.user_id, recipients)
+        return jsonify(ok=True)
+
+    @app.post("/api/goal-milestones/<share_id>/congratulate")
+    @authenticated
+    def congratulate_milestone(share_id):
+        """Congratulate the owner through an active milestone share."""
+        if not storage.congratulate_goal_milestone(database, g.user_id, share_id):
+            return jsonify(error="This milestone is no longer shared with you."), 404
+        return jsonify(ok=True)
+
+    @app.post("/api/friends/request")
+    @authenticated
+    def request_friend():
+        """Invite one existing account by exact username."""
+        username = validate_friend_request(request.get_json())
+        relationship = storage.request_friend(database, g.user_id, username, validate_friend_pair)
+        if relationship is None:
+            return jsonify(error="That GymLog username could not be found."), 404
+        return jsonify(id=relationship)
+
+    @app.post("/api/friends/<relationship_id>/<action>")
+    @authenticated
+    def friend_action(relationship_id, action):
+        """Accept, decline or end a relationship as an authorized participant."""
+        if not storage.change_friendship(
+            database, g.user_id, relationship_id, action, validate_friend_transition
+        ):
+            return jsonify(error="That friendship could not be found."), 404
+        return jsonify(ok=True)
+
+    @app.get("/api/shared-workouts/<share_id>")
+    @authenticated
+    def shared_workout_detail(share_id):
+        """View a still-shared workout as its named recipient."""
+        rows = storage.received_workouts(database, g.user_id, share_id)
+        if not rows:
+            return jsonify(error="This workout is no longer shared with you."), 404
+        return jsonify(shared_workout(rows[0], details=True))
+
+    def comment_response(**workout):
+        """Read or post comments without expanding access to the workout."""
+        entry = validate_workout_comment(request.get_json()) if request.method == "POST" else None
+        comments = storage.workout_comments(database, g.user_id, new_comment=entry, **workout)
+        if comments is None:
+            return jsonify(error="You do not have access to this workout."), 404
+        return jsonify(comments=comments)
+
+    @app.route("/api/sessions/<session_id>/comments", methods=["GET", "POST"])
+    @authenticated
+    def own_workout_comments(session_id):
+        """Open the owner's comment thread from Review."""
+        return comment_response(session_id=session_id)
+
+    @app.route("/api/shared-workouts/<share_id>/comments", methods=["GET", "POST"])
+    @authenticated
+    def shared_workout_comments(share_id):
+        """Open a comment thread through the recipient's active share."""
+        return comment_response(share_id=share_id)
+
+    @app.get("/api/sessions/<session_id>/shares")
+    @authenticated
+    def workout_shares(session_id):
+        """Show the owner's eligible friends and existing shares."""
+        if storage.get_session(database, g.user_id, session_id) is None:
+            return jsonify(error="That workout could not be found."), 404
+        return jsonify(
+            friends=[
+                item
+                for item in storage.friendships(database, g.user_id)
+                if item["state"] == "accepted"
+            ],
+            shares=storage.own_workout_shares(database, g.user_id, session_id),
+        )
+
+    @app.post("/api/sessions/<session_id>/shares")
+    @authenticated
+    def share_session(session_id):
+        """Share one owned workout with all or selected accepted friends."""
+        body = request.get_json()
+        if isinstance(body, dict) and "friendshipId" in body:
+            body = {"audience": "selected", "friendshipIds": [body["friendshipId"]]}
+        replace = isinstance(body, dict) and body.get("replace") is True
+        recipients = validate_workout_audience(body, allow_empty=replace)
+        count = storage.share_workout(database, g.user_id, session_id, recipients, replace=replace)
+        if count is None:
+            return jsonify(error="That workout or accepted friend is unavailable."), 404
+        return jsonify(ok=True, recipientCount=count)
+
+    @app.post("/api/sessions/<session_id>/shares/<share_id>/revoke")
+    @authenticated
+    def revoke_session_share(session_id, share_id):
+        """Revoke access to a workout as its owner."""
+        if not storage.revoke_workout_share(database, g.user_id, session_id, share_id):
+            return jsonify(error="That workout share could not be found."), 404
         return jsonify(ok=True)
 
     @app.get("/api/coaching")

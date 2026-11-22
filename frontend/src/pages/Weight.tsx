@@ -1,3 +1,4 @@
+import ShareGoalMilestone from '../components/ShareGoalMilestone'
 import { useRef, useState, type FormEvent } from 'react'
 import { Pencil, Target, Trophy } from 'lucide-react'
 
@@ -24,6 +25,7 @@ export default function Weight() {
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalProblem, setGoalProblem] = useState('')
   const [goalSaving, setGoalSaving] = useState(false)
+  const [showMilestone, setShowMilestone] = useState(false)
   const entries = journal.weights
   const latest = entries[entries.length - 1]
   const goal = journal.weightGoal
@@ -43,6 +45,10 @@ export default function Weight() {
           (a, b) => a.day.localeCompare(b.day),
         ),
       }))
+      const latestAfterSave = !latest || saved.day >= latest.day ? saved : latest
+      if (remaining !== 0 && remainingWeight(latestAfterSave.kg, goal) === 0) {
+        setShowMilestone(true)
+      }
       setMessage(replacing ? 'Updated.' : 'Saved.')
       setEditingDay(null)
       setDay(today())
@@ -101,6 +107,7 @@ export default function Weight() {
       setJournal((current) => ({ ...current, weightGoal: saved.weightGoal }))
       setGoalKg(saved.weightGoal === null ? '' : formatNumber(saved.weightGoal.kg))
       setEditingGoal(false)
+      setShowMilestone(false)
     } catch (error) {
       setGoalProblem((error as Error).message)
     } finally {
@@ -119,6 +126,7 @@ export default function Weight() {
       setJournal((current) => ({ ...current, weightGoal: saved.weightGoal }))
       setGoalKg('')
       setEditingGoal(false)
+      setShowMilestone(false)
     } catch (error) {
       setGoalProblem((error as Error).message)
     } finally {
@@ -233,6 +241,13 @@ export default function Weight() {
             ) : null}
           </div>
         </div>
+        {!editingGoal && remaining === 0 && goal && (
+          <ShareGoalMilestone
+            key={`${goal.mode}:${goal.kg}`}
+            open={showMilestone}
+            setOpen={setShowMilestone}
+          />
+        )}
         {editingGoal ? (
           <form onSubmit={saveGoal} noValidate className="flex flex-col gap-3">
             <div>

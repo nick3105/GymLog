@@ -160,7 +160,7 @@ export default function Session() {
       }))
       setFinished(true)
       setActive(null)
-      navigate(`/review/${saved.id}`, { state: { notice: 'Workout saved. Well done.' } })
+      navigate(`/review/${saved.id}`, { state: { offerSharing: true } })
     } catch (error) {
       // Every number stays where it is; tapping Finish again retries with the same ID.
       setProblem((error as Error).message)

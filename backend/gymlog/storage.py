@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 10
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -268,6 +268,7 @@ def existing_session(path, user_id, client_id):
 
 
 def add_session(path, user_id, data):
+    """Save a private completed workout once per client ID."""
     document = {**data, "id": str(uuid4()), "completedAt": now()}
     with connect(path) as db:
         db.execute(
@@ -368,6 +369,12 @@ def weight_goal(path, user_id):
 def save_weight_goal(path, user_id, goal):
     """Save or clear only this user's weight goal."""
     with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        previous = db.execute(
+            "SELECT kg, mode FROM body_weight_goals WHERE user_id=?", (user_id,)
+        ).fetchone()
+        if previous is not None and dict(previous) != goal:
+            db.execute("UPDATE goal_milestones SET is_current=0 WHERE owner_id=?", (user_id,))
         if goal["kg"] is None:
             db.execute("DELETE FROM body_weight_goals WHERE user_id=?", (user_id,))
             return None
@@ -487,6 +494,7 @@ def _upgrade_extensions(db):
             for statement in (
                 COACHING_SCHEMA
                 + PERSONAL_EXERCISE_SCHEMA
+                + FRIENDS_SCHEMA
                 + [
                     VOLUME_PREFERENCES_SCHEMA,
                     """CREATE TABLE IF NOT EXISTS workout_drafts (
@@ -763,3 +771,319 @@ def save_coached_template(path, coach_id, coachee_id, data, template_id=None):
                 (document["id"], coachee_id, json.dumps(document), document["createdAt"]),
             )
         return document
+
+
+FRIENDS_SCHEMA = [
+    """CREATE TABLE IF NOT EXISTS friendships (
+        id TEXT PRIMARY KEY, sender_id INTEGER NOT NULL REFERENCES users(id),
+        recipient_id INTEGER NOT NULL REFERENCES users(id),
+        state TEXT NOT NULL CHECK(state IN ('pending', 'accepted', 'declined', 'ended')),
+        CHECK(sender_id != recipient_id))""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS one_active_friendship
+        ON friendships(min(sender_id, recipient_id), max(sender_id, recipient_id))
+        WHERE state IN ('pending', 'accepted')""",
+    """CREATE TABLE IF NOT EXISTS workout_shares (
+        id TEXT PRIMARY KEY, friendship_id TEXT NOT NULL REFERENCES friendships(id),
+        session_id TEXT NOT NULL REFERENCES sessions(id), recipient_id INTEGER NOT NULL
+        REFERENCES users(id), shared_at TEXT NOT NULL,
+        UNIQUE(friendship_id, session_id, recipient_id))""",
+    """CREATE INDEX IF NOT EXISTS workout_shares_recipient
+        ON workout_shares(recipient_id, shared_at)""",
+    """CREATE TABLE IF NOT EXISTS workout_comments (
+        session_id TEXT NOT NULL REFERENCES sessions(id), author_id INTEGER NOT NULL
+        REFERENCES users(id), client_id TEXT NOT NULL, comment TEXT NOT NULL,
+        created_at TEXT NOT NULL, PRIMARY KEY (session_id, author_id, client_id))""",
+    """CREATE TABLE IF NOT EXISTS goal_milestones (
+        id TEXT PRIMARY KEY, owner_id INTEGER NOT NULL REFERENCES users(id),
+        is_current INTEGER NOT NULL CHECK(is_current IN (0, 1)), created_at TEXT NOT NULL)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS current_goal_milestone
+        ON goal_milestones(owner_id) WHERE is_current=1""",
+    """CREATE TABLE IF NOT EXISTS goal_milestone_shares (
+        id TEXT PRIMARY KEY, milestone_id TEXT NOT NULL REFERENCES goal_milestones(id),
+        friendship_id TEXT NOT NULL REFERENCES friendships(id),
+        recipient_id INTEGER NOT NULL REFERENCES users(id), shared_at TEXT NOT NULL,
+        congratulated_at TEXT, UNIQUE(milestone_id, friendship_id))""",
+    """CREATE INDEX IF NOT EXISTS goal_milestone_recipient
+        ON goal_milestone_shares(recipient_id, shared_at)""",
+]
+
+
+def friendships(path, user_id):
+    """List active relationships with the other account's public username."""
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT f.id, f.state, f.recipient_id = ? AS incoming, u.username
+            FROM friendships f JOIN users u ON
+                u.id = CASE WHEN f.sender_id = ? THEN f.recipient_id ELSE f.sender_id END
+            WHERE (f.sender_id = ? OR f.recipient_id = ?)
+                AND f.state IN ('pending', 'accepted')
+            ORDER BY u.username COLLATE NOCASE""",
+            (user_id, user_id, user_id, user_id),
+        )
+        return [{**dict(row), "incoming": bool(row["incoming"])} for row in rows]
+
+
+def request_friend(path, sender_id, username, validate):
+    """Create at most one active request per unordered pair."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        user = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if user is None:
+            return None
+        recipient_id = user["id"]
+        validate(sender_id, recipient_id)
+        existing = db.execute(
+            """SELECT id FROM friendships
+            WHERE min(sender_id, recipient_id)=? AND max(sender_id, recipient_id)=?
+                AND state IN ('pending', 'accepted')""",
+            tuple(sorted((sender_id, recipient_id))),
+        ).fetchone()
+        if existing:
+            return existing["id"]
+        relationship_id = str(uuid4())
+        db.execute(
+            "INSERT INTO friendships VALUES (?, ?, ?, 'pending')",
+            (relationship_id, sender_id, recipient_id),
+        )
+        return relationship_id
+
+
+def change_friendship(path, user_id, relationship_id, action, validate):
+    """Apply an authorized transition and remove ended friendship shares."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT * FROM friendships WHERE id=? AND ? IN (sender_id, recipient_id)",
+            (relationship_id, user_id),
+        ).fetchone()
+        if row is None:
+            return False
+        state = validate(row, user_id, action)
+        db.execute("UPDATE friendships SET state=? WHERE id=?", (state, relationship_id))
+        if state == "ended":
+            db.execute("DELETE FROM workout_shares WHERE friendship_id=?", (relationship_id,))
+        return True
+
+
+def own_workout_shares(path, user_id, session_id):
+    """List recipients for an owned workout."""
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT w.id, w.friendship_id AS friendshipId, u.username
+            FROM workout_shares w JOIN sessions s ON s.id=w.session_id
+            JOIN friendships f ON f.id=w.friendship_id AND f.state='accepted'
+            JOIN users u ON u.id=w.recipient_id
+            WHERE s.id=? AND s.user_id=? ORDER BY u.username COLLATE NOCASE""",
+            (session_id, user_id),
+        )
+        return [dict(row) for row in rows]
+
+
+def _accepted_friends(db, user_id):
+    """Resolve relationship IDs to accepted recipients inside the caller's transaction."""
+    return db.execute(
+        """SELECT id, CASE WHEN sender_id=? THEN recipient_id ELSE sender_id END AS recipient
+        FROM friendships WHERE state='accepted' AND ? IN (sender_id, recipient_id)""",
+        (user_id, user_id),
+    ).fetchall()
+
+
+def share_workout(path, user_id, session_id, friendship_ids=None, *, replace=False):
+    """Add or replace access to one owned workout in a single transaction."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        workout = db.execute(
+            "SELECT 1 FROM sessions WHERE id=? AND user_id=?", (session_id, user_id)
+        ).fetchone()
+        if workout is None:
+            return None
+        friends = _accepted_friends(db, user_id)
+        if friendship_ids is not None:
+            selected = set(friendship_ids)
+            friends = [friend for friend in friends if friend["id"] in selected]
+            if len(friends) != len(selected):
+                return None
+        if replace:
+            keep = {friend["id"] for friend in friends}
+            existing = db.execute(
+                "SELECT id, friendship_id FROM workout_shares WHERE session_id=?", (session_id,)
+            ).fetchall()
+            db.executemany(
+                "DELETE FROM workout_shares WHERE id=?",
+                [(row["id"],) for row in existing if row["friendship_id"] not in keep],
+            )
+        db.executemany(
+            """INSERT INTO workout_shares VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(friendship_id, session_id, recipient_id) DO NOTHING""",
+            [
+                (str(uuid4()), friend["id"], session_id, friend["recipient"], now())
+                for friend in friends
+            ],
+        )
+        return len(friends)
+
+
+def revoke_workout_share(path, user_id, session_id, share_id):
+    """Remove a share only when the actor still owns the specified workout."""
+    with connect(path) as db:
+        return bool(
+            db.execute(
+                """DELETE FROM workout_shares WHERE id=? AND session_id=? AND EXISTS
+                    (SELECT 1 FROM sessions WHERE id=? AND user_id=?)""",
+                (share_id, session_id, session_id, user_id),
+            ).rowcount
+        )
+
+
+def received_workouts(path, user_id, share_id=None):
+    """Read current documents for the recipient's still-active shares."""
+    with connect(path) as db:
+        return db.execute(
+            """SELECT w.id, u.username AS sender, s.document
+            FROM workout_shares w JOIN sessions s ON s.id=w.session_id
+            JOIN users u ON u.id=s.user_id
+            JOIN friendships f ON f.id=w.friendship_id AND f.state='accepted'
+            WHERE w.recipient_id=? AND (? IS NULL OR w.id=?)
+            ORDER BY w.shared_at DESC, w.rowid DESC""",
+            (user_id, share_id, share_id),
+        ).fetchall()
+
+
+def workout_comments(path, user_id, *, session_id=None, share_id=None, new_comment=None):
+    """Read or post to one workout after checking the owner's or recipient's access."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE" if new_comment else "BEGIN")
+        if share_id is not None:
+            workout = db.execute(
+                """SELECT s.id FROM workout_shares w JOIN sessions s ON s.id=w.session_id
+                JOIN friendships f ON f.id=w.friendship_id AND f.state='accepted'
+                WHERE w.id=? AND w.recipient_id=?""",
+                (share_id, user_id),
+            ).fetchone()
+        else:
+            workout = db.execute(
+                "SELECT id FROM sessions WHERE id=? AND user_id=?", (session_id, user_id)
+            ).fetchone()
+        if workout is None:
+            return None
+        if new_comment:
+            client_id, comment = new_comment
+            db.execute(
+                """INSERT INTO workout_comments VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(session_id, author_id, client_id) DO NOTHING""",
+                (workout["id"], user_id, client_id, comment, now()),
+            )
+        rows = db.execute(
+            """SELECT c.rowid AS id, u.username AS author, c.comment AS text,
+                c.created_at AS createdAt
+            FROM workout_comments c JOIN users u ON u.id=c.author_id
+            WHERE c.session_id=? ORDER BY c.rowid""",
+            (workout["id"],),
+        )
+        return [dict(row) for row in rows]
+
+
+def received_workout_comments(path, user_id):
+    """List comments by other accounts on workouts owned by the signed-in user."""
+    with connect(path) as db:
+        rows = db.execute(
+            """SELECT c.rowid AS id, s.id AS workoutId, s.document, u.username AS author
+            FROM workout_comments c JOIN sessions s ON s.id=c.session_id
+            JOIN users u ON u.id=c.author_id
+            WHERE s.user_id=? AND c.author_id!=?
+            ORDER BY c.rowid DESC LIMIT 100""",
+            (user_id, user_id),
+        ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "workoutId": row["workoutId"],
+                "workoutName": json.loads(row["document"])["name"],
+                "author": row["author"],
+            }
+            for row in rows
+        ]
+
+
+def share_goal_milestone(path, user_id, friendship_ids):
+    """Share an achieved goal as a milestone without copying any weight measurements."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        goal = db.execute(
+            """SELECT g.kg AS goal, g.mode, w.kg AS latest FROM body_weight_goals g
+            JOIN body_weights w ON w.user_id=g.user_id WHERE g.user_id=?
+            ORDER BY w.day DESC LIMIT 1""",
+            (user_id,),
+        ).fetchone()
+        if goal is None or not (
+            (goal["mode"] == "lose" and goal["latest"] <= goal["goal"])
+            or (goal["mode"] == "gain" and goal["latest"] >= goal["goal"])
+        ):
+            raise ValueError("Reach your current goal before sharing it.")
+        friends = _accepted_friends(db, user_id)
+        if friendship_ids is not None:
+            selected = set(friendship_ids)
+            friends = [friend for friend in friends if friend["id"] in selected]
+            if len(friends) != len(selected):
+                raise ValueError("Your friends list changed. Choose again.")
+        if not friends:
+            raise ValueError("Add a friend before sharing your milestone.")
+        milestone = db.execute(
+            "SELECT id FROM goal_milestones WHERE owner_id=? AND is_current=1", (user_id,)
+        ).fetchone()
+        if milestone is None:
+            milestone_id = str(uuid4())
+            db.execute(
+                "INSERT INTO goal_milestones VALUES (?, ?, 1, ?)", (milestone_id, user_id, now())
+            )
+        else:
+            milestone_id = milestone["id"]
+        db.executemany(
+            """INSERT INTO goal_milestone_shares VALUES (?, ?, ?, ?, ?, NULL)
+            ON CONFLICT(milestone_id, friendship_id) DO NOTHING""",
+            [
+                (str(uuid4()), milestone_id, friend["id"], friend["recipient"], now())
+                for friend in friends
+            ],
+        )
+
+
+def goal_milestone_activity(path, user_id):
+    """List received milestones and congratulations on this account's own milestones."""
+    with connect(path) as db:
+        shares = db.execute(
+            """SELECT s.id, u.username AS sender,
+                s.congratulated_at IS NOT NULL AS congratulated
+            FROM goal_milestone_shares s JOIN goal_milestones m ON m.id=s.milestone_id
+            JOIN friendships f ON f.id=s.friendship_id AND f.state='accepted'
+            JOIN users u ON u.id=m.owner_id
+            WHERE s.recipient_id=? ORDER BY s.shared_at DESC, s.rowid DESC""",
+            (user_id,),
+        ).fetchall()
+        congratulations = db.execute(
+            """SELECT s.id, u.username AS sender
+            FROM goal_milestone_shares s JOIN goal_milestones m ON m.id=s.milestone_id
+            JOIN users u ON u.id=s.recipient_id
+            WHERE m.owner_id=? AND s.congratulated_at IS NOT NULL
+            ORDER BY s.congratulated_at DESC, s.rowid DESC""",
+            (user_id,),
+        ).fetchall()
+        return [{**dict(row), "congratulated": bool(row["congratulated"])} for row in shares], [
+            dict(row) for row in congratulations
+        ]
+
+
+def congratulate_goal_milestone(path, user_id, share_id):
+    """Send one congratulations from the still-authorized milestone recipient."""
+    with connect(path) as db:
+        return bool(
+            db.execute(
+                """UPDATE goal_milestone_shares
+                SET congratulated_at=coalesce(congratulated_at, ?)
+                WHERE id=? AND recipient_id=? AND EXISTS (
+                    SELECT 1 FROM friendships f
+                    WHERE f.id=goal_milestone_shares.friendship_id AND f.state='accepted'
+                )""",
+                (now(), share_id, user_id),
+            ).rowcount
+        )

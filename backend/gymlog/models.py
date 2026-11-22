@@ -1151,3 +1151,86 @@ def validate_coaching_transition(relationship, actor_id, action):
             raise ValueError("Only an accepted coaching relationship can be ended.")
         return "revoked"
     raise ValueError("Choose accept, decline, cancel or revoke.")
+
+
+def validate_friend_request(body):
+    """Normalize the exact GymLog username used to send a friend request."""
+    username = body.get("username") if isinstance(body, dict) else None
+    if not isinstance(username, str) or not USERNAME.fullmatch(username.strip().lower()):
+        raise ValueError("Enter your friend's GymLog username.")
+    return username.strip().lower()
+
+
+def validate_friend_pair(sender_id, recipient_id):
+    """Reject a request to the signed-in account itself."""
+    if sender_id == recipient_id:
+        raise ValueError("Choose a username other than your own.")
+
+
+def validate_friend_transition(relationship, user_id, action):
+    """Allow only the recipient to decide and either accepted friend to end."""
+    state = relationship["state"]
+    if action in ("accept", "decline"):
+        if relationship["recipient_id"] != user_id:
+            raise ValueError("Only the recipient can accept or decline this request.")
+        target = "accepted" if action == "accept" else "declined"
+        if state in ("pending", target):
+            return target
+    if action == "end" and state in ("accepted", "ended"):
+        return "ended"
+    raise ValueError("This friendship or request has already changed. Reload and try again.")
+
+
+def shared_workout(row, details=False):
+    """Project the fields a selected friend is allowed to see."""
+    document = json.loads(row["document"])
+    summary = {
+        "id": row["id"],
+        "sender": row["sender"],
+        "name": document["name"],
+        "day": document["day"],
+    }
+    if details:
+        summary["exercises"] = [
+            {
+                "name": exercise["name"],
+                "sets": [
+                    {
+                        key: entry[key]
+                        for key in ("weight", "reps", "durationSeconds")
+                        if key in entry
+                    }
+                    for entry in exercise["sets"]
+                    if not entry.get("skipped")
+                ],
+            }
+            for exercise in document["exercises"]
+        ]
+    return summary
+
+
+def validate_workout_audience(body, *, allow_empty=False):
+    """Parse the recipients of an explicit post-save share."""
+    if not isinstance(body, dict):
+        raise ValueError("Choose who can see this workout.")
+    if body.get("audience") == "all":
+        return None
+    ids = body.get("friendshipIds") if body.get("audience") == "selected" else None
+    if not isinstance(ids, list) or (not ids and not allow_empty):
+        raise ValueError("Choose at least one friend to share this workout with.")
+    if any(not isinstance(item, str) or len(item) != 36 for item in ids):
+        raise ValueError("Choose friends from your current friends list.")
+    return list(dict.fromkeys(ids))
+
+
+def validate_workout_comment(body):
+    """Validate a short comment and a stable ID for a posting retry."""
+    text = body.get("text") if isinstance(body, dict) else None
+    if not isinstance(text, str) or not 1 <= len(text.strip()) <= 500:
+        raise ValueError("Write a comment between 1 and 500 characters.")
+    client_id = body.get("clientId")
+    try:
+        identifier = str(UUID(client_id))
+    except (TypeError, ValueError, AttributeError):
+        raise ValueError("Your comment could not be posted. Reload and try again.") from None
+    return identifier, text.strip()

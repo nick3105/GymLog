@@ -1,10 +1,12 @@
+import WorkoutComments from '../components/WorkoutComments'
 import { personalVolumeDescription } from '../personalVolume'
 import { ArrowLeft, Link2 } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 
 import EmptyState from '../components/EmptyState'
 import ExerciseLink from '../components/ExerciseLink'
 import WorkoutReminder from '../components/WorkoutReminder'
+import ShareSavedWorkoutDialog from '../components/ShareSavedWorkoutDialog'
 import { supersetLabel } from '../supersets'
 import Notice from '../components/Notice'
 import { formatDay, formatNumber } from '../format'
@@ -14,6 +16,10 @@ import { card, secondaryButton } from '../ui'
 // REV-02: what was actually lifted in one session.
 export default function ReviewDetail() {
   const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const sharing = location.state as { offerSharing?: boolean; manageSharing?: boolean } | null
+  const afterSave = sharing?.offerSharing === true
   const { journal } = useJournal()
   const session = journal.sessions.find((item) => item.id === id)
 
@@ -31,6 +37,13 @@ export default function ReviewDetail() {
   return (
     <>
       <Notice />
+      {(afterSave || sharing?.manageSharing) && (
+        <ShareSavedWorkoutDialog
+          sessionId={session.id}
+          afterSave={afterSave}
+          onDone={(notice) => navigate(location.pathname, { replace: true, state: { notice } })}
+        />
+      )}
       <Link
         to="/review"
         className="text-accent mb-2 inline-flex min-h-11 items-center gap-2 font-normal"
@@ -43,6 +56,18 @@ export default function ReviewDetail() {
       <Link to={`/review/${session.id}/edit`} className={`${secondaryButton} mb-4`}>
         Edit workout
       </Link>
+      <div className="mb-4">
+        <button
+          type="button"
+          className={secondaryButton}
+          aria-haspopup="dialog"
+          onClick={() =>
+            navigate(location.pathname, { replace: true, state: { manageSharing: true } })
+          }
+        >
+          Share workout
+        </button>
+      </div>
       {session.note && (
         <div className={`${card} mb-4`}>
           <h2 className="font-normal">Workout note</h2>
@@ -118,6 +143,7 @@ export default function ReviewDetail() {
       <div className="mt-4">
         <WorkoutReminder title="Cooldown" text={session.cooldown} done={session.cooldownDone} />
       </div>
+      <WorkoutComments key={session.id} path={`sessions/${session.id}/comments`} />
     </>
   )
 }
