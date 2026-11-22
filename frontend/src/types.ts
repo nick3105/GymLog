@@ -83,6 +83,7 @@ export type Weight = { day: string; kg: number }
 export type Profile = {
   bio: string
   avatar: string | null
+  avatarZoom: number
   level: { name: string; next: string | null; toNextLevel: number | null }
   overview: {
     workouts: number

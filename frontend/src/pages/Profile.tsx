@@ -6,7 +6,7 @@ import { formatDay, formatNumber, today } from '../format'
 import { useJournal } from '../journal'
 import { formatDuration, formatLifted } from '../profile'
 import type { Profile as ProfileData } from '../types'
-import { card, primaryButton, textButton } from '../ui'
+import { card, primaryButton, secondaryButton, textButton } from '../ui'
 
 // A titled card of numbers, two per row on a phone.
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -34,6 +34,8 @@ export default function Profile() {
   const [problem, setProblem] = useState('')
   const [bio, setBio] = useState('')
   const [avatar, setAvatar] = useState<string | null>(null)
+  const [avatarZoom, setAvatarZoom] = useState(1)
+  const [editingPhoto, setEditingPhoto] = useState(false)
   const [editingBio, setEditingBio] = useState(false)
   const [savingBio, setSavingBio] = useState(false)
 
@@ -45,6 +47,7 @@ export default function Profile() {
         setProfile(result)
         setBio(result.bio)
         setAvatar(result.avatar)
+        setAvatarZoom(result.avatarZoom)
       })
       .catch((error: Error) => current && setProblem(error.message))
     return () => {
@@ -57,11 +60,18 @@ export default function Profile() {
     setSavingBio(true)
     setProblem('')
     try {
-      const result = await api<{ bio: string; avatar: string | null }>('profile', { bio, avatar })
+      const result = await api<{ bio: string; avatar: string | null; avatarZoom: number }>('profile', {
+        bio,
+        avatar,
+        avatarZoom,
+      })
       setBio(result.bio)
       setAvatar(result.avatar)
+      setAvatarZoom(result.avatarZoom)
       setProfile((current) =>
-        current ? { ...current, bio: result.bio, avatar: result.avatar } : current,
+        current
+          ? { ...current, bio: result.bio, avatar: result.avatar, avatarZoom: result.avatarZoom }
+          : current,
       )
       setEditingBio(false)
     } catch (error) {
@@ -75,16 +85,29 @@ export default function Profile() {
     <>
       <h1 className="gradient-text mb-4 text-3xl font-bold">Your profile</h1>
       <div className="mb-4 flex flex-col items-center gap-2 text-center">
-        {avatar ? (
-          <img src={avatar} alt="" className="size-24 rounded-full object-cover" />
-        ) : (
-          <span
-            className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
-            aria-hidden
-          >
-            {username.charAt(0)}
-          </span>
-        )}
+        <button
+          type="button"
+          onClick={() => setEditingBio(true)}
+          className="rounded-full focus:outline-none focus:ring-2 focus:ring-accent"
+          aria-label={avatar ? 'Edit profile photo' : 'Add profile photo'}
+        >
+          {avatar ? (
+            <div className="size-24 overflow-hidden rounded-full bg-ink" aria-hidden>
+              <img
+                src={avatar}
+                alt=""
+                className={`size-full object-cover transition-transform ${avatarZoom >= 1.75 ? 'scale-[1.75]' : avatarZoom >= 1.5 ? 'scale-150' : avatarZoom >= 1.25 ? 'scale-125' : 'scale-100'}`}
+              />
+            </div>
+          ) : (
+            <span
+              className="from-gradient-start to-gradient-end flex size-24 items-center justify-center rounded-full bg-linear-to-tr text-4xl font-normal text-white uppercase"
+              aria-hidden
+            >
+              {username.charAt(0)}
+            </span>
+          )}
+        </button>
         <p className="text-xl font-normal">{username}</p>
         {profile && (
           <>
@@ -100,43 +123,84 @@ export default function Profile() {
         )}
       </div>
       {problem && <p className="text-danger text-sm font-normal">{problem}</p>}
+      <section className={`${card} mb-4`} aria-label="Profile photo">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-normal">Profile photo</h2>
+          <button
+            type="button"
+            onClick={() => setEditingPhoto((value) => !value)}
+            className={secondaryButton}
+          >
+            {editingPhoto ? 'Close' : 'Edit photo'}
+          </button>
+        </div>
+        {editingPhoto && (
+          <div className="mt-3 flex flex-col gap-3">
+            <label className={secondaryButton}>
+              {avatar ? 'Change photo' : 'Add photo'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    if (typeof reader.result !== 'string') return
+                    const image = new Image()
+                    image.onload = () => {
+                      const canvas = document.createElement('canvas')
+                      const size = 500
+                      const scale = Math.min(1, size / Math.max(image.width, image.height))
+                      canvas.width = Math.max(1, Math.round(image.width * scale))
+                      canvas.height = Math.max(1, Math.round(image.height * scale))
+                      const context = canvas.getContext('2d')
+                      if (!context) return
+                      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+                      setAvatar(canvas.toDataURL('image/jpeg', 0.82))
+                      setAvatarZoom(1)
+                      setEditingBio(true)
+                    }
+                    image.src = reader.result
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+            </label>
+            {avatar && (
+              <button type="button" className={textButton} onClick={() => setAvatar(null)}>
+                Remove photo
+              </button>
+            )}
+            {avatar && (
+              <label htmlFor="avatar-zoom" className="text-muted text-sm">
+                Photo framing
+                <input
+                  id="avatar-zoom"
+                  type="range"
+                  min="1"
+                  max="2"
+                  step="0.25"
+                  value={avatarZoom}
+                  onChange={(event) => setAvatarZoom(Number(event.target.value))}
+                  className="mt-2 h-11 w-full accent-accent"
+                />
+              </label>
+            )}
+          </div>
+        )}
+      </section>
       <section className={`${card} mb-4`} aria-label="About you">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-normal">About you</h2>
           <button
             type="button"
             onClick={() => setEditingBio((current) => !current)}
-            className={textButton}
+            className={secondaryButton}
           >
             {editingBio ? 'Cancel' : 'Edit bio'}
           </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className={textButton}>
-            {avatar ? 'Change photo' : 'Add photo'}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (!file) return
-                const reader = new FileReader()
-                reader.onload = () => {
-                  if (typeof reader.result === 'string') {
-                    setAvatar(reader.result)
-                    setEditingBio(true)
-                  }
-                }
-                reader.readAsDataURL(file)
-              }}
-            />
-          </label>
-          {avatar && (
-            <button type="button" className={textButton} onClick={() => setAvatar(null)}>
-              Remove photo
-            </button>
-          )}
         </div>
         {!editingBio ? (
           <p className="text-muted mt-3 break-words">
