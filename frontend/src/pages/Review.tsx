@@ -29,6 +29,9 @@ export default function Review() {
         <Link to="/review/progress" className={secondaryButton}>
           Exercise Progress
         </Link>
+        <Link to="/review/calendar" className={secondaryButton}>
+          Calendar
+        </Link>
       </div>
       {journal.sessions.length === 0 ? (
         journal.templates.length > 0 ? (

@@ -20,6 +20,7 @@ import Start from './pages/Start'
 import Weight from './pages/Weight'
 import WeeklyVolume from './pages/WeeklyVolume'
 import ExerciseProgress from './pages/ExerciseProgress'
+import Calendar from './pages/Calendar'
 
 // Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
 function SignedIn({ children }: { children: ReactNode }) {
@@ -68,6 +69,7 @@ const router = createBrowserRouter([
       { path: 'review/create', element: <Navigate to="/create" replace /> },
       { path: 'workouts/:id/edit', element: <Create key="edit" /> },
       { path: 'review', element: <Review /> },
+      { path: 'review/calendar', element: <Calendar /> },
       { path: 'review/:id', element: <ReviewDetail /> },
       { path: 'review/:id/edit', element: <EditSession /> },
       { path: 'weight', element: <Weight /> },
