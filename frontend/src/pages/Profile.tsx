@@ -60,11 +60,14 @@ export default function Profile() {
     setSavingBio(true)
     setProblem('')
     try {
-      const result = await api<{ bio: string; avatar: string | null; avatarZoom: number }>('profile', {
-        bio,
-        avatar,
-        avatarZoom,
-      })
+      const result = await api<{ bio: string; avatar: string | null; avatarZoom: number }>(
+        'profile',
+        {
+          bio,
+          avatar,
+          avatarZoom,
+        },
+      )
       setBio(result.bio)
       setAvatar(result.avatar)
       setAvatarZoom(result.avatarZoom)
@@ -88,11 +91,11 @@ export default function Profile() {
         <button
           type="button"
           onClick={() => setEditingBio(true)}
-          className="rounded-full focus:outline-none focus:ring-2 focus:ring-accent"
+          className="focus:ring-accent rounded-full focus:ring-2 focus:outline-none"
           aria-label={avatar ? 'Edit profile photo' : 'Add profile photo'}
         >
           {avatar ? (
-            <div className="size-24 overflow-hidden rounded-full bg-ink" aria-hidden>
+            <div className="bg-ink size-24 overflow-hidden rounded-full" aria-hidden>
               <img
                 src={avatar}
                 alt=""
@@ -184,7 +187,7 @@ export default function Profile() {
                   step="0.25"
                   value={avatarZoom}
                   onChange={(event) => setAvatarZoom(Number(event.target.value))}
-                  className="mt-2 h-11 w-full accent-accent"
+                  className="accent-accent mt-2 h-11 w-full"
                 />
               </label>
             )}
