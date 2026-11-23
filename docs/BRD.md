@@ -112,3 +112,20 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 authentication, CSRF, consent, user isolation, missing setup, prices and provider failures. At
 375 x 667 check opening/closing, focus, draft preservation, plan cards and explicit saving.
 Check a real phone and a live free-model conversation with the team's key before merging.
+
+## 8. Training Schedule
+
+| ID | Function | Requirement |
+| --- | --- | --- |
+| SCH-01 | **View Schedule** | Show a local Monday–Sunday week with a separate list for workouts that can happen any day. |
+| SCH-02 | **Plan a workout on a day** | Assign a saved workout to an exact date. Allow multiple workouts on a day. |
+| SCH-03 | **Create a workout series** | Save and edit a reusable group of one to seven saved workouts in a chosen order. |
+| SCH-04 | **Plan a series in a week** | Assign the series as ordered workouts for the week, each with no exact day. |
+| SCH-05 | **Adjust the scheduled copy** | Edit set targets, move or remove a scheduled workout independently of its source. |
+| SCH-06 | **Preserve journal data** | Keep saved workouts, active drafts and completed history. Existing scheduled copies survive changes to their source. |
+| SCH-07 | **Save privately** | Save the schedule within the user's account, reject stale edits and prevent duplicate assignments on retry. |
+
+**Release acceptance:** Assign one workout to Tuesday and a three-workout series
+to two weeks. Add a set and change the reps in one scheduled copy. Reload and
+verify the other week, the series, saved workouts and history kept their
+original values. Verify account isolation and upgrading a populated database.

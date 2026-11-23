@@ -37,16 +37,19 @@ const durationTargetFields: typeof targetFields = [
 // PLN-01 to PLN-11: plan a workout once, with targets for every set.
 export default function Create({
   coaching,
+  scheduled,
 }: {
   coaching?: { journal: CoacheeJournal; onUnavailable: (message: string) => void }
+  scheduled?: { workout: Template; returnPath: string; save: (workout: unknown) => Promise<void> }
 }) {
   const { journal: ownJournal, setJournal, setBuilderDirty, active } = useJournal()
   const { setDraft: setAssistantDraft } = useAssistantDraft()
   const journal = coaching ? { ...ownJournal, ...coaching.journal } : ownJournal
-  const returnPath = coaching ? `/coachees/${coaching.journal.owner.id}` : '/start'
+  const returnPath =
+    scheduled?.returnPath ?? (coaching ? `/coachees/${coaching.journal.owner.id}` : '/start')
   const navigate = useNavigate()
   const { id } = useParams()
-  const original = journal.templates.find((template) => template.id === id)
+  const original = scheduled?.workout ?? journal.templates.find((template) => template.id === id)
   const [note, setNote] = useState(original?.note ?? '')
   const [name, setName] = useState(original?.name ?? '')
   const [warmup, setWarmup] = useState(original?.warmup ?? '')
@@ -98,7 +101,7 @@ export default function Create({
 
   useEffect(() => {
     setAssistantDraft(
-      !coaching && planned.length
+      !coaching && !scheduled && planned.length
         ? {
             name: name.trim() || 'Unsaved workout',
             exercises: planned.map((item) => ({
@@ -113,7 +116,7 @@ export default function Create({
         : null,
     )
     return () => setAssistantDraft(null)
-  }, [coaching, name, planned, setAssistantDraft])
+  }, [coaching, scheduled, name, planned, setAssistantDraft])
 
   // PLN-11: leaving with something typed asks first. Opening exercise progress stays on this
   // page (only ?exercise= changes), so it never asks.
@@ -220,32 +223,39 @@ export default function Create({
     setSaving(true)
     try {
       const endpoint = id ? `templates/${id}` : 'templates'
+      const workout = {
+        name,
+        note,
+        warmup,
+        cooldown,
+        exercises: planned.map((item) => ({
+          id: item.id,
+          note: item.note ?? '',
+          supersetId: item.supersetId,
+          targets: item.targets.map((target) =>
+            item.measurement === 'duration'
+              ? {
+                  durationSeconds:
+                    target.durationSeconds === '' ? null : Number(target.durationSeconds),
+                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                }
+              : {
+                  reps: target.reps === '' ? null : Number(target.reps),
+                  weight: target.weight === '' ? null : Number(target.weight),
+                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                },
+          ),
+        })),
+      }
+      if (scheduled) {
+        await scheduled.save(workout)
+        saved.current = true
+        navigate(returnPath, { state: { notice: 'Scheduled workout updated.' } })
+        return
+      }
       const template = await api<Template>(
         coaching ? `coachees/${coaching.journal.owner.id}/${endpoint}` : endpoint,
-        {
-          name,
-          note,
-          warmup,
-          cooldown,
-          exercises: planned.map((item) => ({
-            id: item.id,
-            note: item.note ?? '',
-            supersetId: item.supersetId,
-            targets: item.targets.map((target) =>
-              item.measurement === 'duration'
-                ? {
-                    durationSeconds:
-                      target.durationSeconds === '' ? null : Number(target.durationSeconds),
-                    rpe: target.rpe === '' ? null : Number(target.rpe),
-                  }
-                : {
-                    reps: target.reps === '' ? null : Number(target.reps),
-                    weight: target.weight === '' ? null : Number(target.weight),
-                    rpe: target.rpe === '' ? null : Number(target.rpe),
-                  },
-            ),
-          })),
-        },
+        workout,
       )
       if (!coaching)
         setJournal((current) => ({
@@ -265,7 +275,7 @@ export default function Create({
     }
   }
 
-  if (id && (!original || (!coaching && active))) {
+  if (!scheduled && id && (!original || (!coaching && active))) {
     return (
       <div className={card}>
         <p role="alert" className={errorText}>
@@ -360,9 +370,12 @@ export default function Create({
         </p>
       )}
       <h1 className="gradient-text mb-4 text-3xl font-bold">
-        {id ? 'Edit workout' : 'Create workout'}
+        {scheduled ? 'Adjust scheduled workout' : id ? 'Edit workout' : 'Create workout'}
       </h1>
-      {id && (
+      {scheduled && (
+        <p className="text-muted mb-4">Changes apply to this scheduled workout only.</p>
+      )}
+      {id && !scheduled && (
         <p className="text-muted mb-4">
           Changes apply to future workouts. Completed history stays unchanged.
         </p>
@@ -637,7 +650,7 @@ export default function Create({
                                 ),
                               )
                             }
-                            className={`${input} text-center`}
+                            className={`${input} text-center ${scheduled ? 'max-sm:px-1' : ''}`}
                           />
                         ),
                       )}
@@ -716,7 +729,7 @@ export default function Create({
           </button>
           <button type="submit" disabled={saving} className={primaryButton}>
             <Check className="size-5" aria-hidden />
-            {saving ? 'Saving…' : id ? 'Save changes' : 'Save workout'}
+            {saving ? 'Saving…' : id || scheduled ? 'Save changes' : 'Save workout'}
           </button>
         </div>
       </div>

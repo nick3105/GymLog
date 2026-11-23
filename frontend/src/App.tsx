@@ -22,6 +22,11 @@ import Weight from './pages/Weight'
 import WeeklyVolume from './pages/WeeklyVolume'
 import ExerciseProgress from './pages/ExerciseProgress'
 import Calendar from './pages/Calendar'
+import Schedule from './pages/Schedule'
+import ScheduleAdd from './pages/ScheduleAdd'
+import ScheduledWorkout from './pages/ScheduledWorkout'
+import WorkoutSeries from './pages/WorkoutSeries'
+import EditSeries from './pages/EditSeries'
 
 // Signed out, every page shows Sign in; signed in, Sign in and Create account go home.
 function SignedIn({ children }: { children: ReactNode }) {
@@ -65,6 +70,12 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'start', element: <Start /> },
+      { path: 'schedule', element: <Schedule /> },
+      { path: 'schedule/add', element: <ScheduleAdd /> },
+      { path: 'schedule/series', element: <WorkoutSeries /> },
+      { path: 'schedule/series/:id', element: <EditSeries /> },
+      { path: 'schedule/:id', element: <ScheduledWorkout key="details" /> },
+      { path: 'schedule/:id/edit', element: <ScheduledWorkout key="edit" edit /> },
       { path: 'session', element: <Session /> },
       { path: 'create', element: <Create key="new" /> },
       { path: 'review/create', element: <Navigate to="/create" replace /> },

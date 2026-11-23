@@ -4,8 +4,9 @@ import hashlib
 import json
 import math
 import re
+from copy import deepcopy
 from datetime import UTC, date, datetime, timedelta
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 ASSISTANT_INSTRUCTIONS = """You are GymLog's concise training assistant.
 Use the user's language. Normally reply in at most 80 words, never more than 1200 characters.
@@ -1234,3 +1235,172 @@ def validate_workout_comment(body):
     except (TypeError, ValueError, AttributeError):
         raise ValueError("Your comment could not be posted. Reload and try again.") from None
     return identifier, text.strip()
+
+
+class ScheduleConflict(ValueError):
+    """The scheduled change needs review before it can be saved."""
+
+
+def schedule_date(value, *, week=False):
+    """Validate a canonical local date without converting it through a time zone."""
+    try:
+        if not isinstance(value, str) or len(value) != 10:
+            raise ValueError
+        day = date.fromisoformat(value)
+        earliest = date(1999, 12, 27) if week else date(2000, 1, 1)
+        if day.isoformat() != value or not earliest <= day <= date(2100, 12, 31):
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValueError("Choose a valid date between 2000 and 2100.") from None
+    return day
+
+
+def schedule_week(value):
+    """Identify a local Monday-Sunday week by its Monday date."""
+    day = schedule_date(value, week=True)
+    return (day - timedelta(days=day.weekday())).isoformat()
+
+
+def schedule_id(value):
+    """Require a stable request or record identifier for safe retries."""
+    try:
+        return str(UUID(value))
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("Reload the schedule before saving this item.") from None
+
+
+def schedule_view(document, week):
+    """Expose one week's entries and reusable series without internal retry metadata."""
+    monday = schedule_week(week)
+    entries = []
+    for entry in document["entries"]:
+        if entry["week"] == monday:
+            entries.append(entry)
+    return {
+        "revision": document["revision"],
+        "series": document["series"],
+        "entries": entries,
+        "week": monday,
+    }
+
+
+def change_schedule(body, saved, templates, catalogue):
+    """Apply one validated core scheduling action to independent workout snapshots."""
+    if not isinstance(body, dict):
+        raise ValueError("A schedule change is required.")
+    revision = body.get("revision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+        raise ValueError("Reload the schedule before saving your changes.")
+    action = body.get("action")
+    identifier = schedule_id(body.get("id"))
+    fingerprint = json.dumps(
+        [action, body.get("templateId"), body.get("day"), body.get("seriesId"), body.get("week")]
+    )
+    if action in ("assignWorkout", "assignSeries") and identifier in saved["requests"]:
+        if saved["requests"][identifier] != fingerprint:
+            raise ScheduleConflict("That assignment was already saved with different values.")
+        return saved
+    if revision != saved["revision"]:
+        raise ScheduleConflict(
+            "Your schedule changed on another device. Reload before saving; keep your edits to retry."
+        )
+    document = deepcopy(saved)
+    series = next((item for item in document["series"] if item["id"] == identifier), None)
+    entry = next((item for item in document["entries"] if item["id"] == identifier), None)
+    owned_templates = {item["id"]: item for item in templates}
+    if action == "saveSeries":
+        name = body.get("name")
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 60:
+            raise ValueError("Series name must contain 1-60 characters.")
+        template_ids = body.get("templateIds")
+        if not isinstance(template_ids, list) or not 1 <= len(template_ids) <= 7:
+            raise ValueError("Choose between 1 and 7 workouts in order.")
+        if series:
+            for workout in series["workouts"]:
+                owned_templates[workout["id"]] = workout
+        workouts = []
+        for template_id in template_ids:
+            if not isinstance(template_id, str) or template_id not in owned_templates:
+                raise LookupError("That saved workout could not be found.")
+            workouts.append(deepcopy(owned_templates[template_id]))
+        if series is None and len(document["series"]) >= 100:
+            raise ValueError("Keep at most 100 reusable workout series.")
+        updated = {"id": identifier, "name": name.strip(), "workouts": workouts}
+        if series:
+            document["series"][document["series"].index(series)] = updated
+        else:
+            document["series"].append(updated)
+    elif action == "deleteSeries":
+        if series is None:
+            raise LookupError("That workout series could not be found.")
+        document["series"].remove(series)
+    elif action in ("assignWorkout", "assignSeries"):
+        if action == "assignWorkout":
+            template = (
+                owned_templates.get(body.get("templateId"))
+                if isinstance(body.get("templateId"), str)
+                else None
+            )
+            if template is None:
+                raise LookupError("That saved workout could not be found.")
+            day = schedule_date(body.get("day")).isoformat()
+            week = schedule_week(day)
+            workouts, series_name = [template], None
+        else:
+            source = next(
+                (item for item in document["series"] if item["id"] == body.get("seriesId")), None
+            )
+            if source is None:
+                raise LookupError("That workout series could not be found.")
+            week = schedule_week(body.get("week"))
+            if week != body.get("week"):
+                raise ValueError("Choose the Monday that starts the training week.")
+            workouts, day, series_name = source["workouts"], None, source["name"]
+
+        for index, workout in enumerate(workouts):
+            document["entries"].append(
+                {
+                    "id": str(uuid5(NAMESPACE_URL, f"{identifier}/{index}")),
+                    "week": week,
+                    "day": day,
+                    "seriesName": series_name,
+                    "assignmentId": identifier,
+                    "position": index + 1,
+                    "workout": deepcopy(workout),
+                }
+            )
+        document["requests"][identifier] = fingerprint
+    elif action == "editEntry":
+        if entry is None:
+            raise LookupError("That scheduled workout could not be found.")
+        day = body.get("day")
+        if day is not None:
+            day = schedule_date(day).isoformat()
+            week = schedule_week(day)
+        else:
+            week = schedule_week(body.get("week"))
+            if week != body.get("week"):
+                raise ValueError("Choose the Monday that starts the training week.")
+        if "workout" in body:
+            # Validate against the saved snapshot so retired names and personal metadata stay intact.
+            snapshot_catalogue = dict(catalogue)
+            for exercise in entry["workout"]["exercises"]:
+                snapshot_catalogue[exercise["id"]] = {
+                    **snapshot_catalogue.get(exercise["id"], {}),
+                    **exercise,
+                }
+            cleaned = validate_template(body["workout"], snapshot_catalogue)
+            entry["workout"] = {**entry["workout"], **cleaned}
+        entry.update(day=day, week=week)
+    elif action == "deleteEntry":
+        if entry is None:
+            raise LookupError("That scheduled workout could not be found.")
+        document["entries"].remove(entry)
+    else:
+        raise ValueError("Choose a supported schedule action.")
+    weekly_counts = {}
+    for item in document["entries"]:
+        weekly_counts[item["week"]] = weekly_counts.get(item["week"], 0) + 1
+    if any(count > 50 for count in weekly_counts.values()):
+        raise ValueError("Keep at most 50 scheduled workouts in each week. No changes were saved.")
+    return document
