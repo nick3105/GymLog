@@ -1,7 +1,8 @@
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import Notice from '../components/Notice'
+import CompetitionScheduleCard from '../components/CompetitionScheduleCard'
 import ScheduleProblem from '../components/ScheduleProblem'
 import ScheduledWorkoutCard from '../components/ScheduledWorkoutCard'
 import { formatDay, today } from '../format'
@@ -12,10 +13,14 @@ import { useSchedule } from '../useSchedule'
 export default function Schedule() {
   const [params, setParams] = useSearchParams()
   const requested = params.get('week') ?? today()
-  const { state, problem, reload } = useSchedule(requested)
+  const { key } = useLocation()
+  const { state, problem, reload } = useSchedule(requested, key)
 
   const week = state?.week
   const days = week ? Array.from({ length: 7 }, (_, index) => shiftScheduleDay(week, index)) : []
+
+  const competition = state?.competitionEntries ?? []
+  const competitionWorkouts = competition.filter((entry) => entry.kind !== 'event').length
 
   return (
     <>
@@ -25,6 +30,9 @@ export default function Schedule() {
       <div className="mb-4 flex flex-wrap gap-2">
         <Link to={'/schedule/series?week=' + (week ?? today())} className={secondaryButton}>
           Workout series
+        </Link>
+        <Link to="/schedule/competition-prep" className={secondaryButton}>
+          Competition prep
         </Link>
         <button
           type="button"
@@ -73,7 +81,9 @@ export default function Schedule() {
               <ChevronRight aria-hidden />
             </button>
           </div>
-          <p className="text-muted mb-4">{state.entries.length} workouts planned.</p>
+          <p className="text-muted mb-4">
+            {state.entries.length + competitionWorkouts} workouts planned.
+          </p>
           {[null, ...days].map((day) => (
             <section
               key={day ?? 'flexible'}
@@ -94,7 +104,12 @@ export default function Schedule() {
                 {entriesForDay(state.entries, day).map((entry) => (
                   <ScheduledWorkoutCard key={entry.id} entry={entry} />
                 ))}
-                {entriesForDay(state.entries, day).length === 0 && (
+                {competition
+                  .filter((entry) => entry.day === day)
+                  .map((entry) => (
+                    <CompetitionScheduleCard key={entry.id} entry={entry} />
+                  ))}
+                {entriesForDay(state.entries, day).length === 0 && !competition.some((entry) => entry.day === day) && (
                   <p className="text-muted py-2">Nothing planned.</p>
                 )}
               </div>

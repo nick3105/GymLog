@@ -49,6 +49,17 @@ three independent rows before display/save. Explicit per-set targets still work.
 conflict with individual rows are refused instead of silently becoming one set.
 Manually created templates and standalone drills retain their existing set rules.
 
+## Prepare for a competition
+
+Open **Prepare for a competition** in the Assistant, or **Competition prep** from
+Schedule. Enter the event date and your current preparation. The planner asks
+about your recent training and the time you can make available, then drafts the
+weeks leading to your event.
+
+Agree to share the prep answers before generating. The competition name and
+stored journal data stay in GymLog. Review the draft, edit or remove individual
+workouts, and press **Save plan to Schedule** to add the event and training cards.
+
 ## Free model and availability
 
 Default: `nvidia/nemotron-3.5-lightning-30b-a3b` through <https://router.requesty.ai/v1>.
