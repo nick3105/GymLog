@@ -124,11 +124,16 @@ Check a real phone and a live free-model conversation with the team's key before
 | SCH-05 | **Adjust the scheduled copy** | Edit set targets, move or remove a scheduled workout independently of its source. |
 | SCH-06 | **Preserve journal data** | Keep saved workouts, active drafts and completed history. Existing scheduled copies survive changes to their source. |
 | SCH-07 | **Save privately** | Save the schedule within the user's account, reject stale edits and prevent duplicate assignments on retry. |
+| SCH-08 | **Start the scheduled copy** | Use the saved snapshot from a dated or flexible entry, including local target adjustments. Record the actual local start day in history. |
+| SCH-09 | **Resume or discard** | Restore an existing draft for the entry. Require the trainee to finish or discard a different workout before starting. Discard makes the entry startable again. |
+| SCH-10 | **Link completion** | Save one private session and link it to its schedule entry atomically. Show its status and a link to Review. Keep the scheduled targets and placement after starting. |
+| SCH-11 | **Protect scheduling and logging** | Reject stale starts and unauthorized access. Completing or retrying a session must preserve other drafts and scheduled entries. |
 
 **Release acceptance:** Assign one workout to Tuesday and a three-workout series
 to two weeks. Add a set and change the reps in one scheduled copy. Reload and
 verify the other week, the series, saved workouts and history kept their
-original values. Verify account isolation and upgrading a populated database.
+original values. Start and log a dated and a flexible copy, then review the linked
+results. Verify discard, retry, account isolation and upgrading a populated database.
 
 ## 9. Competition preparation
 

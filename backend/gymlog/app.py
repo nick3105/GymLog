@@ -8,6 +8,7 @@ import secrets
 from datetime import date, timedelta
 from functools import wraps
 from pathlib import Path
+from uuid import uuid4
 
 from flask import Flask, g, jsonify, redirect, request, send_from_directory, session
 from werkzeug.exceptions import HTTPException
@@ -28,9 +29,13 @@ from .models import (
     competition_windows,
     exercise_stats,
     expand_competition_reply,
+    find_scheduled_workout,
+    make_scheduled_draft,
     number,
     profile_stats,
+    schedule_id,
     schedule_view,
+    scheduled_finish_payload,
     shared_workout,
     validate_assistant_reply,
     validate_assistant_request,
@@ -449,8 +454,10 @@ def create_app(config=None):
     @authenticated
     def read_schedule():
         """Return the owner's requested week and reusable workout series."""
+        current = storage.schedule_state(database, g.user_id)
+        active = storage.workout_draft(database, g.user_id)
         return jsonify(
-            schedule_view(storage.schedule_state(database, g.user_id), request.args.get("week"))
+            schedule_view(current, request.args.get("week"), (active or {}).get("scheduleEntryId"))
         )
 
     @app.post("/api/schedule")
@@ -458,27 +465,58 @@ def create_app(config=None):
     def update_schedule():
         """Validate a scheduling command and save only the current owner's schedule."""
         body = request.get_json()
-        current = storage.schedule_state(database, g.user_id)
-        try:
-            document = change_schedule(
-                body,
-                current,
-                storage.documents(database, g.user_id, "templates"),
-                catalogue_for(g.user_id),
-            )
-        except LookupError as error:
-            return jsonify(error=str(error)), 404
-        except ScheduleConflict as error:
-            return jsonify(error=str(error)), 409
-        if document is current:
+        with storage.workout_transaction(database) as db:
+            current = storage.schedule_state(database, g.user_id, transaction=db)
+            active = storage.workout_draft(database, g.user_id, transaction=db)
+            try:
+                document = change_schedule(
+                    body,
+                    current,
+                    storage.documents(database, g.user_id, "templates"),
+                    catalogue_for(g.user_id),
+                    (active or {}).get("scheduleEntryId"),
+                )
+            except LookupError as error:
+                return jsonify(error=str(error)), 404
+            except ScheduleConflict as error:
+                return jsonify(error=str(error)), 409
             saved = current
-        else:
-            saved = storage.save_schedule_state(database, g.user_id, document, current["revision"])
-        if saved is None:
-            return jsonify(
-                error="Your schedule changed on another device. Reload before saving."
-            ), 409
+            if document is not current:
+                saved = storage.save_schedule_state(
+                    database, g.user_id, document, current["revision"], transaction=db
+                )
+            if saved is None:
+                return jsonify(
+                    error="Your schedule changed on another device. Reload before saving."
+                ), 409
         return jsonify({key: saved[key] for key in ("revision", "series", "entries")})
+
+    @app.post("/api/schedule/<entry_id>/start")
+    @authenticated
+    def start_scheduled_workout(entry_id):
+        """Persist a draft from this scheduled copy or resume its matching draft."""
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("A scheduled start needs a schedule revision and timezone offset.")
+        with storage.workout_transaction(database) as db:
+            current = storage.schedule_state(database, g.user_id, transaction=db)
+            try:
+                entry = find_scheduled_workout(current, entry_id)
+            except LookupError as error:
+                return jsonify(error=str(error)), 404
+            active = storage.workout_draft(database, g.user_id, transaction=db)
+            if active and active.get("scheduleEntryId") == entry_id:
+                return jsonify(draft=active)
+            if "sessionId" in entry:
+                return jsonify(error="That scheduled workout is already complete."), 409
+            if active:
+                return jsonify(error="Finish or discard your current workout before starting."), 409
+            revision = body.get("revision")
+            if type(revision) is not int or revision != current["revision"]:
+                return jsonify(error="Your schedule changed. Reload it before starting."), 409
+            draft = make_scheduled_draft(entry, body.get("timezoneOffset"), str(uuid4()))
+            storage.save_workout_draft(database, g.user_id, draft, transaction=db)
+        return jsonify(draft=draft), 201
 
     @app.get("/api/state")
     @authenticated
@@ -786,22 +824,65 @@ def create_app(config=None):
         template_id = body.get("templateId")
         if not isinstance(template_id, str):
             raise ValueError("Select a workout template.")
-        template = storage.get_template(database, g.user_id, template_id)
-        if template is None:
-            return jsonify(error="That workout template could not be found."), 404
-        document = validate_session(body, template)
-        existing = storage.existing_session(database, g.user_id, document["clientId"])
-        if existing:
-            comparable = {key: existing[key] for key in document}
-            for exercise in comparable["exercises"]:
-                exercise["estimated1rm"] = best_1rm(exercise["sets"])
-            if comparable != document:
-                return jsonify(
-                    error="This session was already saved with different values. Reload your history."
-                ), 409
-            storage.delete_workout_draft(database, g.user_id)
-            return jsonify(existing)
-        return jsonify(storage.add_session(database, g.user_id, document)), 201
+        user_id = g.user_id
+        with storage.workout_transaction(database) as db:
+            active = storage.workout_draft(database, user_id, transaction=db)
+            entry = None
+            if "scheduleEntryId" in body:
+                schedule = storage.schedule_state(database, user_id, transaction=db)
+                try:
+                    entry = find_scheduled_workout(schedule, body["scheduleEntryId"])
+                    client_id = schedule_id(body.get("clientId"))
+                    existing = storage.existing_session(
+                        database, user_id, client_id, transaction=db
+                    )
+                    body = scheduled_finish_payload(
+                        {**body, "clientId": client_id}, entry, active, existing
+                    )
+                except LookupError as error:
+                    return jsonify(error=str(error)), 404
+                except ScheduleConflict as error:
+                    return jsonify(error=str(error)), 409
+                template = entry["workout"]
+            else:
+                template = storage.get_template(database, user_id, template_id)
+                if template is None:
+                    return jsonify(error="That workout template could not be found."), 404
+
+            document = validate_session(body, template)
+            client_id = document["clientId"]
+            if entry:
+                document["scheduleEntryId"] = entry["id"]
+            else:
+                if active and active.get("scheduleEntryId") and active["clientId"] == client_id:
+                    return jsonify(
+                        error="Resume the scheduled copy before saving this workout."
+                    ), 409
+                existing = storage.existing_session(database, user_id, client_id, transaction=db)
+
+            if existing:
+                comparable = {key: existing.get(key) for key in document}
+                for exercise in comparable["exercises"]:
+                    exercise["estimated1rm"] = best_1rm(exercise["sets"])
+                if (
+                    existing.get("scheduleEntryId") != document.get("scheduleEntryId")
+                    or comparable != document
+                ):
+                    return jsonify(
+                        error="This session was already saved with different values. Reload your history."
+                    ), 409
+                storage.delete_workout_draft(database, user_id, client_id, transaction=db)
+                return jsonify(existing)
+
+            saved = storage.add_session(database, user_id, document, transaction=db)
+            if entry:
+                entry["sessionId"] = saved["id"]
+                updated = storage.save_schedule_state(
+                    database, user_id, schedule, schedule["revision"], transaction=db
+                )
+                if updated is None:
+                    raise RuntimeError("The schedule changed inside the workout transaction.")
+        return jsonify(saved), 201
 
     @app.get("/api/workout-draft")
     @authenticated
@@ -829,18 +910,30 @@ def create_app(config=None):
         except ValueError:
             raise ValueError("The workout draft needs a valid date.") from None
 
-        existing = storage.workout_draft(database, g.user_id)
-        if existing and existing.get("clientId") != body["clientId"]:
-            return jsonify(
-                error="Discard or resume your current workout before starting another one."
-            ), 409
-        return jsonify(draft=storage.save_workout_draft(database, g.user_id, body))
+        with storage.workout_transaction(database) as db:
+            existing = storage.workout_draft(database, g.user_id, transaction=db)
+            if existing and existing.get("clientId") != body["clientId"]:
+                return jsonify(
+                    error="Discard or resume your current workout before starting another one."
+                ), 409
+            if storage.existing_session(database, g.user_id, body["clientId"], transaction=db):
+                return jsonify(error="This workout has already been saved."), 409
+            if "scheduleEntryId" in body or (existing and "scheduleEntryId" in existing):
+                fields = ("scheduleEntryId", "templateId", "day", "startedAt")
+                if not existing or any(body.get(field) != existing.get(field) for field in fields):
+                    return jsonify(error="Resume the scheduled workout before saving it."), 409
+            saved = storage.save_workout_draft(database, g.user_id, body, transaction=db)
+        return jsonify(draft=saved)
 
     @app.post("/api/workout-draft/discard")
     @authenticated
     def discard_workout_draft():
         """Discard only the signed-in user's active workout draft."""
-        storage.delete_workout_draft(database, g.user_id)
+        body = request.get_json(silent=True)
+        client_id = body.get("clientId") if isinstance(body, dict) else None
+        if client_id is not None and not isinstance(client_id, str):
+            raise ValueError("A valid workout draft ID is required.")
+        storage.delete_workout_draft(database, g.user_id, client_id)
         return jsonify(ok=True)
 
     @app.get("/api/volume")

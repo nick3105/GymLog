@@ -19,6 +19,11 @@ export default function ScheduledWorkoutCard({
         </p>
       )}
       <h3 className="text-xl font-normal break-words">{entry.workout.name}</h3>
+      {entry.sessionId ? (
+        <p className="text-accent mt-1">Completed</p>
+      ) : (
+        entry.inProgress && <p className="text-accent mt-1">In progress</p>
+      )}
       <ul className="mt-2 space-y-2">
         {entry.workout.exercises.map((exercise) => (
           <li key={exercise.id} className="break-words">
@@ -40,7 +45,7 @@ export default function ScheduledWorkoutCard({
           to={`/schedule/${entry.id}?week=${entry.week}`}
           className={`${secondaryButton} mt-3 w-full`}
         >
-          Adjust or move workout
+          Open scheduled workout
         </Link>
       )}
     </article>

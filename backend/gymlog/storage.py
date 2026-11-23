@@ -56,7 +56,10 @@ COACHING_SCHEMA = [
 
 
 @contextmanager
-def connect(path):
+def connect(path, transaction=None):
+    if transaction is not None:
+        yield transaction
+        return
     connection = sqlite3.connect(path, timeout=15)
     connection.row_factory = sqlite3.Row
     try:
@@ -64,6 +67,14 @@ def connect(path):
             yield connection
     finally:
         connection.close()
+
+
+@contextmanager
+def workout_transaction(path):
+    """Serialize changes that span the schedule, workout draft and session history."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        yield db
 
 
 def initialize(path, owner_password_hash=None):
@@ -259,18 +270,18 @@ def delete_template(path, user_id, template_id):
     return result.rowcount > 0
 
 
-def existing_session(path, user_id, client_id):
-    with connect(path) as db:
+def existing_session(path, user_id, client_id, *, transaction=None):
+    with connect(path, transaction) as db:
         row = db.execute(
             "SELECT document FROM sessions WHERE user_id=? AND client_id=?", (user_id, client_id)
         ).fetchone()
         return json.loads(row["document"]) if row else None
 
 
-def add_session(path, user_id, data):
+def add_session(path, user_id, data, *, transaction=None):
     """Save a private completed workout once per client ID."""
     document = {**data, "id": str(uuid4()), "completedAt": now()}
-    with connect(path) as db:
+    with connect(path, transaction) as db:
         db.execute(
             "INSERT OR IGNORE INTO sessions VALUES (?, ?, ?, ?, ?)",
             (
@@ -285,22 +296,22 @@ def add_session(path, user_id, data):
             "SELECT document FROM sessions WHERE user_id=? AND client_id=?",
             (user_id, document["clientId"]),
         ).fetchone()
-        db.execute("DELETE FROM workout_drafts WHERE user_id=?", (user_id,))
+        delete_workout_draft(path, user_id, document["clientId"], transaction=db)
     return json.loads(row["document"])
 
 
-def workout_draft(path, user_id):
+def workout_draft(path, user_id, *, transaction=None):
     """Return only the signed-in user's active workout draft, if one exists."""
-    with connect(path) as db:
+    with connect(path, transaction) as db:
         row = db.execute(
             "SELECT document FROM workout_drafts WHERE user_id=?", (user_id,)
         ).fetchone()
     return json.loads(row["document"]) if row else None
 
 
-def save_workout_draft(path, user_id, document):
+def save_workout_draft(path, user_id, document, *, transaction=None):
     """Replace the one active draft owned by this user."""
-    with connect(path) as db:
+    with connect(path, transaction) as db:
         db.execute(
             """INSERT INTO workout_drafts (user_id, document, updated_at)
             VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
@@ -310,10 +321,16 @@ def save_workout_draft(path, user_id, document):
     return document
 
 
-def delete_workout_draft(path, user_id):
-    """Delete only this user's active workout draft."""
-    with connect(path) as db:
-        db.execute("DELETE FROM workout_drafts WHERE user_id=?", (user_id,))
+def delete_workout_draft(path, user_id, client_id=None, *, transaction=None):
+    """Delete the owner's active draft, optionally only when it matches the given ID."""
+    with connect(path, transaction) as db:
+        if client_id is None:
+            db.execute("DELETE FROM workout_drafts WHERE user_id=?", (user_id,))
+        else:
+            db.execute(
+                "DELETE FROM workout_drafts WHERE user_id=? AND json_extract(document, '$.clientId')=?",
+                (user_id, client_id),
+            )
 
 
 def login_blocked(path, address):
@@ -527,9 +544,9 @@ def favorite_exercise_ids(path, user_id):
         ]
 
 
-def schedule_state(path, user_id):
+def schedule_state(path, user_id, *, transaction=None):
     """Read only this account's reusable series and scheduled snapshots."""
-    with connect(path) as db:
+    with connect(path, transaction) as db:
         row = db.execute(
             "SELECT document FROM schedule_state WHERE user_id=?", (user_id,)
         ).fetchone()
@@ -538,10 +555,11 @@ def schedule_state(path, user_id):
         return {"revision": 0, "series": [], "entries": [], "requests": {}}
 
 
-def save_schedule_state(path, user_id, document, revision):
+def save_schedule_state(path, user_id, document, revision, *, transaction=None):
     """Compare and replace an owner's schedule atomically without changing their journal."""
-    with connect(path) as db:
-        db.execute("BEGIN IMMEDIATE")
+    with connect(path, transaction) as db:
+        if transaction is None:
+            db.execute("BEGIN IMMEDIATE")
         row = db.execute(
             "SELECT revision FROM schedule_state WHERE user_id=?", (user_id,)
         ).fetchone()
