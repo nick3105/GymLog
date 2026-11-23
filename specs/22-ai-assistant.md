@@ -52,6 +52,13 @@ New requirements are documented as AI-01 to AI-06 in the BRD.
 Production deployment, provider account creation, paid models, medical advice, automatically
 changing workouts, persistent chat storage, accessing completed sessions or body weight.
 
+## Planned extension - Competition preparation
+
+[Task 39](39-competition-prep.md) adds a guided competition planner to the
+Assistant. It asks for the event date and current preparation, drafts a weekly
+calendar for review, and adds the plan to Schedule only after explicit save.
+This flow shares only the athlete's approved preparation answers with the model.
+
 ## Done when
 - API tests go red then green with fake provider replies: valid chat/plans, invalid output,
   invalid exercise IDs/targets, unauthenticated/CSRF requests, missing consent/key, quota,
