@@ -2,57 +2,49 @@
 Assignee: Martin Zvelebil
 
 ## Why
-A fresh local journal is empty. To see charts, history, body load or the weight goal, each
-of us has to log weeks of workouts by hand first. One command should fill a local journal
-with realistic training, so every feature can be tried in a minute.
+
+A fresh local journal is empty. A seeded test account gives the team history, charts and
+examples of workout features. A fresh username lets teammates test alongside existing accounts.
 
 ## What
-No BRD ID: a developer tool, not an app feature. Branch `feature/demo-data`.
 
-- `backend/seed_demo.py`, Python standard library only (`urllib`, `http.cookiejar`, `json`,
-  `datetime`). Run it while Flask is running: `uv run python seed_demo.py`. An optional
-  argument gives another address: `uv run python seed_demo.py http://127.0.0.1:5055`.
-  The default is `http://127.0.0.1:5000`, where Flask listens; on macOS `localhost:5000` can
-  reach AirPlay instead.
-- It goes **through the running API**, exactly as the React app does, so every rule in
-  `models.py` checks the data. It never opens the database itself.
-- It refuses any address whose host is not `localhost` or `127.0.0.1`: "Demo data is only
-  for a local GymLog. Use http://127.0.0.1:5000." Production can never get demo data.
-- It registers `demo` with the password `demo-password-123`. If `demo` already exists, it stops
-  with: "The demo user already exists. Delete backend/instance/ for a fresh journal, or sign in
-  as demo." Nothing is changed.
-- Three templates with three set targets each:
-  - **Push:** Bench press 4 × 5, Overhead press 3 × 8, Triceps pushdown 3 × 12,
-    Push-up 2 × 15 at 0 kg.
-  - **Pull:** Barbell row 4 × 8, Lat pulldown 3 × 10, Barbell curl 3 × 10,
-    Cable wrist curl 2 × 15.
-  - **Legs:** Squat 4 × 5, Romanian deadlift 3 × 8, Standing calf raise 3 × 12, Plank 3 × 60 s.
-- 21 completed workouts, Push → Pull → Legs, every second day, from 41 days ago until
-  yesterday. Weights go up 2.5 kg every round (bench 60 → 75 kg) so 1RM charts climb. The top
-  set of each main lift has RPE 8. Plank holds grow by 5 s every round.
-- So every case shows: the newest Push has one extra bench set, and one Legs workout skips its
-  last calf raise set.
-- Body weight on each of the last 30 days until yesterday, 84.0 kg going down 0.1 kg a day.
-  A losing goal of 78 kg. No entry today, so the daily reminder (WGT-08) shows.
-- Dates are the computer's local date, like the app's.
-- At the end it prints what it made and how to sign in.
+This developer tool exercises PLN-09, PLN-10, RUN-09, REV-01 through REV-06, REV-09 and WGT-08
+through the running API. Branch `feature/demo-seeder-refresh`.
+
+- Run `uv run python seed_demo.py` from `backend/` while Flask is running. The default account is
+  `demo`, with password `demo-password-123`. `--username demo-2` creates a different demo account
+  with the same local-only password. An optional positional address still defaults to
+  `http://127.0.0.1:5000`. The host must be `localhost` or `127.0.0.1`.
+- An existing username is refused before writing journal data. The error tells the user to
+  choose another name. Dates use the computer's local date.
+- Seed 28 weeks, with a Push, Pull and Legs session in each seven-day block and rest days
+  between sessions. The first workout is 194 days ago and the last one is yesterday
+  (84 sessions altogether). Keep the extra bench set, skipped calf raise set and all ten
+  catalogue muscle groups represented across the history.
+- Bench and squat progress at roughly 2.5 kg per week early on and Romanian deadlift at
+  roughly 3 kg per week. Accessories increase more slowly. Taper the rates every four weeks
+  and round to practical loading increments, so some weeks repeat a weight. Bodyweight
+  exercises increase in reps. Holds increase in seconds.
+- Push has a bench target RPE of 8, workout and exercise notes, warm-up and cooldown
+  reminders, and a triceps pushdown and push-up superset. Its newest session has warm-up
+  checked and cooldown unchecked. Pull has RPE off on versions with the workout toggle.
+- Add Band chest fly to Push and Single-leg balance to Legs. Where the API supports personal
+  volume choices, the band fly counts toward chest and the balance hold is excluded. Favourite
+  bench press, squat and plank. Set weekly chest and quadriceps goals of 12 and 10 sets.
+- Keep 30 daily body-weight measurements through yesterday and a 78 kg loss goal. This leaves
+  today's weight reminder available.
+- With `--with-draft`, seed a Push workout for today with its first bench set filled in.
+  The Start page offers to resume it.
 
 ## Out of scope
-Several demo users, deleting or resetting data, random data, production or PythonAnywhere,
-any change to the app or the API.
+
+Changing app behaviour, modifying existing accounts, resetting the database, calling the
+training assistant, adding coaching accounts, and seeding production or PythonAnywhere.
 
 ## Done when
-`uv run pytest tests/test_seed_demo.py` is green. The tests run the script against a temporary app
-served on a free local port and check that:
-- `demo` can sign in and has 3 templates, 21 sessions, 30 weights and a 78 kg losing goal.
-- The newest session is yesterday and no weight is saved for today.
-- The sessions train all ten muscle groups (checked against the catalogue groups in
-  `/api/state`), so body load (spec 22) has something everywhere.
-- A second run stops with the "already exists" sentence and changes nothing.
-- `http://example.com` is refused with the local-only sentence.
 
-Run by hand: start Flask on a fresh `backend/instance/`, run the script, sign in as `demo` at
-375 × 667. Start, Review, an exercise's progress chart and Weight all show data.
-The README's "Run it locally" says how to use it.
-
-Commit as `Feature: demo data for local testing`.
+- Tests check all 84 dates, all 14 exercises, the slower progression in the last month and
+  user isolation. The draft stays out of completed history and belongs to its account.
+- At 375 × 667, sign in, open Push in Start and Review, filter the exercises by favourites and
+  open Weekly Volume and Weight. With `--with-draft`, tap Resume workout and see the first set.
+- The README gives the command and sign-in details.

@@ -44,14 +44,27 @@ npm run dev
 
 Open http://localhost:5173/ and create an account.
 
-To try every screen without logging weeks of training first, fill a fresh local journal with
-demo data while Flask is running, then sign in as `demo` / `demo-password-123`:
+With local Flask running, open another terminal in `backend/` and seed a new demo account:
 
 ```sh
-cd backend
-uv run python seed_demo.py
-``` Your local `backend/instance/` is a separate,
-throwaway journal — never copy the production one to your computer.
+uv run python seed_demo.py --username demo-2
+```
+
+Sign in at http://localhost:5173/ as `demo-2` with the password `demo-password-123`.
+Choose another unused name for another account, or omit `--username` to create `demo`.
+The script stops if the username is already taken.
+
+- **Start and Review** have Push, Pull and Legs and 84 sessions from 28 weeks of training.
+  Major lifts progress fastest early on. Accessories add less, and bodyweight and timed
+  exercises progress in reps or seconds.
+- **Exercises** has three favourites and two personal exercises.
+- **Weekly Volume** has chest and quadriceps goals. Open the previous week if the current
+  week is empty.
+- **Weight** has 30 measurements and a 78 kg goal. Today's entry is ready to fill in.
+
+Add `--with-draft` to try **Resume workout** with a partially logged Push session.
+If Flask uses a different port, pass its local address before the options, for example
+`uv run python seed_demo.py http://127.0.0.1:5055 --username demo-2`.
 
 On a phone on the same Wi-Fi: run `npm run dev -- --host` and open the Network address it prints.
 
