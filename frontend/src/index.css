@@ -2,7 +2,7 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/roboto-mono';
 
-/* GymLog palette, copied from ultrasound.money: slate navy, white text, a cyan-to-indigo
+/* TimeToLift palette, copied from ultrasound.money: slate navy, white text, a cyan-to-indigo
    gradient for the main action. See "How it looks" in AGENTS.md. */
 @theme {
   --color-ink: #131827;

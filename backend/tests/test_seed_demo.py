@@ -75,5 +75,5 @@ def test_second_run_changes_nothing(app, address):
 
 
 def test_refuses_anything_but_a_local_address():
-    with pytest.raises(ValueError, match="Demo data is only for a local GymLog."):
+    with pytest.raises(ValueError, match="Demo data is only for a local TimeToLift journal"):
         seed("http://example.com")

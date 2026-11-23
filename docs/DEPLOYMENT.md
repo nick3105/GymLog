@@ -1,4 +1,4 @@
-# GymLog — hosting and operations
+# TimeToLift — hosting and operations
 
 The live journal is https://nickkkk3105.pythonanywhere.com/, served by `backend/` on
 PythonAnywhere. The free web app needs renewal in the Web tab every month; the next expiry is

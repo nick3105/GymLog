@@ -57,7 +57,7 @@ about your recent training and the time you can make available, then drafts the
 weeks leading to your event.
 
 Agree to share the prep answers before generating. The competition name and
-stored journal data stay in GymLog. Review the draft, edit or remove individual
+stored journal data stay in TimeToLift. Review the draft, edit or remove individual
 workouts, and press **Save plan to Schedule** to add the event and training cards.
 
 ## Free model and availability

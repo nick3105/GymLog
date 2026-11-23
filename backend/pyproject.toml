@@ -1,7 +1,7 @@
 [project]
 name = "gymlog"
 version = "0.1.0"
-description = "GymLog API: workout templates, sessions and body weight."
+description = "TimeToLift API: workout templates, sessions and body weight."
 requires-python = ">=3.12"
 dependencies = ["flask>=3.1,<4"]
 

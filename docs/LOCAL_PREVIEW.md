@@ -1,4 +1,4 @@
-# Full GymLog local preview
+# Full TimeToLift local preview
 
 Open http://127.0.0.1:5052. The server is currently running.
 If it has stopped, double-click Start-Preview.cmd and keep its console open.

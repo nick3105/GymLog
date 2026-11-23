@@ -103,7 +103,7 @@ export default function Friends() {
         <h2 className="mb-2 text-xl font-normal">Friend requests</h2>
         <form onSubmit={send} className="flex flex-col gap-2">
           <label htmlFor="friend-username" className="font-normal">
-            GymLog username
+            TimeToLift username
           </label>
           <input
             id="friend-username"

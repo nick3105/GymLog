@@ -1,10 +1,10 @@
-# GymLog — Business Requirements Document
+# TimeToLift — Business Requirements Document
 
 **Version 1.0 · Current functionality baseline**
 
 ## Purpose
 
-GymLog lets users plan strength workouts, record their sets, review performance, and track body weight. Each user has a private journal they can access from a phone or computer. The app runs in a browser and uses English throughout.
+TimeToLift lets users plan strength workouts, record their sets, review performance, and track body weight. Each user has a private journal they can access from a phone or computer. The app runs in a browser and uses English throughout.
 
 ## 1. Accounts and navigation
 
@@ -16,7 +16,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | ACC-04 | **Sign In** | Let users sign in with their username and password. |
 | ACC-05 | **Sign Out** | End the current sign-in and return to the sign-in screen. Warn before discarding unfinished work. |
 | NAV-01 | **View Home** | Provide four starting points: **Start workout**, **Create workout**, **Review workouts**, and **Weight Tracker**. |
-| NAV-02 | **Navigate from Sidebar** | Make Home and all four main functions accessible from the sidebar. |
+| NAV-02 | **Navigate from Sidebar** | Make Home and all four main functions accessible from the sidebar. The TimeToLift wordmark returns users to Home from the sidebar or mobile header. |
 | NAV-03 | **Refresh Journal** | Reload the signed-in user's saved data without interrupting an active workout. |
 | NAV-04 | **Open Exercise Library** | From Home and the sidebar, open a searchable list of every catalogue exercise, filterable by muscle group. Selecting one opens its guide. |
 
@@ -87,7 +87,7 @@ GymLog lets users plan strength workouts, record their sets, review performance,
 | WGT-05 | **View Body Weight Trend** | Display saved measurements in a line chart ordered by date. |
 | WGT-06 | **View Measurement History** | Expand a list of saved dates and weights. |
 | WGT-07 | **Set a Weight-Change Goal** | Let a signed-in user choose to lose or gain weight, save one private goal weight in kg, and keep it available across devices. A losing goal must be below the latest weight; a gaining goal must be above it. Show the remaining kg in the selected direction, a prominent reached-goal message, and the goal on the chart's right edge. |
-| WGT-08 | **Remind About Today's Weight Entry** | When a signed-in user opens GymLog and has not saved a body-weight measurement for their current local date, show a dismissible, non-blocking reminder with a direct link to the Weight Tracker. Do not show it if a measurement already exists for today. |
+| WGT-08 | **Remind About Today's Weight Entry** | When a signed-in user opens TimeToLift and has not saved a body-weight measurement for their current local date, show a dismissible, non-blocking reminder with a direct link to the Weight Tracker. Do not show it if a measurement already exists for today. |
 
 ## 6. Data and scope requirements
 

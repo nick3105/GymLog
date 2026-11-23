@@ -1,4 +1,4 @@
-"""GymLog web app: the JSON API under /api and the React app at every other path."""
+"""TimeToLift web app: the JSON API under /api and the React app at every other path."""
 
 import hashlib
 import hmac
@@ -87,7 +87,7 @@ def create_app(config=None):
     if config:
         app.config.update(config)
     if not app.config["SECRET_KEY"]:
-        raise RuntimeError("Run `uv run python setup_secret.py` before starting GymLog.")
+        raise RuntimeError("Run `uv run python setup_secret.py` before starting TimeToLift.")
     database = app.config["DATABASE"]
     storage.initialize(database, app.config["OWNER_PASSWORD_HASH"])
     volume_registry = json.loads(
@@ -134,7 +134,7 @@ def create_app(config=None):
         def wrapper(*args, **kwargs):
             user = current_user()
             if user is None:
-                return jsonify(error="Please sign in to your GymLog."), 401
+                return jsonify(error="Please sign in to TimeToLift."), 401
             g.user_id = user["id"]
             return function(*args, **kwargs)
 
@@ -289,7 +289,7 @@ def create_app(config=None):
         username = validate_friend_request(request.get_json())
         relationship = storage.request_friend(database, g.user_id, username, validate_friend_pair)
         if relationship is None:
-            return jsonify(error="That GymLog username could not be found."), 404
+            return jsonify(error="That TimeToLift username could not be found."), 404
         return jsonify(id=relationship)
 
     @app.post("/api/friends/<relationship_id>/<action>")

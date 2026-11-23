@@ -1,4 +1,4 @@
-# GymLog — notes for AI assistants (Claude Code, Codex, …)
+# TimeToLift — notes for AI assistants (Claude Code, Codex, …)
 
 A training journal built by a four-person team for Introduction to Programming, Nova SBE
 2026/27. The requirements live in `docs/BRD.md`. Most of the team are **beginners**: they must be
@@ -10,7 +10,7 @@ here is unclear, look at how that project did it.
 
 ## Mobile first
 
-GymLog is used **in the gym, on a phone, between sets** — one hand, sweaty fingers, a few
+TimeToLift is used **in the gym, on a phone, between sets** — one hand, sweaty fingers, a few
 seconds of attention. Design every screen for that first; the desktop is the bonus.
 
 - **Build for a 375 px wide screen first.** Tailwind classes without a prefix are the phone
