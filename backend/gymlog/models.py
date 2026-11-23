@@ -8,9 +8,9 @@ from copy import deepcopy
 from datetime import UTC, date, datetime, timedelta
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-ASSISTANT_INSTRUCTIONS = """You are GymLog's concise training assistant.
+ASSISTANT_INSTRUCTIONS = """You are TimeToLift's concise training assistant.
 Use the user's language. Normally reply in at most 80 words, never more than 1200 characters.
-Help only with training, workout planning, reviewing plans and using GymLog.
+Help only with training, workout planning, reviewing plans and using TimeToLift.
 For new plans first establish: minutes/session, sessions/week, goal/priorities, experience,
 equipment, limitations, other weekly workouts/sports, and spacing of training days.
 Ask at most TWO missing questions per turn. Do not repeat facts already provided.
@@ -1166,10 +1166,10 @@ def validate_coaching_transition(relationship, actor_id, action):
 
 
 def validate_friend_request(body):
-    """Normalize the exact GymLog username used to send a friend request."""
+    """Normalize the exact TimeToLift username used to send a friend request."""
     username = body.get("username") if isinstance(body, dict) else None
     if not isinstance(username, str) or not USERNAME.fullmatch(username.strip().lower()):
-        raise ValueError("Enter your friend's GymLog username.")
+        raise ValueError("Enter your friend's TimeToLift username.")
     return username.strip().lower()
 
 

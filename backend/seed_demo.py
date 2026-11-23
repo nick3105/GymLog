@@ -1,4 +1,4 @@
-"""Fill a local GymLog with six weeks of demo training, through the running API (spec 23)."""
+"""Fill a local TimeToLift journal with six weeks of demo training, through the running API (spec 23)."""
 
 import json
 import sys
@@ -114,9 +114,11 @@ def session_body(template, number, day):
 
 
 def seed(address):
-    """Register the demo user at a local GymLog and save their templates, workouts and weights."""
+    """Register the demo user in a local TimeToLift journal and save their templates, workouts and weights."""
     if urlsplit(address).hostname not in ("localhost", "127.0.0.1"):
-        raise ValueError(f"Demo data is only for a local GymLog. Use {DEFAULT_ADDRESS}.")
+        raise ValueError(
+            f"Demo data is only for a local TimeToLift journal. Use {DEFAULT_ADDRESS}."
+        )
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(CookieJar()))
     _, answer = call(opener, address, "session")
     status, answer = call(
@@ -157,7 +159,7 @@ def main():
         raise SystemExit(str(error)) from None
     except urllib.error.URLError:
         raise SystemExit(
-            f"Cannot reach GymLog at {address}. Start it first: "
+            f"Cannot reach TimeToLift at {address}. Start it first: "
             "uv run flask --app gymlog run --debug"
         ) from None
     print(

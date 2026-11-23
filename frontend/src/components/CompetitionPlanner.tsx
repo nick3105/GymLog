@@ -371,7 +371,7 @@ export default function CompetitionPlanner({
         />
         <span>
           Share the date and prep answers with Requesty and its model host. The event name stays in
-          GymLog.
+          TimeToLift.
         </span>
       </label>
       {problem && (

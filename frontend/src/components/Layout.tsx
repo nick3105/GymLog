@@ -2,7 +2,6 @@ import {
   BookOpen,
   CalendarDays,
   CircleUserRound,
-  Dumbbell,
   House,
   ListChecks,
   LogOut,
@@ -22,6 +21,7 @@ import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-route
 
 import { useJournal } from '../journal'
 import Assistant from './Assistant'
+import BrandWordmark from './BrandWordmark'
 import ProgressSheet from './ProgressSheet'
 
 const pages: { to: string; label: string; icon: LucideIcon }[] = [
@@ -88,17 +88,20 @@ export default function Layout() {
   return (
     <div className="min-h-dvh md:pl-56">
       <header className="border-border bg-ink/95 sticky top-0 z-20 border-b pt-[env(safe-area-inset-top)] backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-2xl items-center gap-2 px-4">
-          <Link to="/" className="flex min-h-11 items-center gap-2 text-lg font-light md:hidden">
-            <Dumbbell className="text-accent size-5" aria-hidden />
-            gymlog<span className="text-accent">.</span>
+        <div className="mx-auto flex h-14 max-w-2xl items-center gap-1 px-2 sm:gap-2 sm:px-4">
+          <Link
+            to="/"
+            aria-label="TimeToLift home"
+            className="flex min-h-11 shrink-0 items-center font-semibold md:hidden"
+          >
+            <BrandWordmark />
           </Link>
           <Link
             to="/profile"
             aria-label={`Your profile, ${username}`}
-            className="text-muted ml-auto flex min-h-11 min-w-11 items-center justify-end truncate text-sm"
+            className="text-muted ml-auto flex min-h-11 min-w-11 items-center justify-end text-sm"
           >
-            {username}
+            <span className="truncate">{username}</span>
           </Link>
           <Link
             to="/settings"
@@ -112,7 +115,7 @@ export default function Layout() {
             onClick={reload}
             disabled={refreshing}
             aria-label="Reload your journal"
-            className="text-muted flex size-11 items-center justify-center rounded-xl disabled:opacity-40"
+            className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40"
           >
             <RefreshCw className={refreshing ? 'size-5 animate-spin' : 'size-5'} aria-hidden />
           </button>
@@ -120,7 +123,7 @@ export default function Layout() {
             type="button"
             onClick={leave}
             aria-label="Sign out"
-            className="text-muted flex size-11 items-center justify-center rounded-xl"
+            className="text-muted flex size-11 shrink-0 items-center justify-center rounded-xl"
           >
             <LogOut className="size-5" aria-hidden />
           </button>
@@ -128,9 +131,12 @@ export default function Layout() {
       </header>
 
       <nav className="border-border bg-panel fixed inset-y-0 left-0 z-30 hidden w-56 flex-col gap-1 overflow-y-auto border-r p-4 md:flex">
-        <Link to="/" className="mb-6 flex min-h-11 items-center gap-2 px-2 text-xl font-light">
-          <Dumbbell className="text-accent size-6" aria-hidden />
-          gymlog<span className="text-accent">.</span>
+        <Link
+          to="/"
+          aria-label="TimeToLift home"
+          className="mb-6 flex min-h-11 items-center px-2 text-xl font-semibold"
+        >
+          <BrandWordmark />
         </Link>
         {pages.map(({ to, label, icon: Icon }) => (
           <NavLink

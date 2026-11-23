@@ -1,4 +1,4 @@
-# GymLog expansion plan
+# TimeToLift expansion plan
 
 Prepared 12 November 2026 from the eight requested ideas.
 

@@ -1,4 +1,4 @@
-"""GymLog Flask app."""
+"""TimeToLift Flask app."""
 
 from .app import create_app
 
