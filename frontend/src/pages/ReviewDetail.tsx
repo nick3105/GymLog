@@ -132,7 +132,9 @@ export default function ReviewDetail() {
                     )}
                   </span>
                   <span className="text-muted">
-                    {!set.skipped && <>RPE {set.rpe === null ? '–' : formatNumber(set.rpe)}</>}
+                    {session.rpeEnabled !== false && !set.skipped && (
+                      <>RPE {set.rpe === null ? '-' : formatNumber(set.rpe)}</>
+                    )}
                   </span>
                 </li>
               ))}

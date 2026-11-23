@@ -47,6 +47,9 @@ export default function Session() {
 
   if (!active) return finished ? null : <Navigate to="/start" replace />
   const workout: ActiveWorkout = active
+  const rpeEnabled = workout.rpeEnabled ?? true
+  const visibleRepFields = repFields.filter((field) => rpeEnabled || field.key !== 'rpe')
+  const visibleDurationFields = durationFields.filter((field) => rpeEnabled || field.key !== 'rpe')
 
   const hasPerformedSet = workout.exercises.some((exercise) =>
     exercise.sets.some((set) => isSetComplete(set)),
@@ -151,7 +154,7 @@ export default function Session() {
           id: exercise.id,
           note: exercise.note ?? '',
           supersetId: exercise.supersetId,
-          sets: exercise.sets.map(setPayload),
+          sets: exercise.sets.map((set) => setPayload(set, rpeEnabled)),
         })),
       })
       setJournal((journal) => ({
@@ -160,7 +163,7 @@ export default function Session() {
       }))
       setFinished(true)
       setActive(null)
-      navigate(`/review/${saved.id}`, { state: { offerSharing: true } })
+      navigate(`/review/${saved.id}`, { state: { notice: 'Workout saved. Well done.' } })
     } catch (error) {
       // Every number stays where it is; tapping Finish again retries with the same ID.
       setProblem((error as Error).message)
@@ -240,7 +243,15 @@ export default function Session() {
       )}
       <div className="flex flex-col gap-4">
         {workout.exercises.map((exercise, exerciseIndex) => {
-          const estimate = bestOneRepMax(exercise.sets)
+          const estimate = bestOneRepMax(exercise.sets, rpeEnabled)
+          const fields =
+            exercise.measurement === 'duration' ? visibleDurationFields : visibleRepFields
+          const columns =
+            fields.length === 1
+              ? 'grid-cols-[1.75rem_1fr]'
+              : fields.length === 2
+                ? 'grid-cols-[1.75rem_1fr_1fr]'
+                : 'grid-cols-[1.75rem_1fr_1fr_1fr]'
           const last = lastTime[exercise.id]
           return (
             <section
@@ -288,12 +299,9 @@ export default function Session() {
                     ? 'No previous results'
                     : `Last time · ${formatDay(last.day)}: ${last.sets.map(formatSet).join(', ')}`}
               </p>
-              <div
-                className={`text-muted grid ${exercise.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr]' : 'grid-cols-[1.75rem_1fr_1fr_1fr]'} gap-2 text-xs`}
-                aria-hidden
-              >
+              <div className={`text-muted grid ${columns} gap-2 text-xs`} aria-hidden>
                 <span>Set</span>
-                {(exercise.measurement === 'duration' ? durationFields : repFields).map((field) => (
+                {fields.map((field) => (
                   <span key={field.key}>{field.label}</span>
                 ))}
               </div>
@@ -337,31 +345,29 @@ export default function Session() {
                     ) : (
                       <>
                         <div
-                          className={`mt-2 grid ${exercise.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr]' : 'grid-cols-[1.75rem_1fr_1fr_1fr]'} items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
+                          className={`mt-2 grid ${columns} items-center gap-2 ${isCurrent ? 'outline-accent/60 rounded-xl outline-2 outline-offset-4' : ''}`}
                         >
                           <span className="text-muted text-center font-normal">{setIndex + 1}</span>
-                          {(exercise.measurement === 'duration' ? durationFields : repFields).map(
-                            ({ key, label, mode }) => (
-                              <input
-                                key={key}
-                                type="text"
-                                disabled={saving}
-                                inputMode={mode}
-                                aria-label={`${exercise.name}, set ${setIndex + 1}, ${label}`}
-                                placeholder={placeholders[key]}
-                                value={set[key] ?? ''}
-                                onChange={(event) =>
-                                  update(
-                                    exerciseIndex,
-                                    setIndex,
-                                    key,
-                                    event.target.value.replace(',', '.'),
-                                  )
-                                }
-                                className={`${input} text-center`}
-                              />
-                            ),
-                          )}
+                          {fields.map(({ key, label, mode }) => (
+                            <input
+                              key={key}
+                              type="text"
+                              disabled={saving}
+                              inputMode={mode}
+                              aria-label={`${exercise.name}, set ${setIndex + 1}, ${label}`}
+                              placeholder={placeholders[key]}
+                              value={set[key] ?? ''}
+                              onChange={(event) =>
+                                update(
+                                  exerciseIndex,
+                                  setIndex,
+                                  key,
+                                  event.target.value.replace(',', '.'),
+                                )
+                              }
+                              className={`${input} text-center`}
+                            />
+                          ))}
                         </div>
                         <div className="flex justify-end">
                           <button
@@ -407,7 +413,7 @@ export default function Session() {
       </div>
       <p className="text-muted mt-4 text-sm">
         Placeholders are your targets. Enter seconds for timed holds; 0 kg is fine for bodyweight
-        sets. RPE is optional. Changes apply to this session only.
+        sets. {rpeEnabled && 'RPE is optional. '}Changes apply to this session only.
       </p>
 
       <div className="border-border bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-2xl border p-3 backdrop-blur md:bottom-4">

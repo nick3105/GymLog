@@ -757,8 +757,12 @@ def profile_stats(sessions, weights, catalogue, today):
 
 
 def validate_template(body, catalogue):
+    """Validate set targets and the workout's optional effort tracking."""
     if not isinstance(body, dict):
         raise ValueError("A workout object is required.")
+    rpe_enabled = body.get("rpeEnabled", True)
+    if not isinstance(rpe_enabled, bool):
+        raise ValueError("Use RPE must be on or off.")
     name = body.get("name")
     if not isinstance(name, str) or not 1 <= len(name.strip()) <= 60:
         raise ValueError("Workout name must contain 1–60 characters.")
@@ -801,7 +805,9 @@ def validate_template(body, catalogue):
             for row in rows:
                 if not isinstance(row, dict):
                     raise ValueError("Invalid set target.")
-                rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
+                rpe = None
+                if rpe_enabled:
+                    rpe = number(row.get("rpe"), "Target RPE", 1, 10, optional=True)
                 if rpe is not None and (rpe * 2) % 1:
                     raise ValueError("Use target RPE steps of 0.5.")
                 if timed:
@@ -833,7 +839,7 @@ def validate_template(body, catalogue):
                 ),
             )
         result.append(item)
-    document = {"name": name.strip(), "exercises": result}
+    document = {"name": name.strip(), "exercises": result, "rpeEnabled": rpe_enabled}
     if "note" in body:
         document["note"] = note(body["note"], 1000, "Workout note")
     validate_supersets(result)
@@ -875,7 +881,9 @@ def validate_session(body, template):
             if row.get("skipped", False):
                 sets.append({"skipped": True})
                 continue
-            rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
+            rpe = None
+            if template.get("rpeEnabled", True):
+                rpe = number(row.get("rpe"), "RPE", 1, 10, optional=True)
             if rpe is not None and (rpe * 2) % 1:
                 raise ValueError("Use RPE steps of 0.5 (for example 7 or 7.5).")
             if planned.get("measurement") == "duration":
@@ -918,6 +926,9 @@ def validate_session(body, template):
         "exercises": completed,
         **validate_instructions(body, template, completed=True),
     }
+    # Keep old session documents comparable when a pre-toggle save is retried.
+    if "rpeEnabled" in template:
+        document["rpeEnabled"] = template["rpeEnabled"]
     if "note" in body or "note" in template:
         document["note"] = note(body.get("note", template.get("note", "")), 1000, "Workout note")
     # Workouts started before RUN-11 have no start time and save as before.

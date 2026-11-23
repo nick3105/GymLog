@@ -80,6 +80,7 @@ export default function Start() {
       clientId: newId(),
       startedAt: startTime(),
       templateId: template.id,
+      rpeEnabled: template.rpeEnabled ?? true,
       name: template.name,
       note: template.note ?? '',
       day: today(),
