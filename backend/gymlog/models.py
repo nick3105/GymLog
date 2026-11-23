@@ -1450,7 +1450,9 @@ def competition_text(value, field, maximum, *, optional=False):
         cleaned = value.strip()
         if len(cleaned) <= maximum and (optional or cleaned):
             return cleaned
-    raise ValueError(f"{field} must contain {'at most' if optional else '1 to'} {maximum} characters.")
+    raise ValueError(
+        f"{field} must contain {'at most' if optional else '1 to'} {maximum} characters."
+    )
 
 
 def competition_integer(value, field, minimum, maximum):
@@ -1497,7 +1499,9 @@ def competition_intake(raw):
         "stage": stage,
         "recentTraining": competition_text(raw.get("recentTraining"), "Recent training", 600),
         "goal": competition_text(raw.get("goal"), "Competition goal", 300, optional=True),
-        "equipment": competition_text(raw.get("equipment"), "Equipment or constraints", 300, optional=True),
+        "equipment": competition_text(
+            raw.get("equipment"), "Equipment or constraints", 300, optional=True
+        ),
         "sessionsPerWeek": sessions,
         "minutesPerSession": competition_integer(
             raw.get("minutesPerSession"), "Minutes per session", 15, 180
@@ -1603,9 +1607,7 @@ def expand_competition_reply(content, intake, windows):
                 raise ValueError("Every workout must refer to an available idea.")
             day = window["days"][position] if intake["weekdays"] else None
             sessions.append({**deepcopy(workouts[index]), "day": day})
-        expanded.append(
-            {"week": window["week"], "focus": week.get("focus"), "sessions": sessions}
-        )
+        expanded.append({"week": window["week"], "focus": week.get("focus"), "sessions": sessions})
     return validate_competition_plan(
         {"summary": raw.get("summary"), "weeks": expanded}, intake, windows
     )
@@ -1627,7 +1629,9 @@ def validate_competition_plan(raw, intake, windows):
             day = session.get("day")
             if intake["weekdays"]:
                 if not isinstance(day, str) or day not in window["days"] or day in used_days:
-                    raise ValueError("Schedule each workout once on an available day before the event.")
+                    raise ValueError(
+                        "Schedule each workout once on an available day before the event."
+                    )
                 used_days.add(day)
             elif day is not None:
                 raise ValueError("Keep flexible workouts undated.")
@@ -1710,7 +1714,9 @@ def add_competition_plan(current, request_id, revision, intake, plan):
     for previous in plans:
         if previous["id"] == identifier:
             if previous != saved:
-                raise ScheduleConflict("This competition plan was already saved with different details.")
+                raise ScheduleConflict(
+                    "This competition plan was already saved with different details."
+                )
             return current
     if type(revision) is not int or revision != current["revision"]:
         raise ScheduleConflict("Your schedule changed. Refresh the preview before saving again.")

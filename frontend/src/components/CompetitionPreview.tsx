@@ -82,7 +82,9 @@ export default function CompetitionPreview({
                   ))}
                 </ol>
                 <details>
-                  <summary className="text-accent min-h-11 cursor-pointer py-3">Edit workout</summary>
+                  <summary className="text-accent min-h-11 cursor-pointer py-3">
+                    Edit workout
+                  </summary>
                   <label className="mb-2 block">
                     Workout name
                     <input

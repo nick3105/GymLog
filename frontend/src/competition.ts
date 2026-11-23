@@ -11,7 +11,15 @@ export const preparationStages = {
   'race-ready': 'Final preparation',
 } as const
 
-export const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+export const weekdays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]
 
 export type CompetitionSport = keyof typeof competitionSports
 export type PreparationStage = keyof typeof preparationStages
@@ -64,7 +72,9 @@ export type CompetitionScheduleEntry = { id: string; eventName: string } & (
 )
 
 export function competitionRequest(message: string): CompetitionSeed | null {
-  if (!/\b(prep(?:are|aring|aration)?|plan(?:ning)?|train(?:ing)?|programme?|build)\b/i.test(message))
+  if (
+    !/\b(prep(?:are|aring|aration)?|plan(?:ning)?|train(?:ing)?|programme?|build)\b/i.test(message)
+  )
     return null
   const match = /\b(powerlifting|hyrox|marathon)\b/i.exec(message)
   const sport = match?.[1].toLowerCase() as CompetitionSport | undefined

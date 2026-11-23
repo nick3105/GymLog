@@ -80,7 +80,10 @@ def fake_provider(monkeypatch, captured, *, broken=False):
                         "name": "Practice session",
                         "kind": kind,
                         "minutes": 40,
-                        "steps": ["Warm up at an easy effort.", "Practice the competition movement."],
+                        "steps": [
+                            "Warm up at an easy effort.",
+                            "Practice the competition movement.",
+                        ],
                     }
                 ],
                 "weeks": weeks,

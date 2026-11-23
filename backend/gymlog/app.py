@@ -600,14 +600,18 @@ def create_app(config=None):
         plan = validate_competition_plan(body.get("plan"), intake, competition_windows(intake))
         current = storage.schedule_state(database, g.user_id)
         try:
-            updated = add_competition_plan(current, body.get("id"), body.get("revision"), intake, plan)
+            updated = add_competition_plan(
+                current, body.get("id"), body.get("revision"), intake, plan
+            )
         except ScheduleConflict as error:
             return jsonify(error=str(error)), 409
         result = {"week": schedule_view(current, intake["today"])["week"]}
         if updated is current:
             return jsonify(result), 200
         if storage.save_schedule_state(database, g.user_id, updated, current["revision"]) is None:
-            return jsonify(error="Your schedule changed. Refresh the preview before saving again."), 409
+            return jsonify(
+                error="Your schedule changed. Refresh the preview before saving again."
+            ), 409
         return jsonify(result), 201
 
     @app.post("/api/exercises/<exercise_id>/favorite")

@@ -182,7 +182,9 @@ export default function CompetitionPlanner({
         </h3>
         {problem && (
           <div>
-            <p role="alert" className={errorText}>{problem}</p>
+            <p role="alert" className={errorText}>
+              {problem}
+            </p>
             <button type="button" className={textButton} disabled={busy} onClick={refresh}>
               Refresh schedule, keep preview
             </button>
@@ -225,7 +227,9 @@ export default function CompetitionPlanner({
             onChange={(event) => update('sport', event.target.value as CompetitionSport)}
           >
             {Object.entries(competitionSports).map(([value, name]) => (
-              <option key={value} value={value}>{name}</option>
+              <option key={value} value={value}>
+                {name}
+              </option>
             ))}
           </select>
         </label>
@@ -251,7 +255,9 @@ export default function CompetitionPlanner({
           >
             <option value="">Choose your stage</option>
             {Object.entries(preparationStages).map(([value, name]) => (
-              <option key={value} value={value}>{name}</option>
+              <option key={value} value={value}>
+                {name}
+              </option>
             ))}
           </select>
         </label>
@@ -343,7 +349,8 @@ export default function CompetitionPlanner({
       )}
       {(['goal', 'equipment', 'eventName'] as const).map((field) => (
         <label key={field} className="block">
-          {{ goal: 'Goal', equipment: 'Equipment or commitments', eventName: 'Event name' }[field]} (optional)
+          {{ goal: 'Goal', equipment: 'Equipment or commitments', eventName: 'Event name' }[field]}{' '}
+          (optional)
           <input
             className={input + ' mt-1'}
             maxLength={field === 'eventName' ? 80 : 300}
@@ -362,10 +369,15 @@ export default function CompetitionPlanner({
           onChange={(event) => setConsent(event.target.checked)}
         />
         <span>
-          Share the date and prep answers with Requesty and its model host. The event name stays in GymLog.
+          Share the date and prep answers with Requesty and its model host. The event name stays in
+          GymLog.
         </span>
       </label>
-      {problem && <p role="alert" className={errorText}>{problem}</p>}
+      {problem && (
+        <p role="alert" className={errorText}>
+          {problem}
+        </p>
+      )}
       <button className={primaryButton + ' w-full'} disabled={busy || !consent}>
         {busy ? 'Building your schedule…' : 'Generate competition plan'}
       </button>

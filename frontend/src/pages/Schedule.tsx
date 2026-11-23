@@ -109,9 +109,10 @@ export default function Schedule() {
                   .map((entry) => (
                     <CompetitionScheduleCard key={entry.id} entry={entry} />
                   ))}
-                {entriesForDay(state.entries, day).length === 0 && !competition.some((entry) => entry.day === day) && (
-                  <p className="text-muted py-2">Nothing planned.</p>
-                )}
+                {entriesForDay(state.entries, day).length === 0 &&
+                  !competition.some((entry) => entry.day === day) && (
+                    <p className="text-muted py-2">Nothing planned.</p>
+                  )}
               </div>
             </section>
           ))}
