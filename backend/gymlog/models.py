@@ -1419,6 +1419,62 @@ def change_schedule(body, saved, templates, catalogue, active_id=None):
     return document
 
 
+def link_completed_workouts(body, saved, sessions, active_id=None):
+    """Link matching dated entries to existing results without changing the results."""
+    if not isinstance(body, dict):
+        raise ValueError("Send a schedule revision and the completed workouts to link.")
+    revision = body.get("revision")
+    if type(revision) is not int or revision < 0:
+        raise ValueError("Reload the schedule before linking completed workouts.")
+    links = body.get("links")
+    if not isinstance(links, list) or not 1 <= len(links) <= 100:
+        raise ValueError("Link between 1 and 100 completed workouts.")
+
+    entries = {entry["id"]: entry for entry in saved["entries"]}
+    completed = {session["id"]: session for session in sessions}
+    claimed_sessions = {entry["sessionId"] for entry in saved["entries"] if "sessionId" in entry}
+    seen_entries = set()
+    replacements = {}
+    for link in links:
+        if not isinstance(link, dict):
+            raise ValueError("Each link needs a scheduled workout and a completed workout.")
+        entry_id = schedule_id(link.get("entryId"))
+        session_id = schedule_id(link.get("sessionId"))
+        if entry_id in seen_entries:
+            raise ValueError("Include each scheduled workout only once.")
+        seen_entries.add(entry_id)
+        entry = entries.get(entry_id)
+        session = completed.get(session_id)
+        if entry is None or session is None:
+            raise LookupError("That scheduled or completed workout could not be found.")
+        if entry.get("sessionId") == session_id:
+            continue
+        if entry_id == active_id or "sessionId" in entry:
+            raise ScheduleConflict("Link only scheduled workouts that have not started.")
+        if session_id in claimed_sessions or session.get("scheduleEntryId"):
+            raise ScheduleConflict("That completed workout is already linked to the schedule.")
+        if (
+            not entry.get("day")
+            or schedule_date(entry["day"]) != schedule_date(session["day"])
+            or entry["workout"]["id"] != session["templateId"]
+        ):
+            raise ScheduleConflict(
+                "The scheduled workout and completed workout must match by date and template."
+            )
+        replacements[entry_id] = {**entry, "sessionId": session_id}
+        claimed_sessions.add(session_id)
+
+    # A retry of the same completed links leaves the revision and the schedule untouched.
+    if not replacements:
+        return saved
+    if revision != saved["revision"]:
+        raise ScheduleConflict("Your schedule changed. Reload before linking completed workouts.")
+    return {
+        **saved,
+        "entries": [replacements.get(entry["id"], entry) for entry in saved["entries"]],
+    }
+
+
 def find_scheduled_workout(document, entry_id):
     """Find a strength workout in this owner's schedule."""
     entry = next((item for item in document["entries"] if item["id"] == entry_id), None)

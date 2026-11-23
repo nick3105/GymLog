@@ -286,3 +286,139 @@ def test_version_ten_upgrade_preserves_existing_journal(journal):
     assert browser.get("/api/workout-draft").json["draft"] == draft
     assert browser.get("/api/state").json["templates"] == [saved]
     assert browser.get("/api/schedule?week=2026-11-23").json["entries"] == []
+
+
+def complete_workout(browser, headers, plan, day):
+    """Save one session outside Schedule for the same workout."""
+    response = browser.post(
+        "/api/sessions",
+        json={
+            "clientId": str(uuid4()),
+            "templateId": plan["id"],
+            "day": day,
+            "exercises": [{"id": "bench-press", "sets": [{"weight": 65, "reps": 8}]}],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 201, response.json
+    return response.json
+
+
+def link_completed(browser, headers, revision, *pairs):
+    """Link the listed schedule and session identifiers through the API."""
+    return browser.post(
+        "/api/schedule/link-completed",
+        json={
+            "revision": revision,
+            "links": [{"entryId": entry, "sessionId": session} for entry, session in pairs],
+        },
+        headers=headers,
+    )
+
+
+def test_links_to_existing_history_and_blocks_start_without_duplicating(journal):
+    """Use the already completed records and leave their actuals and other entries alone."""
+    _, browser, headers = journal
+    plan = template(browser, headers)
+    week = "2026-11-16"
+    pairs = []
+    for index, day in enumerate(("2026-11-18", "2026-11-20")):
+        assigned = change(
+            browser,
+            headers,
+            "assignWorkout",
+            index,
+            id=str(uuid4()),
+            templateId=plan["id"],
+            day=day,
+        )
+        assert assigned.status_code == 200, assigned.json
+        entry_id = assigned.json["entries"][-1]["id"]
+        session_id = complete_workout(browser, headers, plan, day)["id"]
+        pairs.append((entry_id, session_id))
+    before = browser.get("/api/state").json["sessions"]
+    before_schedule = browser.get(f"/api/schedule?week={week}").json
+    draft = {
+        "clientId": str(uuid4()),
+        "templateId": plan["id"],
+        "name": plan["name"],
+        "day": "2026-11-22",
+        "exercises": plan["exercises"],
+    }
+    assert browser.post("/api/workout-draft", json=draft, headers=headers).status_code == 200
+
+    saved = link_completed(browser, headers, 2, *pairs)
+    assert saved.status_code == 200, saved.json
+    assert saved.json == {"revision": 3}
+    calendar = browser.get(f"/api/schedule?week={week}").json
+    assert calendar["entries"] == [
+        {**entry, "sessionId": session_id}
+        for entry, (_, session_id) in zip(before_schedule["entries"], pairs, strict=True)
+    ]
+    assert browser.get("/api/state").json["sessions"] == before
+    assert browser.get("/api/workout-draft").json["draft"] == draft
+
+    entry_id, _ = pairs[0]
+    start = browser.post(
+        f"/api/schedule/{entry_id}/start",
+        json={"revision": 3, "timezoneOffset": 0},
+        headers=headers,
+    )
+    assert start.status_code == 409
+    assert start.json["error"] == "That scheduled workout is already complete."
+    retry = link_completed(browser, headers, 2, *pairs)
+    assert retry.status_code == 200
+    assert retry.json == saved.json
+
+
+def test_link_batch_rejects_invalid_pairs_without_changing_schedule(journal):
+    """Check ownership, stale revisions, duplicate sessions and mismatched records."""
+    app, browser, headers = journal
+    plan = template(browser, headers)
+    other_plan = template(browser, headers, "Another workout")
+    day = "2026-11-18"
+    week = "2026-11-16"
+    entry_ids = []
+    for revision in range(2):
+        assigned = change(
+            browser,
+            headers,
+            "assignWorkout",
+            revision,
+            id=str(uuid4()),
+            templateId=plan["id"],
+            day=day,
+        )
+        assert assigned.status_code == 200, assigned.json
+        entry_ids.append(assigned.json["entries"][-1]["id"])
+    valid = complete_workout(browser, headers, plan, day)["id"]
+    different_date = complete_workout(browser, headers, plan, "2026-11-20")["id"]
+    different_template = complete_workout(browser, headers, other_plan, day)["id"]
+
+    stranger = app.test_client()
+    token = stranger.get("/api/session").json["csrf"]
+    registered = stranger.post(
+        "/api/register",
+        json={"username": "stranger", "password": "test-password-long"},
+        headers={"X-CSRF-Token": token},
+    )
+    stranger_headers = {"X-CSRF-Token": registered.json["csrf"]}
+    stranger_plan = template(stranger, stranger_headers)
+    foreign = complete_workout(stranger, stranger_headers, stranger_plan, day)["id"]
+    assert link_completed(stranger, stranger_headers, 0, (entry_ids[0], valid)).status_code == 404
+    assert link_completed(browser, {}, 2, (entry_ids[0], valid)).status_code == 403
+
+    before = browser.get(f"/api/schedule?week={week}").json
+    for second, status in (
+        (foreign, 404),
+        (different_date, 409),
+        (different_template, 409),
+        (valid, 409),
+    ):
+        result = link_completed(browser, headers, 2, (entry_ids[0], valid), (entry_ids[1], second))
+        assert result.status_code == status, result.json
+        assert browser.get(f"/api/schedule?week={week}").json == before
+
+    stale = link_completed(browser, headers, 1, (entry_ids[0], valid))
+    assert stale.status_code == 409
+    assert browser.get(f"/api/schedule?week={week}").json == before

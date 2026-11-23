@@ -30,6 +30,7 @@ from .models import (
     exercise_stats,
     expand_competition_reply,
     find_scheduled_workout,
+    link_completed_workouts,
     make_scheduled_draft,
     number,
     profile_stats,
@@ -490,6 +491,34 @@ def create_app(config=None):
                     error="Your schedule changed on another device. Reload before saving."
                 ), 409
         return jsonify({key: saved[key] for key in ("revision", "series", "entries")})
+
+    @app.post("/api/schedule/link-completed")
+    @authenticated
+    def link_completed_schedule():
+        """Link existing journal results to this account's schedule in one update."""
+        user_id = g.user_id
+        with storage.workout_transaction(database) as db:
+            current = storage.schedule_state(database, user_id, transaction=db)
+            active = storage.workout_draft(database, user_id, transaction=db)
+            sessions = storage.documents(database, user_id, "sessions", transaction=db)
+            try:
+                updated = link_completed_workouts(
+                    request.get_json(), current, sessions, (active or {}).get("scheduleEntryId")
+                )
+            except LookupError as error:
+                return jsonify(error=str(error)), 404
+            except ScheduleConflict as error:
+                return jsonify(error=str(error)), 409
+            if updated is current:
+                return jsonify(revision=current["revision"])
+            saved = storage.save_schedule_state(
+                database, user_id, updated, current["revision"], transaction=db
+            )
+            if saved is None:
+                return jsonify(
+                    error="Your schedule changed. Reload before linking completed workouts."
+                ), 409
+        return jsonify(revision=saved["revision"])
 
     @app.post("/api/schedule/<entry_id>/start")
     @authenticated
