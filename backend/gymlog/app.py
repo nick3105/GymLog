@@ -833,7 +833,9 @@ def create_app(config=None):
                 try:
                     entry = find_scheduled_workout(schedule, body["scheduleEntryId"])
                     client_id = schedule_id(body.get("clientId"))
-                    existing = storage.existing_session(database, user_id, client_id, transaction=db)
+                    existing = storage.existing_session(
+                        database, user_id, client_id, transaction=db
+                    )
                     body = scheduled_finish_payload(
                         {**body, "clientId": client_id}, entry, active, existing
                     )
