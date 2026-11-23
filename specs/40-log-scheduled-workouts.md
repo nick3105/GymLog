@@ -12,7 +12,9 @@ A trainee can add a set or adjust reps on a scheduled workout, but the Start scr
 - Use the actual local day at Start for the history entry. Keep the scheduled day or flexible week for planning. A trainee can start from any visible week, so early and late sessions remain possible.
 - Keep one active workout per account. **Resume workout** restores existing inputs after reload. Tell the trainee to finish or discard a different active workout first. Discard returns the entry to a startable state. A stale Start for a changed schedule requires a reload.
 - Before starting, trainees can still adjust the scheduled copy for progression. While it is in progress or completed, the scheduled targets and placement are read-only. The existing logger accepts actual reps, extra sets and skipped sets.
-- Save the completed session and its link to the private schedule entry together. After saving, show **Completed** and **Review workout** for that entry. Retrying the same save keeps one session and never clears a newer draft.
+- When a trainee logs an existing scheduled workout, save the completed session and its link to the private schedule entry together. After saving, show **Completed** and **Review workout** for that entry. Retrying the same save keeps one session and never clears a newer draft.
+
+- A dated scheduled entry can also be linked through the API to an already completed session with the same date and template. See [issue 006](../issues/006-link-completed-workouts-to-schedule.md).
 
 ## Out of scope
 

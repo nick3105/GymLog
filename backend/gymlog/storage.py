@@ -220,10 +220,11 @@ def get_user(path, user_id):
         return dict(row) if row else None
 
 
-def documents(path, user_id, table):
+def documents(path, user_id, table, *, transaction=None):
+    """Read the owner's saved templates or sessions."""
     if table not in ("templates", "sessions"):
         raise ValueError("Unknown table")
-    with connect(path) as db:
+    with connect(path, transaction) as db:
         return [
             json.loads(row["document"])
             for row in db.execute(
