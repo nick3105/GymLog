@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router'
 
 import { api } from '../api'
 import { filterExerciseLibrary } from '../equipment'
-import { groupExercises } from '../exerciseLibrary'
+import { exerciseOverviewBlocks } from '../exerciseLibrary'
 import { useJournal } from '../journal'
 import type { Equipment } from '../types'
 import { input } from '../ui'
@@ -37,8 +37,7 @@ export default function Exercises() {
   const groups = [...new Set(journal.exercises.map((exercise) => exercise.group))]
   const filtering = query.trim() !== '' || group !== '' || equipment !== ''
   const results = filterExerciseLibrary(journal.exercises, query, group, equipment)
-  // Search results are ranked best first, so they stay one list; otherwise one list per muscle.
-  const blocks = filtering ? [{ group: '', exercises: results }] : groupExercises(results)
+  const blocks = exerciseOverviewBlocks(results, !filtering)
 
   function open(exerciseId: string) {
     setPlayingId(null)
