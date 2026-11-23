@@ -344,9 +344,9 @@ def login_blocked(path, address):
 def record_login(path, address, success):
     with connect(path) as db:
         db.execute("DELETE FROM login_attempts WHERE since < ?", (time.time() - 900,))
-        if success:
-            db.execute("DELETE FROM login_attempts WHERE address=?", (address,))
-        else:
+        # A success never clears failures: else signing in to your own account between
+        # guesses at someone else's password would reset the limit (issue 006).
+        if not success:
             db.execute(
                 """INSERT INTO login_attempts VALUES (?, 1, ?)
                 ON CONFLICT(address) DO UPDATE SET count=count+1""",

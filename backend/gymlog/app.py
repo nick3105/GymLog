@@ -83,6 +83,9 @@ def create_app(config=None):
         AI_ENABLED=os.environ.get("GYMLOG_AI_ENABLED") == "1",
         REQUESTY_API_KEY=os.environ.get("REQUESTY_API_KEY", ""),
         REQUESTY_MODEL=os.environ.get("REQUESTY_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b"),
+        # Only wsgi.py turns this on: PythonAnywhere's load balancer sets X-Real-IP, while
+        # anywhere else a visitor could send the header themselves (issue 006).
+        TRUST_X_REAL_IP=False,
     )
     if config:
         app.config.update(config)
@@ -222,9 +225,12 @@ def create_app(config=None):
 
     @app.post("/api/login")
     def login():
+        visitor = request.remote_addr
+        if app.config["TRUST_X_REAL_IP"]:
+            visitor = request.headers.get("X-Real-IP", visitor)
         address = hmac.new(
             app.config["SECRET_KEY"].encode(),
-            (request.remote_addr or "unknown").encode(),
+            (visitor or "unknown").encode(),
             hashlib.sha256,
         ).hexdigest()
         if storage.login_blocked(database, address):
