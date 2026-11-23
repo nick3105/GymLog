@@ -21,9 +21,9 @@ export function isSetComplete(set: SetInput): boolean {
   )
 }
 
-export function setPayload(set: SetInput) {
+export function setPayload(set: SetInput, rpeEnabled = true) {
   if (set.skipped) return { skipped: true as const }
-  const rpe = set.rpe === '' ? null : Number(set.rpe)
+  const rpe = !rpeEnabled || set.rpe === '' ? null : Number(set.rpe)
   if (set.durationSeconds !== undefined) {
     return { durationSeconds: set.durationSeconds === '' ? null : Number(set.durationSeconds), rpe }
   }

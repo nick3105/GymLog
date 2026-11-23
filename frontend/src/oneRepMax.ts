@@ -22,12 +22,12 @@ export function estimatedOneRepMax(
 }
 
 // The best estimate from what has been typed so far; unfinished rows are skipped.
-export function bestOneRepMax(sets: SetInput[]): number | null {
+export function bestOneRepMax(sets: SetInput[], rpeEnabled = true): number | null {
   let best: number | null = null
   for (const set of sets) {
     if (set.skipped || set.durationSeconds !== undefined) continue
     if (set.weight === '' || set.reps === '') continue
-    const rpe = set.rpe === '' ? null : Number(set.rpe)
+    const rpe = !rpeEnabled || set.rpe === '' ? null : Number(set.rpe)
     if (rpe !== null && !(rpe >= 1 && rpe <= 10)) continue
     const estimate = estimatedOneRepMax(Number(set.weight), Number(set.reps), rpe)
     if (estimate !== null && (best === null || estimate > best)) best = estimate

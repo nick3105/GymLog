@@ -50,6 +50,18 @@ export default function Create({
   const navigate = useNavigate()
   const { id } = useParams()
   const original = scheduled?.workout ?? journal.templates.find((template) => template.id === id)
+  const [rpeEnabled, setRpeEnabled] = useState(original ? (original.rpeEnabled ?? true) : false)
+  const visibleTargetFields = targetFields.filter((field) => rpeEnabled || field.key !== 'rpe')
+  const visibleDurationFields = durationTargetFields.filter(
+    (field) => rpeEnabled || field.key !== 'rpe',
+  )
+
+  function targetColumns(measurement: Exercise['measurement']) {
+    const fields = measurement === 'duration' ? visibleDurationFields : visibleTargetFields
+    if (fields.length === 1) return 'grid-cols-[1.75rem_1fr_2.75rem]'
+    if (fields.length === 2) return 'grid-cols-[1.75rem_1fr_1fr_2.75rem]'
+    return 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'
+  }
   const [note, setNote] = useState(original?.note ?? '')
   const [name, setName] = useState(original?.name ?? '')
   const [warmup, setWarmup] = useState(original?.warmup ?? '')
@@ -92,7 +104,12 @@ export default function Create({
   const [saving, setSaving] = useState(false)
   const saved = useRef(false)
   const dirty =
-    name.trim() !== '' || planned.length > 0 || note !== '' || warmup !== '' || cooldown !== ''
+    name.trim() !== '' ||
+    planned.length > 0 ||
+    note !== '' ||
+    warmup !== '' ||
+    cooldown !== '' ||
+    rpeEnabled
 
   useEffect(() => {
     setBuilderDirty(dirty)
@@ -108,15 +125,15 @@ export default function Create({
               id: item.id,
               targets: item.targets.map((target) =>
                 item.measurement === 'duration'
-                  ? { durationSeconds: target.durationSeconds, rpe: target.rpe }
-                  : { reps: target.reps, weight: target.weight, rpe: target.rpe },
+                  ? { durationSeconds: target.durationSeconds, rpe: rpeEnabled ? target.rpe : '' }
+                  : { reps: target.reps, weight: target.weight, rpe: rpeEnabled ? target.rpe : '' },
               ),
             })),
           }
         : null,
     )
     return () => setAssistantDraft(null)
-  }, [coaching, scheduled, name, planned, setAssistantDraft])
+  }, [coaching, scheduled, name, planned, rpeEnabled, setAssistantDraft])
 
   // PLN-11: leaving with something typed asks first. Opening exercise progress stays on this
   // page (only ?exercise= changes), so it never asks.
@@ -225,6 +242,7 @@ export default function Create({
       const endpoint = id ? `templates/${id}` : 'templates'
       const workout = {
         name,
+        rpeEnabled,
         note,
         warmup,
         cooldown,
@@ -237,12 +255,12 @@ export default function Create({
               ? {
                   durationSeconds:
                     target.durationSeconds === '' ? null : Number(target.durationSeconds),
-                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                  rpe: !rpeEnabled || target.rpe === '' ? null : Number(target.rpe),
                 }
               : {
                   reps: target.reps === '' ? null : Number(target.reps),
                   weight: target.weight === '' ? null : Number(target.weight),
-                  rpe: target.rpe === '' ? null : Number(target.rpe),
+                  rpe: !rpeEnabled || target.rpe === '' ? null : Number(target.rpe),
                 },
           ),
         })),
@@ -401,6 +419,27 @@ export default function Create({
           onChange={setNote}
           disabled={saving}
         />
+        <div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={rpeEnabled}
+            aria-describedby="rpe-help"
+            disabled={saving}
+            onClick={() => setRpeEnabled(!rpeEnabled)}
+            className={`${secondaryButton} w-full justify-between`}
+          >
+            <span>Use RPE</span>
+            <span className={rpeEnabled ? 'text-accent' : 'text-muted'}>
+              {rpeEnabled ? 'On' : 'Off'}
+            </span>
+          </button>
+          <p id="rpe-help" className="text-muted mt-2">
+            {rpeEnabled
+              ? 'Optionally rate effort from 1 to 10 for each set.'
+              : 'Plan and train without effort ratings. Your 1RM uses weight and reps.'}
+          </p>
+        </div>
         <WorkoutInstructions
           warmup={warmup}
           cooldown={cooldown}
@@ -609,51 +648,49 @@ export default function Create({
                     disabled={saving}
                   />
                   <div
-                    className={`text-muted mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} gap-2 text-xs`}
+                    className={`text-muted mt-2 grid ${targetColumns(item.measurement)} gap-2 text-xs`}
                     aria-hidden
                   >
                     <span>Set</span>
-                    {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                      (field) => (
-                        <span key={field.key}>{field.label}</span>
-                      ),
-                    )}
+                    {(item.measurement === 'duration'
+                      ? visibleDurationFields
+                      : visibleTargetFields
+                    ).map((field) => (
+                      <span key={field.key}>{field.label}</span>
+                    ))}
                   </div>
                   {item.targets.map((target, setIndex) => (
                     <div
                       key={setIndex}
-                      className={`mt-2 grid ${item.measurement === 'duration' ? 'grid-cols-[1.75rem_1fr_1fr_2.75rem]' : 'grid-cols-[1.75rem_1fr_1fr_1fr_2.75rem]'} items-center gap-2`}
+                      className={`mt-2 grid ${targetColumns(item.measurement)} items-center gap-2`}
                     >
                       <span className="text-muted text-center font-normal">{setIndex + 1}</span>
-                      {(item.measurement === 'duration' ? durationTargetFields : targetFields).map(
-                        ({ key, label: fieldLabel, mode }) => (
-                          <input
-                            key={key}
-                            type="text"
-                            inputMode={mode}
-                            aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
-                            placeholder={
-                              key === 'durationSeconds'
-                                ? 'seconds'
-                                : key === 'reps'
-                                  ? 'reps'
-                                  : 'opt.'
-                            }
-                            value={target[key]}
-                            onChange={(event) =>
-                              changeTargets(
-                                item.id,
-                                item.targets.map((row, j) =>
-                                  j === setIndex
-                                    ? { ...row, [key]: event.target.value.replace(',', '.') }
-                                    : row,
-                                ),
-                              )
-                            }
-                            className={`${input} text-center ${scheduled ? 'max-sm:px-1' : ''}`}
-                          />
-                        ),
-                      )}
+                      {(item.measurement === 'duration'
+                        ? visibleDurationFields
+                        : visibleTargetFields
+                      ).map(({ key, label: fieldLabel, mode }) => (
+                        <input
+                          key={key}
+                          type="text"
+                          inputMode={mode}
+                          aria-label={`${item.name}, set ${setIndex + 1}, target ${fieldLabel}`}
+                          placeholder={
+                            key === 'durationSeconds' ? 'seconds' : key === 'reps' ? 'reps' : 'opt.'
+                          }
+                          value={target[key]}
+                          onChange={(event) =>
+                            changeTargets(
+                              item.id,
+                              item.targets.map((row, j) =>
+                                j === setIndex
+                                  ? { ...row, [key]: event.target.value.replace(',', '.') }
+                                  : row,
+                              ),
+                            )
+                          }
+                          className={`${input} text-center ${scheduled ? 'max-sm:px-1' : ''}`}
+                        />
+                      ))}
                       <button
                         type="button"
                         disabled={item.targets.length === 1}
@@ -713,8 +750,8 @@ export default function Create({
       </ReorderList>
 
       <p className="text-muted mt-4 text-sm">
-        Reps or seconds are required. Weight (for repetition exercises) and RPE (1–10, steps of 0.5)
-        are optional.
+        Reps or seconds are required. Weight (for repetition exercises) is optional.
+        {rpeEnabled && ' RPE is optional: 1–10, in steps of 0.5.'}
       </p>
 
       <div className="border-border bg-ink/95 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] mt-4 flex flex-col gap-2 rounded-2xl border p-3 backdrop-blur md:bottom-4">

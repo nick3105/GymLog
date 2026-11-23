@@ -37,6 +37,7 @@ export type TemplateExercise = {
 }
 
 export type Template = {
+  rpeEnabled?: boolean
   note?: string
   id: string
   name: string
@@ -54,6 +55,7 @@ export type LoggedSet =
   | { skipped: true }
 
 export type Session = {
+  rpeEnabled?: boolean
   note?: string
   revision?: number
   id: string

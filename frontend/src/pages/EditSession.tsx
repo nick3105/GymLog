@@ -18,6 +18,9 @@ export default function EditSession() {
   const navigate = useNavigate()
   // Hold the snapshot while typing, including when the journal refreshes.
   const [original] = useState(() => journal.sessions.find((session) => session.id === id))
+  const rpeEnabled = original?.rpeEnabled ?? true
+  const visibleRepFields = repFields.filter((field) => rpeEnabled || field.key !== 'rpe')
+  const visibleDurationFields = durationFields.filter((field) => rpeEnabled || field.key !== 'rpe')
   const [note, setNote] = useState(original?.note ?? '')
   const [exerciseNotes, setExerciseNotes] = useState(
     () => original?.exercises.map((exercise) => exercise.note ?? '') ?? [],
@@ -122,7 +125,7 @@ export default function EditSession() {
         exercises: session.exercises.map((exercise, index) => ({
           id: exercise.id,
           note: exerciseNotes[index],
-          sets: rows[index].map(setPayload),
+          sets: rows[index].map((set) => setPayload(set, rpeEnabled)),
         })),
       })
       setJournal((current) => ({
@@ -193,26 +196,27 @@ export default function EditSession() {
                 </p>
                 {!row.skipped && (
                   <div
-                    className={`grid ${exercise.measurement === 'duration' ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}
+                    className={`grid ${exercise.measurement === 'duration' ? (rpeEnabled ? 'grid-cols-2' : 'grid-cols-1') : rpeEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}
                   >
-                    {(exercise.measurement === 'duration' ? durationFields : repFields).map(
-                      ({ key, label: fieldLabel, mode }) => (
-                        <label key={key} className="min-w-0">
-                          <span className="text-muted mb-1 block">{fieldLabel}</span>
-                          <input
-                            type="text"
-                            inputMode={mode}
-                            value={row[key] ?? ''}
-                            disabled={saving}
-                            aria-label={`${exercise.name}, set ${setIndex + 1}, ${fieldLabel}`}
-                            onChange={(event) =>
-                              update(exerciseIndex, setIndex, key, event.target.value)
-                            }
-                            className={`${input} px-2 text-center`}
-                          />
-                        </label>
-                      ),
-                    )}
+                    {(exercise.measurement === 'duration'
+                      ? visibleDurationFields
+                      : visibleRepFields
+                    ).map(({ key, label: fieldLabel, mode }) => (
+                      <label key={key} className="min-w-0">
+                        <span className="text-muted mb-1 block">{fieldLabel}</span>
+                        <input
+                          type="text"
+                          inputMode={mode}
+                          value={row[key] ?? ''}
+                          disabled={saving}
+                          aria-label={`${exercise.name}, set ${setIndex + 1}, ${fieldLabel}`}
+                          onChange={(event) =>
+                            update(exerciseIndex, setIndex, key, event.target.value)
+                          }
+                          className={`${input} px-2 text-center`}
+                        />
+                      </label>
+                    ))}
                   </div>
                 )}
               </div>

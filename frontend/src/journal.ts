@@ -6,6 +6,7 @@ import type { SetInput } from './oneRepMax'
 import type { Journal as JournalData, Target } from './types'
 
 export type ActiveWorkout = {
+  rpeEnabled?: boolean
   note?: string
   // One ID per workout, so pressing Finish twice (or retrying after a network error) saves once.
   clientId: string
