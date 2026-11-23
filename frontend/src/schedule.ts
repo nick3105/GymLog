@@ -1,3 +1,4 @@
+import type { CompetitionScheduleEntry } from './competition'
 import type { Template } from './types'
 
 export type WorkoutSeries = { id: string; name: string; workouts: Template[] }
@@ -15,6 +16,7 @@ export type ScheduleState = {
   week?: string
   series: WorkoutSeries[]
   entries: ScheduledWorkout[]
+  competitionEntries?: CompetitionScheduleEntry[]
 }
 
 // Date-only arithmetic uses UTC so daylight saving changes cannot shift the calendar day.

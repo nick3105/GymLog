@@ -4,9 +4,11 @@ import { useLocation } from 'react-router'
 
 import { api } from '../api'
 import { conversationFor, type AssistantReply, type ChatMessage } from '../assistant'
+import { competitionRequest, type CompetitionSeed } from '../competition'
 import { useAssistantDraft } from '../journal'
 import { input, secondaryButton, textButton } from '../ui'
 import AssistantWorkout from './AssistantWorkout'
+import CompetitionPlanner from './CompetitionPlanner'
 
 type Setup = { enabled: boolean; configured: boolean }
 
@@ -21,6 +23,8 @@ export default function Assistant() {
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
   const [setup, setSetup] = useState<Setup | null>(null)
+  const [competitionOpen, setCompetitionOpen] = useState(false)
+  const [competitionSeed, setCompetitionSeed] = useState<CompetitionSeed | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const bubble = useRef<HTMLButtonElement>(null)
   const messageInput = useRef<HTMLInputElement>(null)
@@ -69,6 +73,11 @@ export default function Assistant() {
   async function send(event: FormEvent) {
     event.preventDefault()
     if (!question.trim() || busy || !consent) return
+    const seed = competitionRequest(question)
+    if (seed) {
+      openCompetition(seed)
+      return
+    }
     const next: ChatMessage[] = [...messages, { role: 'user', content: question.trim() }]
     setBusy(true)
     setProblem('')
@@ -86,6 +95,11 @@ export default function Assistant() {
     } finally {
       if (mounted.current) setBusy(false)
     }
+  }
+
+  function openCompetition(seed: CompetitionSeed = {}) {
+    setCompetitionSeed((current) => current ?? seed)
+    setCompetitionOpen(true)
   }
 
   function startOver() {
@@ -138,7 +152,39 @@ export default function Assistant() {
             </button>
           </header>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-3">
+          {competitionSeed && (
+            <div
+              className={
+                competitionOpen
+                  ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3'
+                  : 'hidden'
+              }
+            >
+              <button
+                type="button"
+                className={textButton + ' mb-2'}
+                onClick={() => setCompetitionOpen(false)}
+              >
+                Back to chat
+              </button>
+              <CompetitionPlanner seed={competitionSeed} onOpenSchedule={() => setOpen(false)} />
+            </div>
+          )}
+          <div
+            className={
+              competitionOpen
+                ? 'hidden'
+                : 'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-3'
+            }
+          >
+            <button
+              type="button"
+              className={secondaryButton + ' shrink-0'}
+              disabled={busy}
+              onClick={() => openCompetition()}
+            >
+              Prepare for a competition
+            </button>
             {!consent ? (
               <div className="flex flex-col gap-4">
                 <p className="text-xl">A little help with your next workout.</p>
@@ -233,7 +279,7 @@ export default function Assistant() {
             <div ref={end} />
           </div>
 
-          {consent && (
+          {consent && !competitionOpen && (
             <form
               onSubmit={send}
               className="border-border flex shrink-0 flex-col gap-2 border-t px-4 pt-2 pb-3"

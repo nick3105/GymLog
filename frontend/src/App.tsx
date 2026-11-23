@@ -23,6 +23,7 @@ import WeeklyVolume from './pages/WeeklyVolume'
 import ExerciseProgress from './pages/ExerciseProgress'
 import Calendar from './pages/Calendar'
 import Schedule from './pages/Schedule'
+import CompetitionPrep from './pages/CompetitionPrep'
 import ScheduleAdd from './pages/ScheduleAdd'
 import ScheduledWorkout from './pages/ScheduledWorkout'
 import WorkoutSeries from './pages/WorkoutSeries'
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: 'start', element: <Start /> },
       { path: 'schedule', element: <Schedule /> },
+      { path: 'schedule/competition-prep', element: <CompetitionPrep /> },
       { path: 'schedule/add', element: <ScheduleAdd /> },
       { path: 'schedule/series', element: <WorkoutSeries /> },
       { path: 'schedule/series/:id', element: <EditSeries /> },

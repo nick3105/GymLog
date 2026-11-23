@@ -17,11 +17,17 @@ from . import assistant, storage
 from .models import (
     PERSONAL_MUSCLES,
     ScheduleConflict,
+    add_competition_plan,
     assistant_messages,
     best_1rm,
     body_load,
     change_schedule,
+    competition_existing_workouts,
+    competition_intake,
+    competition_messages,
+    competition_windows,
     exercise_stats,
+    expand_competition_reply,
     number,
     profile_stats,
     schedule_view,
@@ -30,6 +36,7 @@ from .models import (
     validate_assistant_request,
     validate_coach_request,
     validate_coaching_transition,
+    validate_competition_plan,
     validate_friend_pair,
     validate_friend_request,
     validate_friend_transition,
@@ -530,6 +537,82 @@ def create_app(config=None):
                 error="The AI returned an unusable answer or plan. Please try again."
             ), 502
         return jsonify(result)
+
+    @app.post("/api/assistant/competition-plan")
+    @authenticated
+    def generate_competition_plan():
+        """Ask the approved free model for a private, unsaved plan."""
+        body = request.get_json()
+        if not isinstance(body, dict) or body.get("consent") is not True:
+            raise ValueError("Agree to share your preparation answers before generating a plan.")
+        intake = competition_intake(body.get("intake"))
+        windows = competition_windows(intake)
+        if not app.config["AI_ENABLED"]:
+            return jsonify(error="Enable the local assistant with GYMLOG_AI_ENABLED=1."), 503
+        if not app.config["REQUESTY_API_KEY"]:
+            return jsonify(error="Set REQUESTY_API_KEY on the server to use the assistant."), 503
+        try:
+            content = assistant.complete(
+                app.config["REQUESTY_API_KEY"],
+                app.config["REQUESTY_MODEL"],
+                competition_messages(intake, windows),
+            )
+        except assistant.AssistantUnavailable as error:
+            return jsonify(error=str(error)), error.status
+        try:
+            plan = expand_competition_reply(content, intake, windows)
+        except ValueError:
+            return jsonify(
+                error="The AI returned an unusable competition plan. Your answers are kept."
+            ), 502
+        current = storage.schedule_state(database, g.user_id)
+        return jsonify(
+            intake=intake,
+            plan=plan,
+            revision=current["revision"],
+            existing=competition_existing_workouts(current, windows),
+        )
+
+    @app.post("/api/competition-plans/preview")
+    @authenticated
+    def refresh_competition_preview():
+        """Review the latest calendar without using the model again."""
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("Enter your competition details.")
+        intake = competition_intake(body.get("intake"))
+        current = storage.schedule_state(database, g.user_id)
+        return jsonify(
+            revision=current["revision"],
+            existing=competition_existing_workouts(current, competition_windows(intake)),
+        )
+
+    @app.post("/api/competition-plans")
+    @authenticated
+    def save_competition_plan():
+        """Save a reviewed event and its training cards in a single update."""
+        body = request.get_json()
+        if not isinstance(body, dict):
+            raise ValueError("A reviewed competition plan is required.")
+        intake = competition_intake(body.get("intake"))
+        if body.get("today", intake["today"]) != intake["today"]:
+            raise ValueError("The planning day changed. Generate a new preview before saving.")
+        plan = validate_competition_plan(body.get("plan"), intake, competition_windows(intake))
+        current = storage.schedule_state(database, g.user_id)
+        try:
+            updated = add_competition_plan(
+                current, body.get("id"), body.get("revision"), intake, plan
+            )
+        except ScheduleConflict as error:
+            return jsonify(error=str(error)), 409
+        result = {"week": schedule_view(current, intake["today"])["week"]}
+        if updated is current:
+            return jsonify(result), 200
+        if storage.save_schedule_state(database, g.user_id, updated, current["revision"]) is None:
+            return jsonify(
+                error="Your schedule changed. Refresh the preview before saving again."
+            ), 409
+        return jsonify(result), 201
 
     @app.post("/api/exercises/<exercise_id>/favorite")
     @authenticated

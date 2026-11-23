@@ -7,9 +7,9 @@ export function readSchedule(day: string) {
   return api<ScheduleState>('schedule?week=' + encodeURIComponent(day))
 }
 
-export function useSchedule(day: string) {
+export function useSchedule(day: string, viewKey = '') {
   const [retry, setRetry] = useState(0)
-  const key = day + ':' + retry
+  const key = day + ':' + viewKey + ':' + retry
   const [loaded, setLoaded] = useState<{
     key: string
     state: ScheduleState | null

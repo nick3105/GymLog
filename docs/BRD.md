@@ -129,3 +129,13 @@ Check a real phone and a live free-model conversation with the team's key before
 to two weeks. Add a set and change the reps in one scheduled copy. Reload and
 verify the other week, the series, saved workouts and history kept their
 original values. Verify account isolation and upgrading a populated database.
+
+## 9. Competition preparation
+
+| ID | Function | Requirement |
+| --- | --- | --- |
+| PREP-01 | **Plan for an event** | Choose powerlifting, HYROX or marathon and confirm the future date. Show the event in Schedule when saved. |
+| PREP-02 | **Gather preparation details** | From Schedule or the AI Assistant, ask about current preparation, recent training, available time, and optional goals and equipment. |
+| PREP-03 | **Preview a tailored plan** | Show the weeks leading to the event with clear workout steps on eligible dates or in flexible weekly order. |
+| PREP-04 | **Review and save** | Allow editing individual cards and adding the reviewed plan to Schedule. Duplicate submissions create one event and plan. |
+| PREP-06 | **Protect data** | Ask before sharing prep answers, check that the model is free, and validate and save the plan privately. |
