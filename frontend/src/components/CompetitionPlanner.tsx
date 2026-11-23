@@ -195,6 +195,7 @@ export default function CompetitionPlanner({
         <CompetitionPreview
           draft={draft}
           busy={busy}
+          inDialog={Boolean(onOpenSchedule)}
           onEdit={editWorkout}
           onRemove={editWorkout}
           onSave={save}

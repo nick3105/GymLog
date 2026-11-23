@@ -6,11 +6,13 @@ import {
   type CompetitionWorkout,
 } from '../competition'
 import { formatDay } from '../format'
+import { scheduleActionBar } from '../schedule'
 import { card, input, primaryButton, textButton } from '../ui'
 
 export default function CompetitionPreview({
   draft,
   busy,
+  inDialog,
   onEdit,
   onRemove,
   onSave,
@@ -18,6 +20,7 @@ export default function CompetitionPreview({
 }: {
   draft: CompetitionDraft
   busy: boolean
+  inDialog: boolean
   onEdit: (week: number, workout: number, value: CompetitionWorkout) => void
   onRemove: (week: number, workout: number) => void
   onSave: () => void
@@ -154,7 +157,13 @@ export default function CompetitionPreview({
           Fill in each workout name and step, with minutes between 1 and {limit}.
         </p>
       )}
-      <div className="bg-ink/95 sticky bottom-0 z-10 space-y-2 py-3 backdrop-blur">
+      <div
+        className={
+          inDialog
+            ? 'bg-ink/95 sticky bottom-0 z-10 space-y-2 py-3 backdrop-blur'
+            : scheduleActionBar + ' z-10 space-y-2'
+        }
+      >
         <button
           type="button"
           className={primaryButton + ' w-full'}
