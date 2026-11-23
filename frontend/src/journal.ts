@@ -12,6 +12,7 @@ export type ActiveWorkout = {
   clientId: string
   // When Start was tapped (RUN-11); drafts from before this have none.
   startedAt?: string
+  scheduleEntryId?: string
   templateId: string
   name: string
   day: string
@@ -47,7 +48,7 @@ export type JournalContext = {
   signOut: () => Promise<void>
   active: ActiveWorkout | null
   draftStatus: DraftStatus
-  setActive: (workout: ActiveWorkout | null) => void
+  setActive: (workout: ActiveWorkout | null, persist?: boolean) => void
   discardActiveDraft: () => Promise<void>
   retryDraft: () => void
   // The workout builder reports unsaved typing here, so signing out can warn first.

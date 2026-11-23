@@ -1280,13 +1280,13 @@ def schedule_id(value):
         raise ValueError("Reload the schedule before saving this item.") from None
 
 
-def schedule_view(document, week):
+def schedule_view(document, week, active_id=None):
     """Expose one week's entries and reusable series without internal retry metadata."""
     monday = schedule_week(week)
     entries = []
     for entry in document["entries"]:
         if entry["week"] == monday:
-            entries.append(entry)
+            entries.append({**entry, "inProgress": True} if entry["id"] == active_id else entry)
     return {
         "revision": document["revision"],
         "series": document["series"],
@@ -1296,7 +1296,7 @@ def schedule_view(document, week):
     }
 
 
-def change_schedule(body, saved, templates, catalogue):
+def change_schedule(body, saved, templates, catalogue, active_id=None):
     """Apply one validated core scheduling action to independent workout snapshots."""
     if not isinstance(body, dict):
         raise ValueError("A schedule change is required.")
@@ -1385,6 +1385,8 @@ def change_schedule(body, saved, templates, catalogue):
     elif action == "editEntry":
         if entry is None:
             raise LookupError("That scheduled workout could not be found.")
+        if entry["id"] == active_id or "sessionId" in entry:
+            raise ScheduleConflict("A workout that has started cannot be changed.")
         day = body.get("day")
         if day is not None:
             day = schedule_date(day).isoformat()
@@ -1407,12 +1409,85 @@ def change_schedule(body, saved, templates, catalogue):
     elif action == "deleteEntry":
         if entry is None:
             raise LookupError("That scheduled workout could not be found.")
+        if entry["id"] == active_id or "sessionId" in entry:
+            raise ScheduleConflict("A workout that has started cannot be changed.")
         document["entries"].remove(entry)
     else:
         raise ValueError("Choose a supported schedule action.")
     if any(count > 50 for count in schedule_weekly_counts(document).values()):
         raise ValueError("Keep at most 50 scheduled workouts in each week. No changes were saved.")
     return document
+
+
+def find_scheduled_workout(document, entry_id):
+    """Find a strength workout in this owner's schedule."""
+    entry = next((item for item in document["entries"] if item["id"] == entry_id), None)
+    if entry is None:
+        raise LookupError("That scheduled workout could not be found.")
+    return entry
+
+
+def make_scheduled_draft(entry, timezone_offset, client_id):
+    """Open the scheduled snapshot with empty actuals for each planned set."""
+    offset = number(timezone_offset, "Timezone offset", -840, 840, integer=True)
+    started = datetime.now(UTC)
+    template = entry["workout"]
+    exercises = []
+    for planned in template["exercises"]:
+        timed = planned.get("measurement") == "duration"
+        targets = planned.get("targets")
+        if targets is None:
+            target = {
+                "reps": planned.get("targetReps") or 1,
+                "weight": planned.get("targetWeight"),
+                "rpe": None,
+            }
+            targets = [target] * planned["sets"]
+        blank = {"weight": "", "reps": "", "rpe": ""}
+        if timed:
+            blank["durationSeconds"] = ""
+        exercises.append(
+            {
+                **planned,
+                "note": planned.get("note", ""),
+                "targets": targets,
+                "sets": [blank.copy() for _ in range(planned["sets"])],
+            }
+        )
+    return {
+        "clientId": client_id,
+        "scheduleEntryId": entry["id"],
+        "templateId": template["id"],
+        "name": template["name"],
+        "note": template.get("note", ""),
+        "rpeEnabled": template.get("rpeEnabled", True),
+        "day": (started - timedelta(minutes=offset)).date().isoformat(),
+        "startedAt": started.isoformat(),
+        "warmup": template.get("warmup", ""),
+        "cooldown": template.get("cooldown", ""),
+        "warmupDone": False,
+        "cooldownDone": False,
+        "exercises": exercises,
+    }
+
+
+def scheduled_finish_payload(body, entry, active, existing):
+    """Require a matching draft or a retry and preserve the recorded start."""
+    if body.get("templateId") != entry["workout"]["id"]:
+        raise ScheduleConflict("The workout does not match the scheduled copy.")
+    if "sessionId" in entry:
+        if not existing or existing["id"] != entry["sessionId"]:
+            raise ScheduleConflict("That scheduled workout is already complete.")
+        reference = existing
+    elif (
+        active
+        and active.get("scheduleEntryId") == entry["id"]
+        and active.get("clientId") == body["clientId"]
+    ):
+        reference = active
+    else:
+        raise ScheduleConflict("Start this scheduled workout before saving it.")
+    return {**body, "day": reference["day"], "startedAt": reference["startedAt"]}
 
 
 COMPETITION_SPORTS = {

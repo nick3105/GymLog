@@ -50,9 +50,9 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  function deleteDraft(revision: number) {
+  function deleteDraft(revision: number, clientId?: string) {
     draftAction.current = 'discard'
-    void enqueueDraftRequest(() => api('workout-draft/discard', {})).then(
+    void enqueueDraftRequest(() => api('workout-draft/discard', { clientId })).then(
       () => {
         if (revision === draftRevision.current) {
           latestDraft.current = null
@@ -100,11 +100,17 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
       })
   }, [enter])
 
-  const setActive = useCallback((workout: ActiveWorkout | null) => {
+  const setActive = useCallback((workout: ActiveWorkout | null, persist = true) => {
     const revision = ++draftRevision.current
     if (draftTimer.current !== null) window.clearTimeout(draftTimer.current)
+    draftTimer.current = null
     latestDraft.current = workout
     setActiveState(workout)
+    if (!persist) {
+      draftAction.current = 'save'
+      setDraftStatus(workout ? 'saved' : 'idle')
+      return
+    }
     if (!workout) {
       setDraftStatus('idle')
       deleteDraft(revision)
@@ -121,8 +127,9 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
     draftTimer.current = null
     setDraftStatus('saving')
     draftAction.current = 'discard'
+    const clientId = latestDraft.current?.clientId
     try {
-      await enqueueDraftRequest(() => api('workout-draft/discard', {}))
+      await enqueueDraftRequest(() => api('workout-draft/discard', { clientId }))
       latestDraft.current = null
       setActiveState(null)
       setDraftStatus('idle')
@@ -138,7 +145,7 @@ export default function JournalProvider({ children }: { children: ReactNode }) {
     draftTimer.current = null
     setDraftStatus('saving')
     if (draftAction.current === 'discard') {
-      deleteDraft(revision)
+      deleteDraft(revision, latestDraft.current?.clientId)
     } else if (latestDraft.current) {
       saveDraft(latestDraft.current, revision)
     } else {

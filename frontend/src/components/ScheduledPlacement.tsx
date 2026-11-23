@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 
 import { api } from '../api'
-import { scheduleActionBar, scheduleMonday, type ScheduledWorkout } from '../schedule'
-import { input, primaryButton, textButton } from '../ui'
+import { scheduleMonday, type ScheduledWorkout } from '../schedule'
+import { input, secondaryButton, textButton } from '../ui'
 import { readSchedule } from '../useSchedule'
 import { useScheduleForm } from '../useScheduleForm'
 import ScheduleProblem from './ScheduleProblem'
@@ -11,9 +11,11 @@ import ScheduleProblem from './ScheduleProblem'
 export default function ScheduledPlacement({
   entry,
   revision,
+  onDirtyChange,
 }: {
   entry: ScheduledWorkout
   revision: number
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [currentRevision, setRevision] = useState(revision)
   const [isDated, setIsDated] = useState(Boolean(entry.day))
@@ -24,6 +26,11 @@ export default function ScheduledPlacement({
   const dirty = isDated !== Boolean(entry.day) || day !== (entry.day ?? entry.week)
   const markSaved = useScheduleForm(dirty)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+    return () => onDirtyChange(false)
+  }, [dirty, onDirtyChange])
 
   async function submit(change: object, week: string, message: string) {
     setBusy(true)
@@ -111,11 +118,9 @@ export default function ScheduledPlacement({
       >
         Remove from schedule
       </button>
-      <div className={scheduleActionBar}>
-        <button className={primaryButton + ' w-full'} disabled={busy || !dirty || !day}>
-          {busy ? 'Saving…' : 'Save placement'}
-        </button>
-      </div>
+      <button className={secondaryButton + ' w-full'} disabled={busy || !dirty || !day}>
+        {busy ? 'Saving…' : 'Save placement'}
+      </button>
     </form>
   )
 }

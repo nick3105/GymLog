@@ -9,6 +9,8 @@ export type ScheduledWorkout = {
   seriesName: string | null
   assignmentId: string
   position: number
+  sessionId?: string
+  inProgress?: boolean
   workout: Template
 }
 export type ScheduleState = {

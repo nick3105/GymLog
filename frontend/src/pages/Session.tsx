@@ -143,6 +143,7 @@ export default function Session() {
       const saved = await api<SavedSession>('sessions', {
         clientId: workout.clientId,
         startedAt: workout.startedAt,
+        scheduleEntryId: workout.scheduleEntryId,
         templateId: workout.templateId,
         day: workout.day,
         note: workout.note ?? '',
@@ -162,7 +163,7 @@ export default function Session() {
         sessions: [saved, ...journal.sessions.filter((session) => session.id !== saved.id)],
       }))
       setFinished(true)
-      setActive(null)
+      setActive(null, false)
       navigate(`/review/${saved.id}`, { state: { notice: 'Workout saved. Well done.' } })
     } catch (error) {
       // Every number stays where it is; tapping Finish again retries with the same ID.
