@@ -29,6 +29,7 @@ export default function Assistant() {
   const needsActionSpace =
     location.pathname === '/create' ||
     location.pathname === '/session' ||
+    location.pathname.startsWith('/schedule') ||
     location.pathname.endsWith('/edit')
 
   useEffect(() => {

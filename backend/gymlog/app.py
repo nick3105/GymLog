@@ -16,12 +16,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import assistant, storage
 from .models import (
     PERSONAL_MUSCLES,
+    ScheduleConflict,
     assistant_messages,
     best_1rm,
     body_load,
+    change_schedule,
     exercise_stats,
     number,
     profile_stats,
+    schedule_view,
     shared_workout,
     validate_assistant_reply,
     validate_assistant_request,
@@ -434,6 +437,41 @@ def create_app(config=None):
         if result is None:
             return jsonify(error="You can edit only your own plans for an accepted coachee."), 404
         return jsonify(result), 200 if template_id else 201
+
+    @app.get("/api/schedule")
+    @authenticated
+    def read_schedule():
+        """Return the owner's requested week and reusable workout series."""
+        return jsonify(
+            schedule_view(storage.schedule_state(database, g.user_id), request.args.get("week"))
+        )
+
+    @app.post("/api/schedule")
+    @authenticated
+    def update_schedule():
+        """Validate a scheduling command and save only the current owner's schedule."""
+        body = request.get_json()
+        current = storage.schedule_state(database, g.user_id)
+        try:
+            document = change_schedule(
+                body,
+                current,
+                storage.documents(database, g.user_id, "templates"),
+                catalogue_for(g.user_id),
+            )
+        except LookupError as error:
+            return jsonify(error=str(error)), 404
+        except ScheduleConflict as error:
+            return jsonify(error=str(error)), 409
+        if document is current:
+            saved = current
+        else:
+            saved = storage.save_schedule_state(database, g.user_id, document, current["revision"])
+        if saved is None:
+            return jsonify(
+                error="Your schedule changed on another device. Reload before saving."
+            ), 409
+        return jsonify({key: saved[key] for key in ("revision", "series", "entries")})
 
     @app.get("/api/state")
     @authenticated

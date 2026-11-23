@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarDays,
   ChevronRight,
   ListChecks,
   Play,
@@ -31,6 +32,12 @@ const choices: { to: string; title: string; text: string; icon: LucideIcon }[] =
     title: 'Create workout',
     text: 'Build a routine with exercises and targets.',
     icon: Plus,
+  },
+  {
+    to: '/schedule',
+    title: 'Schedule',
+    text: 'Plan workouts by day or week.',
+    icon: CalendarDays,
   },
   {
     to: '/review',

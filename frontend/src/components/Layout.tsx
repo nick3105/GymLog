@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarDays,
   CircleUserRound,
   Dumbbell,
   House,
@@ -144,6 +145,15 @@ export default function Layout() {
             {label === 'Weight' ? 'Weight Tracker' : label}
           </NavLink>
         ))}
+        <NavLink
+          to="/schedule"
+          className={({ isActive }) =>
+            `flex min-h-11 items-center gap-3 rounded-xl px-3 font-normal ${isActive ? 'bg-accent/10 text-accent' : 'text-muted'}`
+          }
+        >
+          <CalendarDays className="size-5" aria-hidden />
+          Schedule
+        </NavLink>
         {/* Desktop only: the phone bottom bar keeps five big buttons (NAV-04 is on Home). */}
         <NavLink
           to="/exercises"

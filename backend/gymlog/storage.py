@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 # One statement per item: executescript() would commit an open transaction first.
 SCHEMA = [
@@ -501,6 +501,9 @@ def _upgrade_extensions(db):
                         user_id INTEGER PRIMARY KEY REFERENCES users(id),
                         document TEXT NOT NULL, updated_at TEXT NOT NULL)""",
                     FAVORITE_EXERCISE_SCHEMA,
+                    """CREATE TABLE IF NOT EXISTS schedule_state (
+                        user_id INTEGER PRIMARY KEY REFERENCES users(id),
+                        document TEXT NOT NULL, revision INTEGER NOT NULL)""",
                 ]
             ):
                 db.execute(statement)
@@ -522,6 +525,36 @@ def favorite_exercise_ids(path, user_id):
                 (user_id,),
             )
         ]
+
+
+def schedule_state(path, user_id):
+    """Read only this account's reusable series and scheduled snapshots."""
+    with connect(path) as db:
+        row = db.execute(
+            "SELECT document FROM schedule_state WHERE user_id=?", (user_id,)
+        ).fetchone()
+        if row:
+            return json.loads(row["document"])
+        return {"revision": 0, "series": [], "entries": [], "requests": {}}
+
+
+def save_schedule_state(path, user_id, document, revision):
+    """Compare and replace an owner's schedule atomically without changing their journal."""
+    with connect(path) as db:
+        db.execute("BEGIN IMMEDIATE")
+        row = db.execute(
+            "SELECT revision FROM schedule_state WHERE user_id=?", (user_id,)
+        ).fetchone()
+        current_revision = row["revision"] if row else 0
+        if current_revision != revision:
+            return None
+        saved = {**document, "revision": revision + 1}
+        db.execute(
+            "INSERT INTO schedule_state VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET "
+            "document=excluded.document, revision=excluded.revision",
+            (user_id, json.dumps(saved), saved["revision"]),
+        )
+        return saved
 
 
 def toggle_favorite_exercise(path, user_id, exercise_id):
